@@ -1,5 +1,9 @@
 # Sonata neural voices for NVDA
 
+> **Maintenance fork notice**
+>
+> The original author, Musharraf Omer ([@mush42](https://github.com/mush42)), [announced on the NVDA Add-ons list](https://nvda-addons.groups.io/g/nvda-addons/message/27636) that commercial contract conflicts prevent him from continuing to maintain this open-source add-on. This fork continues the project to keep the add-on working on current NVDA releases (2026.1+). All credit for the original work belongs to Musharraf Omer; this fork only carries minimal compatibility fixes.
+
 This add-on implements a speech synthesizer driver for NVDA using neural TTS models. It supports [Piper](https://github.com/rhasspy/piper).
 
 [Piper](https://github.com/rhasspy/piper) is a fast, local neural text to speech system that sounds great and is optimized for low-end devices such as the Raspberry Pi.
@@ -13,7 +17,11 @@ This add-on uses [Sonata: A cross-platform Rust engine for neural TTS models](ht
 
 ## Downloading the add-on
 
-You can find the add-on package under the assets section of the [release page](https://github.com/mush42/sonata-nvda/releases/latest)
+You can find the add-on package under the assets section of the [release page](https://github.com/austek/sonata-nvda/releases/latest).
+
+## Reporting issues
+
+Please report bugs and feature requests on the [issue tracker for this fork](https://github.com/austek/sonata-nvda/issues).
 
 ## Adding voices
 
