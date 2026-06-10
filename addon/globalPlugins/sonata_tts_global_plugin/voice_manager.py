@@ -300,6 +300,7 @@ class OnlineSonataVoicesPanel(SizedPanel):
                 _("Could not retrieve voice list.\nPlease check your connection and try again."),
                 _("Error"),
                 style=wx.ICON_ERROR,
+                parent=gui.mainFrame,
             )
             return
         wx.CallAfter(self.set_voices, result)
