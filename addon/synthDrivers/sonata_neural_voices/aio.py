@@ -15,6 +15,7 @@ THREADED_EXECUTOR = None
 ASYNCIO_EVENT_LOOP = asyncio.new_event_loop()
 ASYNCIO_LOOP_THREAD = None
 _STATE_LOCK = threading.RLock()
+_LOOP_STARTED = threading.Event()
 
 
 def initialize():
@@ -26,26 +27,36 @@ def initialize():
             and ASYNCIO_LOOP_THREAD.is_alive()
             and THREADED_EXECUTOR is not None
         ):
-            return
-        if ASYNCIO_EVENT_LOOP.is_closed():
-            raise RuntimeError("The Sonata asyncio event loop was closed")
-        if THREADED_EXECUTOR is None:
-            THREADED_EXECUTOR = ThreadPoolExecutor(
-                max_workers=max(1, (os.cpu_count() or 2) // 2),
-                thread_name_prefix="sonata_nvda_executor",
+            loop_thread = ASYNCIO_LOOP_THREAD
+        else:
+            if ASYNCIO_EVENT_LOOP.is_closed():
+                raise RuntimeError("The Sonata asyncio event loop was closed")
+            if THREADED_EXECUTOR is None:
+                THREADED_EXECUTOR = ThreadPoolExecutor(
+                    max_workers=max(1, (os.cpu_count() or 2) // 2),
+                    thread_name_prefix="sonata_nvda_executor",
+                )
+
+            def _thread_target():
+                log.info("Starting Sonata asyncio event loop")
+                asyncio.set_event_loop(ASYNCIO_EVENT_LOOP)
+                ASYNCIO_EVENT_LOOP.call_soon(_LOOP_STARTED.set)
+                try:
+                    ASYNCIO_EVENT_LOOP.run_forever()
+                finally:
+                    _LOOP_STARTED.clear()
+
+            _LOOP_STARTED.clear()
+            ASYNCIO_LOOP_THREAD = threading.Thread(
+                target=_thread_target,
+                daemon=True,
+                name="sonata_nvda_asyncio",
             )
+            loop_thread = ASYNCIO_LOOP_THREAD
+            loop_thread.start()
 
-        def _thread_target():
-            log.info("Starting Sonata asyncio event loop")
-            asyncio.set_event_loop(ASYNCIO_EVENT_LOOP)
-            ASYNCIO_EVENT_LOOP.run_forever()
-
-        ASYNCIO_LOOP_THREAD = threading.Thread(
-            target=_thread_target,
-            daemon=True,
-            name="sonata_nvda_asyncio",
-        )
-        ASYNCIO_LOOP_THREAD.start()
+    if not _LOOP_STARTED.wait(timeout=5):
+        raise RuntimeError("The Sonata asyncio event loop did not start")
 
 
 def terminate():
