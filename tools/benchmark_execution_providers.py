@@ -126,6 +126,15 @@ def parse_args():
     parser.add_argument("--repetitions", type=int, default=3)
     parser.add_argument("--warmups", type=int, default=1)
     parser.add_argument(
+        "--inter-utterance-delay",
+        type=float,
+        default=0.0,
+        help=(
+            "Seconds to wait before every synthesis call. Use this to measure "
+            "bursty screen-reader speech after the GPU has been idle."
+        ),
+    )
+    parser.add_argument(
         "--max-words",
         type=int,
         default=180,
@@ -311,6 +320,8 @@ def benchmark_voice_provider(
                     continue
                 text = text_with_word_count(voice["language"], word_count)
                 for _ in range(args.warmups):
+                    if args.inter_utterance_delay:
+                        time.sleep(args.inter_utterance_delay)
                     synthesize(
                         stub,
                         voice_info.voice_id,
@@ -319,6 +330,8 @@ def benchmark_voice_provider(
                         stop_after_first=args.cancel_after_first,
                     )
                 for repetition in range(args.repetitions):
+                    if args.inter_utterance_delay:
+                        time.sleep(args.inter_utterance_delay)
                     measurement = synthesize(
                         stub,
                         voice_info.voice_id,
@@ -369,6 +382,7 @@ def load_or_create_results(args):
         "voices_directory": os.fspath(args.voices_directory.resolve()),
         "repetitions": args.repetitions,
         "warmups": args.warmups,
+        "inter_utterance_delay": args.inter_utterance_delay,
         "lengths": [
             {"name": name, "words": words} for name, words in TEXT_LENGTHS
         ],
@@ -431,7 +445,7 @@ def print_summary(results):
 
     print(
         "kind,length,words,voices,cpu_total_ms,gpu_total_ms,"
-        "total_speedup,cpu_first_ms,gpu_first_ms,first_audio_speedup,"
+        "total_speedup,gpu_total_wins,cpu_first_ms,gpu_first_ms,first_audio_speedup,"
         "gpu_first_audio_wins"
     )
     for streaming in (False, True):
@@ -447,30 +461,51 @@ def print_summary(results):
             gpu_total = statistics.mean(item["gpu_total_ms"] for item in group)
             cpu_first = statistics.mean(item["cpu_first_ms"] for item in group)
             gpu_first = statistics.mean(item["gpu_first_ms"] for item in group)
-            wins = sum(item["gpu_first_ms"] < item["cpu_first_ms"] for item in group)
+            total_wins = sum(
+                item["gpu_total_ms"] < item["cpu_total_ms"] for item in group
+            )
+            first_audio_wins = sum(
+                item["gpu_first_ms"] < item["cpu_first_ms"] for item in group
+            )
             print(
                 f"{'streaming' if streaming else 'standard'},"
                 f"{length},{words},{len(group)},"
                 f"{cpu_total:.3f},{gpu_total:.3f},{cpu_total / gpu_total:.3f},"
+                f"{total_wins}/{len(group)},"
                 f"{cpu_first:.3f},{gpu_first:.3f},{cpu_first / gpu_first:.3f},"
-                f"{wins}/{len(group)}"
+                f"{first_audio_wins}/{len(group)}"
             )
 
     for streaming in (False, True):
         group = [item for item in comparisons if item["streaming"] == streaming]
         if not group:
             continue
+        cpu_total = statistics.mean(item["cpu_total_ms"] for item in group)
+        gpu_total = statistics.mean(item["gpu_total_ms"] for item in group)
+        total_ratios = [
+            item["cpu_total_ms"] / item["gpu_total_ms"] for item in group
+        ]
+        total_wins = sum(
+            item["gpu_total_ms"] < item["cpu_total_ms"] for item in group
+        )
         cpu_first = statistics.mean(item["cpu_first_ms"] for item in group)
         gpu_first = statistics.mean(item["gpu_first_ms"] for item in group)
-        ratios = [item["cpu_first_ms"] / item["gpu_first_ms"] for item in group]
-        geometric_speedup = statistics.geometric_mean(ratios)
-        wins = sum(item["gpu_first_ms"] < item["cpu_first_ms"] for item in group)
+        first_audio_ratios = [
+            item["cpu_first_ms"] / item["gpu_first_ms"] for item in group
+        ]
+        first_audio_wins = sum(
+            item["gpu_first_ms"] < item["cpu_first_ms"] for item in group
+        )
         print(
             f"OVERALL {'streaming' if streaming else 'standard'}: "
-            f"balanced first-audio mean CPU {cpu_first:.3f} ms, "
-            f"GPU {gpu_first:.3f} ms, ratio {cpu_first / gpu_first:.3f}x, "
-            f"geometric speedup {geometric_speedup:.3f}x, "
-            f"GPU first-audio wins {wins}/{len(group)}"
+            f"balanced full-generation mean CPU {cpu_total:.3f} ms, "
+            f"GPU {gpu_total:.3f} ms, ratio {cpu_total / gpu_total:.3f}x, "
+            f"geometric speedup {statistics.geometric_mean(total_ratios):.3f}x, "
+            f"GPU full-generation wins {total_wins}/{len(group)}; "
+            f"first-audio CPU {cpu_first:.3f} ms, GPU {gpu_first:.3f} ms, "
+            f"ratio {cpu_first / gpu_first:.3f}x, geometric speedup "
+            f"{statistics.geometric_mean(first_audio_ratios):.3f}x, "
+            f"GPU first-audio wins {first_audio_wins}/{len(group)}"
         )
 
 
@@ -478,6 +513,8 @@ def main():
     args = parse_args()
     if args.standard_only and args.streaming_only:
         raise SystemExit("--standard-only and --streaming-only are mutually exclusive")
+    if args.inter_utterance_delay < 0:
+        raise SystemExit("--inter-utterance-delay must not be negative")
     if args.summary_only:
         print_summary(json.loads(args.output.read_text(encoding="utf-8")))
         return

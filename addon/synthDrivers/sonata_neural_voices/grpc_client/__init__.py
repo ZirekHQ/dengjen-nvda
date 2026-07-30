@@ -62,6 +62,7 @@ def _show_vcruntime_warning():
 from ..const import SONATA_VOICES_BASE_DIR
 from ..engine_runtime import build_engine_environment
 from ..helpers import BIN_DIRECTORY, find_free_port, import_bundled_library
+from ..process_lifetime import close_job_handle, create_kill_on_close_job
 
 
 with import_bundled_library():
@@ -73,23 +74,33 @@ with import_bundled_library():
 
 SONATA_GRPC_SERVER_PORT = None
 GRPC_SERVER_PROCESS = None
+GRPC_SERVER_JOB_HANDLE = None
 CHANNEL = None
 CHANNEL_PORT = None
 SONATA_GRPC_SERVICE = None
 
 
 def start_grpc_server():
-    global GRPC_SERVER_PROCESS, SONATA_GRPC_SERVER_PORT
+    global GRPC_SERVER_JOB_HANDLE, GRPC_SERVER_PROCESS, SONATA_GRPC_SERVER_PORT
     shared_port = getattr(globalVars, "SONATA_GRPC_SERVER_PORT", None)
     shared_process = getattr(globalVars, "GRPC_SERVER_PROCESS", None)
+    shared_job_handle = getattr(globalVars, "GRPC_SERVER_JOB_HANDLE", None)
     if shared_port is not None and shared_process is not None:
         with suppress(Exception):
             if shared_process.poll() is None:
                 SONATA_GRPC_SERVER_PORT = shared_port
                 GRPC_SERVER_PROCESS = shared_process
+                GRPC_SERVER_JOB_HANDLE = shared_job_handle
                 return True
         log.warning("Discarding a stopped Sonata GRPC server process")
-    for attribute in ("SONATA_GRPC_SERVER_PORT", "GRPC_SERVER_PROCESS"):
+        with suppress(Exception):
+            close_job_handle(shared_job_handle)
+        GRPC_SERVER_JOB_HANDLE = None
+    for attribute in (
+        "SONATA_GRPC_SERVER_PORT",
+        "GRPC_SERVER_PROCESS",
+        "GRPC_SERVER_JOB_HANDLE",
+    ):
         with suppress(AttributeError):
             delattr(globalVars, attribute)
     if _vcruntime_missing():
@@ -135,6 +146,14 @@ def start_grpc_server():
             stdout=server_stdout,
             stderr=subprocess.STDOUT,
         )
+        try:
+            GRPC_SERVER_JOB_HANDLE = create_kill_on_close_job(GRPC_SERVER_PROCESS)
+        except Exception:
+            GRPC_SERVER_JOB_HANDLE = None
+            log.exception(
+                "Failed to attach the Sonata GRPC server to NVDA's lifetime",
+                exc_info=True,
+            )
     except Exception:
         log.exception(
             "Failed to start Sonata GRPC server. The synth will not be available.",
@@ -146,6 +165,7 @@ def start_grpc_server():
             server_stdout.close()
     globalVars.SONATA_GRPC_SERVER_PORT = SONATA_GRPC_SERVER_PORT
     globalVars.GRPC_SERVER_PROCESS = GRPC_SERVER_PROCESS
+    globalVars.GRPC_SERVER_JOB_HANDLE = GRPC_SERVER_JOB_HANDLE
     return True
 
 
@@ -166,7 +186,8 @@ async def initialize():
 
 @atexit.register
 def terminate():
-    global CHANNEL, CHANNEL_PORT, GRPC_SERVER_PROCESS, SONATA_GRPC_SERVER_PORT
+    global CHANNEL, CHANNEL_PORT, GRPC_SERVER_JOB_HANDLE
+    global GRPC_SERVER_PROCESS, SONATA_GRPC_SERVER_PORT
     SONATA_GRPC_SERVER_PORT = None
     if CHANNEL is not None:
         try:
@@ -192,7 +213,15 @@ def terminate():
         except Exception:
             log.exception("Failed to stop the Sonata GRPC server", exc_info=True)
         GRPC_SERVER_PROCESS = None
-    for attribute in ("SONATA_GRPC_SERVER_PORT", "GRPC_SERVER_PROCESS"):
+    if GRPC_SERVER_JOB_HANDLE is not None:
+        with suppress(Exception):
+            close_job_handle(GRPC_SERVER_JOB_HANDLE)
+        GRPC_SERVER_JOB_HANDLE = None
+    for attribute in (
+        "SONATA_GRPC_SERVER_PORT",
+        "GRPC_SERVER_PROCESS",
+        "GRPC_SERVER_JOB_HANDLE",
+    ):
         with suppress(AttributeError):
             delattr(globalVars, attribute)
     aio.terminate()

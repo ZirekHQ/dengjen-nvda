@@ -37,7 +37,7 @@ index c13980b..07689c1 100644
  
  const MIN_CHUNK_SIZE: isize = 44;
  const MAX_CHUNK_SIZE: usize = 1024;
-+const DEFAULT_GPU_MIN_PHONEMES: usize = 0;
++const DEFAULT_GPU_MIN_PHONEMES: usize = 64;
  const BOS: char = '^';
  const EOS: char = '$';
  const PAD: char = '_';

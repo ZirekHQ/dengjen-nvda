@@ -7,7 +7,9 @@ The bundled `sonata-grpc.exe` is built from
 
 The patch keeps CPU sessions as a fallback and creates DirectML sessions for
 both standard and streaming `+RT` Piper voices when DirectML is available.
-The default threshold is zero, so all standard utterances use the GPU.
+The default threshold is 64 phonemes, so very short standard utterances use
+CPU while larger segments use the GPU. Streaming `+RT` voices use DirectML at
+all text lengths because complete-audio generation was faster on average.
 DirectML sessions are serialized because the provider does not support
 concurrent `Run` calls on one session; CPU sessions remain concurrent.
 Streaming encoder or decoder initialization failures fall back to CPU without
