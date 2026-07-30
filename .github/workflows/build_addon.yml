@@ -92,6 +92,7 @@ jobs:
         sha256sum *.nvda-addon >> changelog.md
 
     - name: Release
+      id: release
       uses: softprops/action-gh-release@v2
       with:
         files: |
@@ -100,4 +101,20 @@ jobs:
         body_path: changelog.md
         fail_on_unmatched_files: true
         prerelease: ${{ contains(github.ref, '-') }}
+
+    - name: Store submission summary
+      run: |
+        ADDON_FILE=$(ls *.nvda-addon)
+        SHA256=$(sha256sum "$ADDON_FILE" | awk '{print $1}')
+        TAG=${GITHUB_REF#refs/tags/}
+        REPO="${GITHUB_REPOSITORY}"
+        DOWNLOAD_URL="https://github.com/${REPO}/releases/download/${TAG}/${ADDON_FILE}"
+        echo "## NVDA Add-on Store submission values" >> "$GITHUB_STEP_SUMMARY"
+        echo "" >> "$GITHUB_STEP_SUMMARY"
+        echo "| Field | Value |" >> "$GITHUB_STEP_SUMMARY"
+        echo "|---|---|" >> "$GITHUB_STEP_SUMMARY"
+        echo "| **Download URL** | \`${DOWNLOAD_URL}\` |" >> "$GITHUB_STEP_SUMMARY"
+        echo "| **SHA256** | \`${SHA256}\` |" >> "$GITHUB_STEP_SUMMARY"
+        echo "" >> "$GITHUB_STEP_SUMMARY"
+        echo "Use these values when filling in the [Add-on Store registration form](https://github.com/nvaccess/addon-datastore/issues/new?template=registerAddon.yml)." >> "$GITHUB_STEP_SUMMARY"
 
