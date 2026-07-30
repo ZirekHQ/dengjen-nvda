@@ -14,49 +14,74 @@ from .helpers import import_bundled_library
 THREADED_EXECUTOR = None
 ASYNCIO_EVENT_LOOP = asyncio.new_event_loop()
 ASYNCIO_LOOP_THREAD = None
+_STATE_LOCK = threading.RLock()
 
 
 def initialize():
     global THREADED_EXECUTOR, ASYNCIO_EVENT_LOOP, ASYNCIO_LOOP_THREAD
 
-    THREADED_EXECUTOR = ThreadPoolExecutor(
-        max_workers=os.cpu_count() // 2, thread_name_prefix="piper4nvda_executor"
-    )
+    with _STATE_LOCK:
+        if (
+            ASYNCIO_LOOP_THREAD is not None
+            and ASYNCIO_LOOP_THREAD.is_alive()
+            and THREADED_EXECUTOR is not None
+        ):
+            return
+        if ASYNCIO_EVENT_LOOP.is_closed():
+            raise RuntimeError("The Sonata asyncio event loop was closed")
+        if THREADED_EXECUTOR is None:
+            THREADED_EXECUTOR = ThreadPoolExecutor(
+                max_workers=max(1, (os.cpu_count() or 2) // 2),
+                thread_name_prefix="sonata_nvda_executor",
+            )
 
-    if ASYNCIO_LOOP_THREAD:
-        log.warning(
-            "Attempted to start the asyncio eventloop while it is already running"
+        def _thread_target():
+            log.info("Starting Sonata asyncio event loop")
+            asyncio.set_event_loop(ASYNCIO_EVENT_LOOP)
+            ASYNCIO_EVENT_LOOP.run_forever()
+
+        ASYNCIO_LOOP_THREAD = threading.Thread(
+            target=_thread_target,
+            daemon=True,
+            name="sonata_nvda_asyncio",
         )
-        return
-
-    def _thread_target():
-        log.info("Starting asyncio event loop")
-        asyncio.set_event_loop(ASYNCIO_EVENT_LOOP)
-        ASYNCIO_EVENT_LOOP.run_forever()
-
-    ASYNCIO_LOOP_THREAD = threading.Thread(
-        target=_thread_target, daemon=True, name="piper4nvda_asyncio"
-    )
-    ASYNCIO_LOOP_THREAD.start()
+        ASYNCIO_LOOP_THREAD.start()
 
 
 def terminate():
     global THREADED_EXECUTOR, ASYNCIO_LOOP_THREAD, ASYNCIO_EVENT_LOOP
-    log.info("Shutting down the thread pool executor")
-    THREADED_EXECUTOR.shutdown()
-    THREADED_EXECUTOR = None
-    if ASYNCIO_LOOP_THREAD:
-        log.info("Shutting down asyncio event loop")
-        ASYNCIO_EVENT_LOOP.call_soon_threadsafe(ASYNCIO_EVENT_LOOP.stop)
-        ASYNCIO_LOOP_THREAD = None
+    with _STATE_LOCK:
+        executor = THREADED_EXECUTOR
+        loop_thread = ASYNCIO_LOOP_THREAD
+        if loop_thread is not None and ASYNCIO_EVENT_LOOP.is_running():
+            log.info("Shutting down Sonata asyncio event loop")
+            ASYNCIO_EVENT_LOOP.call_soon_threadsafe(ASYNCIO_EVENT_LOOP.stop)
+
+    if (
+        loop_thread is not None
+        and loop_thread is not threading.current_thread()
+        and loop_thread.is_alive()
+    ):
+        loop_thread.join(timeout=5)
+    if executor is not None:
+        log.info("Shutting down the Sonata thread pool executor")
+        executor.shutdown(wait=False, cancel_futures=True)
+
+    with _STATE_LOCK:
+        if ASYNCIO_LOOP_THREAD is loop_thread:
+            ASYNCIO_LOOP_THREAD = None
+        if THREADED_EXECUTOR is executor:
+            THREADED_EXECUTOR = None
 
 
 def asyncio_create_task(coro):
+    initialize()
     return ASYNCIO_EVENT_LOOP.call_soon_threadsafe(ASYNCIO_EVENT_LOOP.create_task, coro)
 
 
 def asyncio_cancel_task(task):
-    ASYNCIO_EVENT_LOOP.call_soon_threadsafe(task.cancel)
+    if task is not None and ASYNCIO_EVENT_LOOP.is_running():
+        ASYNCIO_EVENT_LOOP.call_soon_threadsafe(task.cancel)
 
 
 def asyncio_coroutine_to_concurrent_future(async_func):
@@ -64,6 +89,7 @@ def asyncio_coroutine_to_concurrent_future(async_func):
 
     @wraps(async_func)
     def wrapper(*args, **kwargs):
+        initialize()
         return asyncio.run_coroutine_threadsafe(
             async_func(*args, **kwargs), loop=ASYNCIO_EVENT_LOOP
         )
@@ -80,6 +106,7 @@ def call_threaded(func: t.Callable[..., None]) -> t.Callable[..., "Future"]:
     @wraps(func)
     def wrapper(*args, **kwargs):
         try:
+            initialize()
             return THREADED_EXECUTOR.submit(func, *args, **kwargs)
         except RuntimeError:
             log.debug(f"Failed to submit function {func}.")
@@ -88,5 +115,6 @@ def call_threaded(func: t.Callable[..., None]) -> t.Callable[..., "Future"]:
 
 
 def run_in_executor(func, *args, **kwargs):
+    initialize()
     callable = partial(func, *args, **kwargs)
     return ASYNCIO_EVENT_LOOP.run_in_executor(THREADED_EXECUTOR, callable)

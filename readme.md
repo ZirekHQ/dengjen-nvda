@@ -37,26 +37,33 @@ You can also install voices from local archives. After obtaining the voice's fil
 
 ## GPU acceleration
 
-Sonata automatically uses DirectML for long utterances from standard Piper
-voices on supported Windows computers. DirectML works with DirectX 12-capable
-NVIDIA, AMD, and Intel GPUs and does not require the CUDA toolkit.
+Sonata automatically uses DirectML for all text lengths from both standard and
+streaming `+RT` Piper voices on supported Windows computers. DirectML works
+with DirectX 12-capable NVIDIA, AMD, and Intel GPUs and does not require the
+CUDA toolkit. If DirectML or a compatible GPU is unavailable, each voice falls
+back to CPU inference automatically.
 
-Short utterances stay on the CPU because this gives lower latency for normal
-screen-reader navigation. Streaming `+RT` voices also stay on the CPU so they
-can begin speaking as quickly as possible. If DirectML or a compatible GPU is
-not available, Sonata falls back to CPU inference automatically.
+The default was selected from 636 measurements across all 19 voices installed
+on the test computer, covering Swedish, English, Spanish, Norwegian, German,
+and Finnish text from one to 180 words. The measurement stops the latency
+clock when the first audio chunk arrives; playback duration is not included.
+On an RTX 4060 Laptop GPU, balanced first-audio latency for standard voices
+averaged about 191 ms on GPU versus 330 ms on CPU. Streaming `+RT` voices
+averaged about 179 ms on GPU versus 214 ms on CPU. One- to three-word results
+vary by voice, but the balanced averages favor GPU execution.
+The reproducible first-audio benchmark is included as
+`tools/benchmark_execution_providers.py`.
 
-On an RTX 4060 Laptop GPU, a representative long Swedish test utterance took
-about 266 ms after warm-up with automatic DirectML selection, compared with
-about 2,960 ms in CPU-only mode. Performance varies by voice, text, GPU, and
-driver.
+DirectML calls are serialized to prevent overlapping inference when NVDA
+cancels speech or switches synthesizers. CPU sessions remain concurrent.
 
 Advanced users can set these environment variables before starting NVDA:
 
 - `SONATA_EXECUTION_PROVIDER=cpu` disables GPU acceleration. The default is
-  `auto`; `directml` also enables the automatic DirectML path.
-- `SONATA_GPU_MIN_PHONEMES` changes the crossover point. The tested default is
-  `300`.
+  `auto`; `directml` also enables DirectML.
+- `SONATA_GPU_MIN_PHONEMES` changes the standard-voice crossover point. The
+  tested default is `0`, which uses GPU for every text length.
+- `SONATA_STREAMING_EXECUTION_PROVIDER=cpu` keeps only `+RT` voices on CPU.
 - `SONATA_DIRECTML_DEVICE_ID` selects a DirectML adapter. The default is `0`.
 
 ## A note on voice quality

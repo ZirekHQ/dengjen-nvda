@@ -12,6 +12,7 @@ from sonata_neural_voices.engine_runtime import (
 def test_build_engine_environment_sets_safe_defaults(tmp_path):
     env = build_engine_environment(tmp_path, {"PATH": r"C:\Windows\System32"})
 
+    assert DEFAULT_GPU_MIN_PHONEMES == 0
     assert env["ORT_DYLIB_PATH"] == os.fspath(
         Path(tmp_path).resolve() / "onnxruntime.dll"
     )
@@ -25,6 +26,7 @@ def test_build_engine_environment_preserves_performance_overrides(tmp_path):
     base = {
         "PATH": os.fspath(Path(tmp_path).resolve()),
         "SONATA_EXECUTION_PROVIDER": "cpu",
+        "SONATA_STREAMING_EXECUTION_PROVIDER": "cpu",
         "SONATA_GPU_MIN_PHONEMES": "999",
         "SONATA_DIRECTML_DEVICE_ID": "2",
     }
@@ -32,6 +34,7 @@ def test_build_engine_environment_preserves_performance_overrides(tmp_path):
     env = build_engine_environment(tmp_path, base)
 
     assert env["SONATA_EXECUTION_PROVIDER"] == "cpu"
+    assert env["SONATA_STREAMING_EXECUTION_PROVIDER"] == "cpu"
     assert env["SONATA_GPU_MIN_PHONEMES"] == "999"
     assert env["SONATA_DIRECTML_DEVICE_ID"] == "2"
     assert env["PATH"] == base["PATH"]

@@ -6,6 +6,7 @@ import ctypes
 import os
 import subprocess
 import time
+from contextlib import suppress
 from pathlib import Path
 
 import globalVars
@@ -73,15 +74,24 @@ with import_bundled_library():
 SONATA_GRPC_SERVER_PORT = None
 GRPC_SERVER_PROCESS = None
 CHANNEL = None
+CHANNEL_PORT = None
 SONATA_GRPC_SERVICE = None
 
 
 def start_grpc_server():
     global GRPC_SERVER_PROCESS, SONATA_GRPC_SERVER_PORT
-    if hasattr(globalVars, "SONATA_GRPC_SERVER_PORT"):
-        SONATA_GRPC_SERVER_PORT = globalVars.SONATA_GRPC_SERVER_PORT
-        GRPC_SERVER_PROCESS = globalVars.GRPC_SERVER_PROCESS
-        return True
+    shared_port = getattr(globalVars, "SONATA_GRPC_SERVER_PORT", None)
+    shared_process = getattr(globalVars, "GRPC_SERVER_PROCESS", None)
+    if shared_port is not None and shared_process is not None:
+        with suppress(Exception):
+            if shared_process.poll() is None:
+                SONATA_GRPC_SERVER_PORT = shared_port
+                GRPC_SERVER_PROCESS = shared_process
+                return True
+        log.warning("Discarding a stopped Sonata GRPC server process")
+    for attribute in ("SONATA_GRPC_SERVER_PORT", "GRPC_SERVER_PROCESS"):
+        with suppress(AttributeError):
+            delattr(globalVars, attribute)
     if _vcruntime_missing():
         log.error(
             "Sonata GRPC server cannot start: vcruntime140_1.dll not found. "
@@ -107,7 +117,7 @@ def start_grpc_server():
     creationflags = (
         subprocess.DETACHED_PROCESS
         | subprocess.CREATE_NEW_PROCESS_GROUP
-        | subprocess.REALTIME_PRIORITY_CLASS
+        | subprocess.HIGH_PRIORITY_CLASS
     )
     try:
         server_log_file = os.path.join(SONATA_VOICES_BASE_DIR, "logs", "sonata-grpc.log")
@@ -125,12 +135,15 @@ def start_grpc_server():
             stdout=server_stdout,
             stderr=subprocess.STDOUT,
         )
-    except:
+    except Exception:
         log.exception(
             "Failed to start Sonata GRPC server. The synth will not be available.",
             exc_info=True
         )
         return False
+    finally:
+        with suppress(AttributeError):
+            server_stdout.close()
     globalVars.SONATA_GRPC_SERVER_PORT = SONATA_GRPC_SERVER_PORT
     globalVars.GRPC_SERVER_PROCESS = GRPC_SERVER_PROCESS
     return True
@@ -138,27 +151,51 @@ def start_grpc_server():
 
 @aio.asyncio_coroutine_to_concurrent_future
 async def initialize():
-    global CHANNEL, SONATA_GRPC_SERVICE, SONATA_GRPC_SERVER_PORT
-    start_grpc_server()
-    if CHANNEL is not None:
-        log.warning("Attempted to re-initialize an already initialized GRPC connection")
-        return
+    global CHANNEL, CHANNEL_PORT, SONATA_GRPC_SERVICE, SONATA_GRPC_SERVER_PORT
+    if not start_grpc_server():
+        raise RuntimeError("The Sonata GRPC server could not be started")
     port = SONATA_GRPC_SERVER_PORT
+    if CHANNEL is not None and CHANNEL_PORT == port:
+        return
+    if CHANNEL is not None:
+        await CHANNEL.close()
     CHANNEL = grpc.aio.insecure_channel(f"localhost:{port}")
+    CHANNEL_PORT = port
     SONATA_GRPC_SERVICE = sonata_grpcStub(CHANNEL)
 
 
 @atexit.register
 def terminate():
-    global CHANNEL, GRPC_SERVER_PROCESS, SONATA_GRPC_SERVER_PORT
+    global CHANNEL, CHANNEL_PORT, GRPC_SERVER_PROCESS, SONATA_GRPC_SERVER_PORT
     SONATA_GRPC_SERVER_PORT = None
-    aio.terminate()
     if CHANNEL is not None:
-        CHANNEL.close()
+        try:
+            aio.initialize()
+            close_future = asyncio.run_coroutine_threadsafe(
+                CHANNEL.close(),
+                aio.ASYNCIO_EVENT_LOOP,
+            )
+            close_future.result(timeout=5)
+        except Exception:
+            log.exception("Failed to close the Sonata GRPC channel", exc_info=True)
         CHANNEL = None
+    CHANNEL_PORT = None
     if GRPC_SERVER_PROCESS is not None:
-        GRPC_SERVER_PROCESS.terminate()
+        try:
+            GRPC_SERVER_PROCESS.terminate()
+            GRPC_SERVER_PROCESS.wait(timeout=5)
+        except subprocess.TimeoutExpired:
+            log.warning("Sonata GRPC server did not stop in time; forcing shutdown")
+            with suppress(Exception):
+                GRPC_SERVER_PROCESS.kill()
+                GRPC_SERVER_PROCESS.wait(timeout=5)
+        except Exception:
+            log.exception("Failed to stop the Sonata GRPC server", exc_info=True)
         GRPC_SERVER_PROCESS = None
+    for attribute in ("SONATA_GRPC_SERVER_PORT", "GRPC_SERVER_PROCESS"):
+        with suppress(AttributeError):
+            delattr(globalVars, attribute)
+    aio.terminate()
 
 
 @aio.asyncio_coroutine_to_concurrent_future

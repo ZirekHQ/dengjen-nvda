@@ -5,10 +5,13 @@ The bundled `sonata-grpc.exe` is built from
 `451f9ebf2bd2aa2ba1be25fcec3b7593eeabf6ee`, plus
 [`sonata-directml.patch`](sonata-directml.patch).
 
-The patch keeps a CPU session for low-latency screen-reader utterances and
-creates a DirectML session for standard Piper voices when DirectML is
-available. Inference switches to DirectML only at the configured phoneme
-threshold. Streaming `+RT` voices remain CPU-only.
+The patch keeps CPU sessions as a fallback and creates DirectML sessions for
+both standard and streaming `+RT` Piper voices when DirectML is available.
+The default threshold is zero, so all standard utterances use the GPU.
+DirectML sessions are serialized because the provider does not support
+concurrent `Run` calls on one session; CPU sessions remain concurrent.
+Streaming encoder or decoder initialization failures fall back to CPU without
+preventing the voice from loading.
 
 The `build-sonata-engine.yml` workflow checks out the pinned source and
 submodules, applies the patch, builds the gRPC frontend with dynamic ONNX
