@@ -40,10 +40,17 @@ jobs:
         uses: dtolnay/rust-toolchain@1.97.1
 
       - name: Install protobuf compiler
-        uses: arduino/setup-protoc@v3
-        with:
-          version: "3.20.3"
-          repo-token: ${{ secrets.GITHUB_TOKEN }}
+        shell: pwsh
+        run: |
+          $protocArchive = Join-Path $env:RUNNER_TEMP "protoc-3.20.3-win64.zip"
+          $protocDirectory = Join-Path $env:RUNNER_TEMP "protoc-3.20.3"
+          Invoke-WebRequest `
+            -Uri "https://github.com/protocolbuffers/protobuf/releases/download/v3.20.3/protoc-3.20.3-win64.zip" `
+            -OutFile $protocArchive
+          Expand-Archive -Path $protocArchive -DestinationPath $protocDirectory
+          $protocPath = Join-Path $protocDirectory "bin/protoc.exe"
+          Add-Content -Path $env:GITHUB_ENV -Value "PROTOC=$protocPath"
+          & $protocPath --version
 
       - name: Build release engine
         shell: pwsh
