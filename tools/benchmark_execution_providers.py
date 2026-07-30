@@ -123,6 +123,15 @@ def parse_args():
         default=("cpu", "directml"),
     )
     parser.add_argument("--directml-device-id", default="0")
+    parser.add_argument(
+        "--gpu-min-phonemes",
+        default="0",
+        help=(
+            "Standard-voice DirectML threshold. The default 0 forces the "
+            "selected provider for comparison; use 'default' to test the "
+            "engine's compiled default."
+        ),
+    )
     parser.add_argument("--repetitions", type=int, default=3)
     parser.add_argument("--warmups", type=int, default=1)
     parser.add_argument(
@@ -222,7 +231,10 @@ def engine_environment(
     bin_directory,
     espeak_directory,
     directml_device_id,
+    gpu_min_phonemes,
 ):
+    bin_directory = bin_directory.resolve()
+    espeak_directory = espeak_directory.resolve()
     environment = dict(os.environ)
     environment.update(
         {
@@ -230,13 +242,16 @@ def engine_environment(
             "SONATA_DIRECTML_DEVICE_ID": str(directml_device_id),
             "SONATA_ESPEAKNG_DATA_DIRECTORY": os.fspath(espeak_directory),
             "SONATA_EXECUTION_PROVIDER": provider,
-            "SONATA_GPU_MIN_PHONEMES": "0",
             "SONATA_GRPC": "debug",
             "SONATA_GRPC_SERVER_PORT": str(port),
             # Patched benchmark engines use this for +RT encoder/decoder sessions.
             "SONATA_STREAMING_EXECUTION_PROVIDER": provider,
         }
     )
+    if gpu_min_phonemes != "default":
+        environment["SONATA_GPU_MIN_PHONEMES"] = str(gpu_min_phonemes)
+    else:
+        environment.pop("SONATA_GPU_MIN_PHONEMES", None)
     existing_path = environment.get("PATH", "")
     environment["PATH"] = os.pathsep.join((os.fspath(bin_directory), existing_path))
     return environment
@@ -289,19 +304,22 @@ def benchmark_voice_provider(
     log_directory,
 ):
     port = find_free_port()
+    engine_path = args.engine.resolve()
+    bin_directory = args.bin_directory.resolve()
     log_path = log_directory / f"{voice['key']}--{provider}.log"
     environment = engine_environment(
         provider,
         port,
-        args.bin_directory,
+        bin_directory,
         args.espeak_directory,
         args.directml_device_id,
+        args.gpu_min_phonemes,
     )
     records = []
     with log_path.open("wb") as log_file:
         process = subprocess.Popen(
-            [os.fspath(args.engine)],
-            cwd=os.fspath(args.bin_directory),
+            [os.fspath(engine_path)],
+            cwd=os.fspath(bin_directory),
             env=environment,
             stdout=log_file,
             stderr=subprocess.STDOUT,
@@ -383,6 +401,7 @@ def load_or_create_results(args):
         "repetitions": args.repetitions,
         "warmups": args.warmups,
         "inter_utterance_delay": args.inter_utterance_delay,
+        "gpu_min_phonemes": args.gpu_min_phonemes,
         "lengths": [
             {"name": name, "words": words} for name, words in TEXT_LENGTHS
         ],
