@@ -136,11 +136,21 @@ async def initialize():
     global CHANNEL, SONATA_GRPC_SERVICE, SONATA_GRPC_SERVER_PORT
     start_grpc_server()
     if CHANNEL is not None:
-        log.warning("Attempted to re-initialize an already initialized GRPC connection")
-        return
+        try:
+            channel_loop = getattr(CHANNEL, "_loop", None)
+            if channel_loop is aio.ASYNCIO_EVENT_LOOP and aio.ASYNCIO_EVENT_LOOP.is_running():
+                return
+        except Exception:
+            pass
+        try:
+            await CHANNEL.close()
+        except Exception:
+            pass
+        CHANNEL = None
     port = SONATA_GRPC_SERVER_PORT
     CHANNEL = grpc.aio.insecure_channel(f"localhost:{port}")
     SONATA_GRPC_SERVICE = sonata_grpcStub(CHANNEL)
+
 
 
 @atexit.register

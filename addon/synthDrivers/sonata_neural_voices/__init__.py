@@ -187,8 +187,10 @@ class SynthDriver(synthDriverHandler.SynthDriver):
 
     def __init__(self):
         super().__init__()
+        aio.ensure_running()
+        grpc_init_fut = grpc_client.initialize()
         try:
-            _GRPC_IS_INIT.result()
+            grpc_init_fut.result(timeout=10)
         except Exception:
             log.exception(
                 "Failed to initialize Sonata services. Synthesizer will not be available.",
@@ -196,7 +198,7 @@ class SynthDriver(synthDriverHandler.SynthDriver):
             )
             return
         try:
-            sonata_grpc_server_version = grpc_client.check_grpc_server().result()
+            sonata_grpc_server_version = grpc_client.check_grpc_server().result(timeout=10)
         except Exception:
             log.exception(
                 "Failed to connect to sonata GRPC server. Synthesizer will not be available.",
@@ -237,11 +239,12 @@ class SynthDriver(synthDriverHandler.SynthDriver):
 
     def terminate(self):
         self.cancel()
-        self.tts.shutdown()
+        if hasattr(self, "tts") and self.tts is not None:
+            self.tts.shutdown()
         for player in self._players.values():
             player.close()
         self._players.clear()
-        aio.terminate()
+
 
     def speak(self, speechSequence):
         with self.tts.create_synthesis_context():
