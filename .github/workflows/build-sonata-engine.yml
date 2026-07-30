@@ -77,7 +77,7 @@ jobs:
           Copy-Item directml-runtime/onnxruntime/ThirdPartyNotices.txt dist/ONNXRUNTIME-ThirdPartyNotices.txt
 
       - name: Upload engine bundle
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v5
         with:
           name: sonata-grpc-directml-windows-x64
           path: dist/
