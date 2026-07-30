@@ -35,6 +35,30 @@ Note that we recommend choosing the `low` or `medium` quality voices for your ta
 
 You can also install voices from local archives. After obtaining the voice's file, open the voice manager, in the installed tab, click the button labeled `Install from local file`. Choose the voice file, wait for the voice to install, and restart NVDA to refresh the voices list.
 
+## GPU acceleration
+
+Sonata automatically uses DirectML for long utterances from standard Piper
+voices on supported Windows computers. DirectML works with DirectX 12-capable
+NVIDIA, AMD, and Intel GPUs and does not require the CUDA toolkit.
+
+Short utterances stay on the CPU because this gives lower latency for normal
+screen-reader navigation. Streaming `+RT` voices also stay on the CPU so they
+can begin speaking as quickly as possible. If DirectML or a compatible GPU is
+not available, Sonata falls back to CPU inference automatically.
+
+On an RTX 4060 Laptop GPU, a representative long Swedish test utterance took
+about 266 ms after warm-up with automatic DirectML selection, compared with
+about 2,960 ms in CPU-only mode. Performance varies by voice, text, GPU, and
+driver.
+
+Advanced users can set these environment variables before starting NVDA:
+
+- `SONATA_EXECUTION_PROVIDER=cpu` disables GPU acceleration. The default is
+  `auto`; `directml` also enables the automatic DirectML path.
+- `SONATA_GPU_MIN_PHONEMES` changes the crossover point. The tested default is
+  `300`.
+- `SONATA_DIRECTML_DEVICE_ID` selects a DirectML adapter. The default is `0`.
+
 ## A note on voice quality
 
 The currently available voices are trained using freely available TTS datasets, which are generally of low quality (mostly public domain audio books or research quality recordings).

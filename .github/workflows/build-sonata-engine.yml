@@ -1,0 +1,66 @@
+name: Build DirectML Sonata engine
+
+on:
+  workflow_dispatch:
+  push:
+    paths:
+      - "engine/**"
+      - ".github/workflows/build-sonata-engine.yml"
+
+permissions:
+  contents: read
+
+env:
+  SONATA_COMMIT: 451f9ebf2bd2aa2ba1be25fcec3b7593eeabf6ee
+  ONNXRUNTIME_VERSION: 1.23.0
+
+jobs:
+  build:
+    runs-on: windows-2022
+
+    steps:
+      - name: Check out add-on
+        uses: actions/checkout@v4
+
+      - name: Check out pinned Sonata source
+        uses: actions/checkout@v4
+        with:
+          repository: mush42/sonata
+          ref: ${{ env.SONATA_COMMIT }}
+          path: sonata-source
+          submodules: recursive
+
+      - name: Apply DirectML patch
+        shell: pwsh
+        run: |
+          git -C sonata-source apply --check ../engine/sonata-directml.patch
+          git -C sonata-source apply ../engine/sonata-directml.patch
+
+      - name: Install Rust
+        uses: dtolnay/rust-toolchain@1.97.1
+
+      - name: Build release engine
+        shell: pwsh
+        run: cargo build --release --manifest-path sonata-source/crates/frontends/grpc/Cargo.toml --features ort-dylib,directml
+
+      - name: Install DirectML runtime
+        shell: pwsh
+        run: py -3 -m pip install --target directml-runtime "onnxruntime-directml==$env:ONNXRUNTIME_VERSION"
+
+      - name: Assemble engine bundle
+        shell: pwsh
+        run: |
+          New-Item -ItemType Directory -Path dist | Out-Null
+          Copy-Item sonata-source/target/release/sonata-grpc.exe dist/
+          Copy-Item directml-runtime/onnxruntime/capi/onnxruntime.dll dist/
+          Copy-Item directml-runtime/onnxruntime/capi/onnxruntime_providers_shared.dll dist/
+          Copy-Item directml-runtime/onnxruntime/capi/DirectML.dll dist/
+          Copy-Item directml-runtime/onnxruntime/LICENSE dist/ONNXRUNTIME-LICENSE.txt
+          Copy-Item directml-runtime/onnxruntime/ThirdPartyNotices.txt dist/ONNXRUNTIME-ThirdPartyNotices.txt
+
+      - name: Upload engine bundle
+        uses: actions/upload-artifact@v4
+        with:
+          name: sonata-grpc-directml-windows-x64
+          path: dist/
+          if-no-files-found: error

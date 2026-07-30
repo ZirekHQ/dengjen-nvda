@@ -59,6 +59,7 @@ def _show_vcruntime_warning():
         log.exception("Failed to show VC++ redistributable warning dialog", exc_info=True)
 
 from ..const import SONATA_VOICES_BASE_DIR
+from ..engine_runtime import build_engine_environment
 from ..helpers import BIN_DIRECTORY, find_free_port, import_bundled_library
 
 
@@ -92,12 +93,17 @@ def start_grpc_server():
     SONATA_GRPC_SERVER_PORT = find_free_port()
     grpc_server_exe = os.path.join(BIN_DIRECTORY, "sonata-grpc.exe")
     nvda_espeak_dir = os.path.join(globalVars.appDir, "synthDrivers")
-    env = os.environ.copy()
+    env = build_engine_environment(BIN_DIRECTORY)
     env.update({
         "SONATA_GRPC_SERVER_PORT": str(SONATA_GRPC_SERVER_PORT),
         "SONATA_ESPEAKNG_DATA_DIRECTORY": os.fspath(nvda_espeak_dir),
         "SONATA_GRPC": "info",
     })
+    log.info(
+        "Starting Sonata with execution provider %s (GPU threshold: %s phonemes)",
+        env["SONATA_EXECUTION_PROVIDER"],
+        env["SONATA_GPU_MIN_PHONEMES"],
+    )
     creationflags = (
         subprocess.DETACHED_PROCESS
         | subprocess.CREATE_NEW_PROCESS_GROUP
