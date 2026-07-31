@@ -73,6 +73,7 @@ SONATA_GRPC_SERVER_PORT = None
 GRPC_SERVER_PROCESS = None
 CHANNEL = None
 SONATA_GRPC_SERVICE = None
+SERVER_CHECK_TIMEOUT = 15
 
 
 def start_grpc_server():
@@ -156,8 +157,8 @@ def terminate():
 
 
 @aio.asyncio_coroutine_to_concurrent_future
-async def check_grpc_server(timeout=15) -> str:
-    async with asyncio.timeout(timeout):
+async def check_grpc_server() -> str:
+    async with asyncio.timeout(SERVER_CHECK_TIMEOUT):
         return await get_sonata_version()
 
 
