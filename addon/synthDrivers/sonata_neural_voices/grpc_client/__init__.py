@@ -269,7 +269,10 @@ async def speak(
     voice_id, text, rate=None, volume=None, pitch=None, appended_silence_ms=None, streaming=False
 ):
     speech_args = None
-    if any([rate, volume, pitch, appended_silence_ms]):
+    if any(
+        value is not None
+        for value in (rate, volume, pitch, appended_silence_ms)
+    ):
         speech_args = msgs.SpeechArgs(
             rate=rate,
             volume=volume,

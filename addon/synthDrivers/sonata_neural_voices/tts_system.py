@@ -6,6 +6,7 @@
 import copy
 import operator
 import os
+import re
 from abc import ABC, abstractmethod
 from contextlib import contextmanager
 from dataclasses import dataclass, field
@@ -19,6 +20,69 @@ from . import aio
 from . import grpc_client
 from .const import *
 from .helpers import import_bundled_library, LIB_DIRECTORY
+
+
+# Standard Piper models return a complete waveform for each request. Keeping
+# requests short lets NVDA play the first waveform while the following one is
+# being generated, which bounds time-to-first-audio without changing rate.
+LOW_LATENCY_CHUNK_WORDS = 8
+_MIN_PHRASE_BREAK_WORDS = 4
+_SENTENCE_ENDINGS = frozenset(".!?…")
+_PHRASE_ENDINGS = frozenset(",;:")
+_TRAILING_CLOSERS = "\"'\u2019\u201d)]}"
+
+
+def split_text_for_low_latency(text, max_words=LOW_LATENCY_CHUNK_WORDS):
+    """Split text into short, natural synthesis requests.
+
+    Whitespace-only text is ignored. Sentence endings are always respected;
+    commas and similar phrase endings are preferred after a few words. A hard
+    word limit guarantees that even one unusually long sentence starts
+    playing promptly.
+    """
+    if max_words < 1:
+        raise ValueError("max_words must be at least 1")
+
+    words = list(re.finditer(r"\S+", text))
+    if not words:
+        return []
+
+    chunks = []
+    first_word = 0
+    chunk_start = 0
+    word_count = len(words)
+    while first_word < word_count:
+        hard_end = min(first_word + max_words, word_count)
+        break_after = None
+        phrase_break_after = None
+
+        for word_index in range(first_word, hard_end):
+            token = words[word_index].group().rstrip(_TRAILING_CLOSERS)
+            ending = token[-1:] if token else ""
+            words_in_chunk = word_index - first_word + 1
+            if ending in _SENTENCE_ENDINGS:
+                break_after = word_index + 1
+                break
+            if (
+                words_in_chunk >= _MIN_PHRASE_BREAK_WORDS
+                and ending in _PHRASE_ENDINGS
+            ):
+                phrase_break_after = word_index + 1
+
+        if break_after is None:
+            break_after = phrase_break_after or hard_end
+
+        if break_after < word_count:
+            chunk_end = words[break_after].start()
+        else:
+            chunk_end = len(text)
+        chunk = text[chunk_start:chunk_end].strip()
+        if chunk:
+            chunks.append(chunk)
+        chunk_start = chunk_end
+        first_word = break_after
+
+    return chunks
 
 
 class VoiceNotFoundError(LookupError):
@@ -179,17 +243,24 @@ class SonataVoice:
     async def synthesize(self, text, rate, volume, pitch, sentence_silence_ms):
         if (len(text) < 10) and (set(text.strip()).issubset(IGNORED_PUNCS)):
             return
-        stream = grpc_client.speak(
-            voice_id=self.remote_id,
-            text=text,
-            rate=rate,
-            volume=volume,
-            pitch=pitch,
-            appended_silence_ms=sentence_silence_ms,
-            streaming=self.supports_streaming_output
-        )
-        async for ret in stream:
-            yield ret.wav_samples
+        if self.supports_streaming_output:
+            text_chunks = [text]
+        else:
+            text_chunks = split_text_for_low_latency(text)
+
+        for chunk_index, text_chunk in enumerate(text_chunks):
+            is_last_chunk = chunk_index == len(text_chunks) - 1
+            stream = grpc_client.speak(
+                voice_id=self.remote_id,
+                text=text_chunk,
+                rate=rate,
+                volume=volume,
+                pitch=pitch,
+                appended_silence_ms=(sentence_silence_ms if is_last_chunk else 0),
+                streaming=self.supports_streaming_output,
+            )
+            async for ret in stream:
+                yield ret.wav_samples
 
 
 class SpeechOptions:

@@ -6,12 +6,16 @@ All NVDA internals and gRPC calls are stubbed by conftest.py.
 No real gRPC server is required.
 """
 
+import asyncio
 import sys
 import pytest
 from pathlib import Path
+from types import SimpleNamespace
 from unittest.mock import MagicMock
 
+from sonata_neural_voices import grpc_client
 from sonata_neural_voices.tts_system import (
+    LOW_LATENCY_CHUNK_WORDS,
     SonataVoice,
     SonataTextToSpeechSystem,
     SpeechOptions,
@@ -19,6 +23,7 @@ from sonata_neural_voices.tts_system import (
     VoiceNotFoundError,
     SpeakerNotFoundError,
     Scales,
+    split_text_for_low_latency,
 )
 from sonata_neural_voices.const import (
     DEFAULT_RATE,
@@ -136,6 +141,93 @@ class TestSonataVoiceFromPath:
 
     def test_fast_variant_key(self, single_voice):
         assert single_voice.fast_variant_key == "en-test+RT-medium"
+
+
+class TestLowLatencySynthesis:
+
+    def test_short_text_stays_in_one_chunk(self):
+        assert split_text_for_low_latency("One short sentence.") == [
+            "One short sentence."
+        ]
+
+    def test_long_sentence_is_bounded(self):
+        text = "one two three four five six seven eight nine ten eleven"
+        chunks = split_text_for_low_latency(text)
+
+        assert chunks == [
+            "one two three four five six seven eight",
+            "nine ten eleven",
+        ]
+        assert all(len(chunk.split()) <= LOW_LATENCY_CHUNK_WORDS for chunk in chunks)
+
+    def test_prefers_natural_sentence_and_phrase_breaks(self):
+        text = "One. two three four five, six seven eight nine ten."
+
+        assert split_text_for_low_latency(text) == [
+            "One.",
+            "two three four five,",
+            "six seven eight nine ten.",
+        ]
+
+    def test_standard_voice_sends_short_requests_and_silence_only_at_end(
+        self, single_voice, monkeypatch
+    ):
+        calls = []
+
+        async def fake_speak(**kwargs):
+            calls.append(kwargs)
+            yield SimpleNamespace(wav_samples=kwargs["text"].encode())
+
+        monkeypatch.setattr(grpc_client, "speak", fake_speak)
+        text = "one two three four five six seven eight nine ten"
+
+        async def collect():
+            return [
+                audio
+                async for audio in single_voice.synthesize(text, 50, 100, 50, 75)
+            ]
+
+        audio = asyncio.run(collect())
+
+        assert audio == [
+            b"one two three four five six seven eight",
+            b"nine ten",
+        ]
+        assert [call["appended_silence_ms"] for call in calls] == [0, 75]
+        assert all(call["streaming"] is False for call in calls)
+
+    def test_fast_voice_keeps_engine_streaming_for_every_quality(
+        self, monkeypatch
+    ):
+        calls = []
+        fast_voice = _make_voice(key="en-test+RT-high")
+        fast_voice.supports_streaming_output = True
+
+        async def fake_speak(**kwargs):
+            calls.append(kwargs)
+            yield SimpleNamespace(wav_samples=b"first")
+            yield SimpleNamespace(wav_samples=b"second")
+
+        monkeypatch.setattr(grpc_client, "speak", fake_speak)
+
+        async def collect():
+            return [
+                audio
+                async for audio in fast_voice.synthesize(
+                    "one two three four five six seven eight nine ten",
+                    50,
+                    100,
+                    50,
+                    75,
+                )
+            ]
+
+        audio = asyncio.run(collect())
+
+        assert audio == [b"first", b"second"]
+        assert len(calls) == 1
+        assert calls[0]["streaming"] is True
+        assert calls[0]["appended_silence_ms"] == 75
 
 
 # ---------------------------------------------------------------------------

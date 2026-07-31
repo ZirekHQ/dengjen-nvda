@@ -23,12 +23,12 @@ addon_info = AddonInfo(
 	# Translators: Long description to be shown for this add-on on add-on information from add-on store
 	addon_description=_("""Neural voices for NVDA based on Sonata"""),
 	# version
-	addon_version="3.3.2",
+	addon_version="3.3.3",
 	# Brief changelog for this version
 	# Translators: what's new content for the add-on version to be shown in the add-on store
 	addon_changelog=_(
-		"Optimizes total audio generation: short standard Piper segments use CPU, larger segments and all streaming +RT voices use DirectML. "
-		"Also prevents orphaned Sonata engine processes after NVDA exits unexpectedly."
+		"Prioritizes time to first audio: standard Piper voices synthesize short natural chunks while +RT voices keep native streaming. "
+		"DirectML is used consistently on supported GPUs for every voice quality and text length, with automatic CPU fallback."
 	),
 	# Author(s)
 	addon_author="Musharraf Omer (original) <ibnomer2011@hotmail.com>, Ali Ustek (maintainer) <13117393+austek@users.noreply.github.com>",

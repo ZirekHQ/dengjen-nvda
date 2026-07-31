@@ -12,7 +12,7 @@ from sonata_neural_voices.engine_runtime import (
 def test_build_engine_environment_sets_safe_defaults(tmp_path):
     env = build_engine_environment(tmp_path, {"PATH": r"C:\Windows\System32"})
 
-    assert DEFAULT_GPU_MIN_PHONEMES == 64
+    assert DEFAULT_GPU_MIN_PHONEMES == 0
     assert env["ORT_DYLIB_PATH"] == os.fspath(
         Path(tmp_path).resolve() / "onnxruntime.dll"
     )
