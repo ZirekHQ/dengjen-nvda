@@ -133,9 +133,8 @@ class TestAuthorFormat:
 
     def test_author_contains_email(self):
         author = INFO["addon_author"]
-        assert "<" in author and ">" in author, (
-            f"addon_author '{author}' should contain an email in angle brackets"
-        )
+        assert "<" in author, f"addon_author '{author}' should contain an opening angle bracket"
+        assert ">" in author, f"addon_author '{author}' should contain a closing angle bracket"
 
     def test_author_email_is_valid(self):
         author = INFO["addon_author"]

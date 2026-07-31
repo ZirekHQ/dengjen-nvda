@@ -220,6 +220,6 @@ async def speak(
 async def bench(n=10000):
     initialize()
     t0 = time.perf_counter()
-    for i in range(n):
+    for _ in range(n):
         await get_sonata_version()
     return time.perf_counter() - t0

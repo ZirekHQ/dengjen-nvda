@@ -61,9 +61,9 @@ class SimpleDialog(sc.SizedDialog):
 
         panel = self.GetContentsPane()
         self.addControls(panel)
-        buttonsSizer = self.getButtons(panel)
-        if buttonsSizer is not None:
-            self.SetButtonSizer(buttonsSizer)
+        buttons_sizer = self.getButtons(panel)
+        if buttons_sizer is not None:
+            self.SetButtonSizer(buttons_sizer)
 
         self.Layout()
         self.Fit()
@@ -71,11 +71,11 @@ class SimpleDialog(sc.SizedDialog):
         self.Center(wx.BOTH)
 
     def SetButtonSizer(self, sizer):
-        bottomSizer = wx.BoxSizer(wx.VERTICAL)
+        bottom_sizer = wx.BoxSizer(wx.VERTICAL)
         line = wx.StaticLine(self, -1, size=(20, -1), style=wx.LI_HORIZONTAL)
-        bottomSizer.Add(line, 0, wx.TOP | wx.EXPAND, 15)
-        bottomSizer.Add(sizer, 0, wx.EXPAND | wx.ALL, 10)
-        super().SetButtonSizer(bottomSizer)
+        bottom_sizer.Add(line, 0, wx.TOP | wx.EXPAND, 15)
+        bottom_sizer.Add(sizer, 0, wx.EXPAND | wx.ALL, 10)
+        super().SetButtonSizer(bottom_sizer)
 
     def addControls(self, parent):
         raise NotImplementedError
@@ -83,11 +83,11 @@ class SimpleDialog(sc.SizedDialog):
     def getButtons(self, parent):
         btnsizer = wx.StdDialogButtonSizer()
         # Translators: the label of the OK button in a dialog
-        okBtn = wx.Button(self, wx.ID_OK, _("OK"))
-        okBtn.SetDefault()
+        ok_btn = wx.Button(self, wx.ID_OK, _("OK"))
+        ok_btn.SetDefault()
         # Translators: the label of the cancel button in a dialog
-        cancelBtn = wx.Button(self, wx.ID_CANCEL, _("Cancel"))
-        for btn in (okBtn, cancelBtn):
+        cancel_btn = wx.Button(self, wx.ID_CANCEL, _("Cancel"))
+        for btn in (ok_btn, cancel_btn):
             btnsizer.AddButton(btn)
         btnsizer.Realize()
         return btnsizer
@@ -160,10 +160,10 @@ class AsyncSnakDialog:
         gui.runScriptModalDialog(self.snak_dg)
 
     def on_future_completed(self, completed_future):
-        self.Dismiss()
+        self.dismiss()
         wx.CallAfter(self.done_callback, completed_future)
 
-    def Dismiss(self):
+    def dismiss(self):
         if self.snak_dg:
             wx.CallAfter(self.snak_dg.Hide)
             wx.CallAfter(self.snak_dg.Close)
