@@ -286,7 +286,7 @@ class PiperVoiceDownloader:
         target_file = os.path.join(download_dir, file.file_path.replace('/', os.sep))
         os.makedirs(os.path.dirname(target_file), exist_ok=True)
 
-        hasher = md5()
+        hasher = md5(usedforsecurity=False)
         total_size = file.size_in_bytes
         downloaded_til_now = 0
 

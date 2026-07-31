@@ -272,7 +272,6 @@ class OnlineSonataVoicesPanel(SizedPanel):
         refresh_list_btn = wx.Button(self, -1, _("&Refresh voices list"))
         self.Bind(wx.EVT_CHOICE, self.on_language_selection_change, self.language_choice)
         self.Bind(wx.EVT_LIST_ITEM_SELECTED, self.on_voice_selected, self.voices_list)
-        self.Bind(wx.EVT_CHOICE, self.on_speaker_selection_changed, self.speaker_choice)
         self.Bind(wx.EVT_BUTTON, self.on_preview, self.preview_btn)
         self.Bind(wx.EVT_BUTTON, self.on_download, self.download_std_btn)
         self.Bind(wx.EVT_BUTTON, self.on_download_rt, self.download_rt_btn)
@@ -339,9 +338,6 @@ class OnlineSonataVoicesPanel(SizedPanel):
             self.speaker_choice.SetSelection(0)
         else:
             self.speaker_choice.Enable(False)
-
-    def on_speaker_selection_changed(self, event):
-        pass
 
     def on_preview(self, event):
         # While a preview is playing, the same button acts as Stop. This keeps
