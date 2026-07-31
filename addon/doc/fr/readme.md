@@ -1,19 +1,34 @@
 # Voix neuronales Sonata pour NVDA
 
+> **Avis de maintenance de ce fork**
+>
+> L'auteur original, Musharraf Omer ([@mush42](https://github.com/mush42)), [a annoncé sur la liste des extensions NVDA](https://nvda-addons.groups.io/g/nvda-addons/message/27636) que des conflits de contrats commerciaux l'empêchent de continuer à maintenir cette extension open source. Ce fork poursuit le projet afin de garder l'extension fonctionnelle sur les versions actuelles de NVDA. Tout le mérite du travail original revient à Musharraf Omer.
+>
+> Cette traduction peut être en retard sur le [readme en anglais](https://github.com/austek/sonata-nvda/blob/main/readme.md).
+
 Cette extension implémente un pilote de synthèse vocale pour NVDA utilisant  le modèles neuronaux TTS. Elle supporte [Piper](https://github.com/rhasspy/piper).
 
 [Piper](https://github.com/rhasspy/piper) est un système de synthèse de texte à parole rapide, local et neuronal qui sonne bien et est optimisé pour fonctionner sur des appareils bas de gamme tels que le Raspberry Pi.
 
 Vous pouvez écouter les extraits de voix de Piper ici : [Piper voice samples](https://rhasspy.github.io/piper-samples/).
 
-Cette extension utilise [Sonata : Un moteur Rust multiplateforme pour les modèles neuronaux TTS](https://github.com/mush42/ssonata) qui est développé par Musharraf Omer.
+Cette extension utilise [Sonata : Un moteur Rust multiplateforme pour les modèles neuronaux TTS](https://github.com/mush42/sonata) qui est développé par Musharraf Omer.
 
+
+# Prérequis
+
+- NVDA 2025.1 ou ultérieur (testé jusqu'à 2026.1).
+- Le [Microsoft Visual C++ 2015-2022 Redistributable (x64)](https://aka.ms/vs/17/release/vc_redist.x64.exe). Le moteur de synthèse fourni avec l'extension est compilé avec MSVC et ne peut pas démarrer sans lui. S'il est absent, l'extension affiche un message renvoyant vers ce téléchargement ; installez-le puis redémarrez NVDA. La plupart des machines Windows le possèdent déjà.
 
 # Installation
 
 ## Téléchargement de l'extension
 
-Vous pouvez trouver le package de l'extension sous la section assets à partir de la [page release](https://github.com/mush42/sonata-nvda/releases/latest)
+Vous pouvez trouver le package de l'extension sous la section assets à partir de la [page release](https://github.com/austek/sonata-nvda/releases/latest)
+
+## Signaler des problèmes
+
+Merci de signaler les bogues et les demandes de fonctionnalités sur le [gestionnaire de tickets de ce fork](https://github.com/austek/sonata-nvda/issues).
 
 ## Ajout de voix
 
@@ -37,4 +52,4 @@ Heureusement, le développeur de `Piper` et certains développeurs de la communa
 
 # Licence
 
-Copyright(c) 2024, Musharraf Omer. Ce logiciel est sous licence GNU GENERAL PUBLIC LICENSE Version 2 (GPL v2).
+Copyright(c) 2024, Musharraf Omer. Copyright(c) 2026, Ali Ustek et les contributeurs de ce fork. Ce logiciel est sous licence GNU GENERAL PUBLIC LICENSE Version 2 (GPL v2).
