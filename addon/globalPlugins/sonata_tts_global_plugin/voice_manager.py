@@ -39,7 +39,7 @@ class InstalledSonataVoicesPanel(SizedPanel):
         self.__already_populated = threading.Event()
         # Add controls
         # Translators: label for a list of installed voices
-        voices_label = wx.StaticText(self, -1, _("Installed voices"))
+        wx.StaticText(self, -1, _("Installed voices"))
         self.voices_list = ImmutableObjectListView(
             self,
             -1,
@@ -177,7 +177,7 @@ class InstalledSonataVoicesPanel(SizedPanel):
                 self.update_voices_list(set_focus=True, invalidate_synth_voices_cache=True)
 
     def _on_install_voice_from_tar(self, event):
-        openFileDialog = wx.FileDialog(
+        open_file_dialog = wx.FileDialog(
             parent=gui.mainFrame,
             # Translators: title for a dialog for opening a file
             message=_("Choose voice archive file "),
@@ -191,8 +191,8 @@ class InstalledSonataVoicesPanel(SizedPanel):
             style=wx.FD_OPEN,
         )
         gui.runScriptModalDialog(
-            openFileDialog,
-            functools.partial(self._get_process_tar_archive, openFileDialog),
+            open_file_dialog,
+            functools.partial(self._get_process_tar_archive, open_file_dialog),
         )
 
     def _get_process_tar_archive(self, dialog, res):
@@ -420,10 +420,10 @@ class OnlineSonataVoicesPanel(SizedPanel):
             self.lang_to_voices.setdefault(voice.language, []).append(voice)
         for vlist in self.lang_to_voices.values():
             vlist.sort(key=operator.attrgetter("key"))
-        self.languages = list(sorted(
+        self.languages = sorted(
             self.lang_to_voices.keys(),
             key=operator.attrgetter("name_english")
-        ))
+        )
         self.language_choice.SetItems([lang.description for lang in self.languages])
         self.__already_populated.set()
 
@@ -466,8 +466,8 @@ class SonataVoiceManagerDialog(SimpleDialog):
     def getButtons(self, parent):
         btnsizer = wx.StdDialogButtonSizer()
         # Translators: the label of the close button in a dialog
-        cancelBtn = wx.Button(self, wx.ID_CANCEL, _("&Close"))
-        btnsizer.AddButton(cancelBtn)
+        cancel_btn = wx.Button(self, wx.ID_CANCEL, _("&Close"))
+        btnsizer.AddButton(cancel_btn)
         btnsizer.Realize()
         return btnsizer
 

@@ -88,5 +88,5 @@ def call_threaded(func: t.Callable[..., None]) -> t.Callable[..., "Future"]:
 
 
 def run_in_executor(func, *args, **kwargs):
-    callable = partial(func, *args, **kwargs)
-    return ASYNCIO_EVENT_LOOP.run_in_executor(THREADED_EXECUTOR, callable)
+    bound_func = partial(func, *args, **kwargs)
+    return ASYNCIO_EVENT_LOOP.run_in_executor(THREADED_EXECUTOR, bound_func)

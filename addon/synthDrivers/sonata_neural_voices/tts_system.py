@@ -76,7 +76,7 @@ class SonataVoice:
     description: str
     location: str
     properties: Optional[Mapping[str, int]] = field(default_factory=dict)
-    remote_id: str = None
+    remote_id: Optional[str] = None
     supports_streaming_output: bool = False
 
     @classmethod

@@ -33,7 +33,7 @@ def is_free_port(port):
             s.bind(("localhost", port))
             s.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
             return True
-        except (OSError, socket.error) as e:
+        except OSError:
             return False
 
 

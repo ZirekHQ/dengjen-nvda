@@ -58,9 +58,9 @@ _GRPC_IS_INIT = grpc_client.initialize()
 class DoneSpeakingTask:
     __slots__ = ["player", "on_index_reached",]
 
-    def __init__(self, player, onIndexReached):
+    def __init__(self, player, on_index_reached):
         self.player = player
-        self.on_index_reached = onIndexReached
+        self.on_index_reached = on_index_reached
 
     async def __call__(self):
         await run_in_executor(self.player.idle)
@@ -191,7 +191,7 @@ class SynthDriver(synthDriverHandler.SynthDriver):
             _GRPC_IS_INIT.result()
         except Exception:
             log.exception(
-                f"Failed to initialize Sonata services. Synthesizer will not be available.",
+                "Failed to initialize Sonata services. Synthesizer will not be available.",
                 exc_info=True,
             )
             return
@@ -199,7 +199,7 @@ class SynthDriver(synthDriverHandler.SynthDriver):
             sonata_grpc_server_version = grpc_client.check_grpc_server().result()
         except Exception:
             log.exception(
-                f"Failed to connect to sonata GRPC server. Synthesizer will not be available.",
+                "Failed to connect to sonata GRPC server. Synthesizer will not be available.",
                 exc_info=True,
             )
             return
@@ -247,13 +247,13 @@ class SynthDriver(synthDriverHandler.SynthDriver):
         with self.tts.create_synthesis_context():
             self._fast_prepare_and_run_speech_task(speechSequence)
 
-    def _fast_prepare_and_run_speech_task(self, speechSequence):
+    def _fast_prepare_and_run_speech_task(self, speech_sequence):
         self.cancel()
         speech_seq = []
         text_list = []
         index_command_list = []
         default_lang = self.tts.language
-        for item in speechSequence:
+        for item in speech_sequence:
             item_type = type(item)
             if item_type is IndexCommand:
                 index_command_list.append(item.index)
@@ -433,7 +433,7 @@ class SynthDriver(synthDriverHandler.SynthDriver):
 
     def _set_voice(self, value):
         if value not in self.availableVoices:
-            value = list(self.availableVoices)[0]
+            value = next(iter(self.availableVoices))
         self.__voice = value
         with suppress(AttributeError):
             del self._availableVariants
