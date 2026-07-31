@@ -8,3 +8,14 @@ updates:
     commit-message:
       prefix: "ci"
       include: "scope"
+
+  # CI tooling pinned in requirements-build.txt / requirements-test.txt.
+  # The libraries vendored under addon/.../lib are NOT covered here; they are
+  # recorded in lib/VENDORED.txt and bumped via the repo-root update_*.py scripts.
+  - package-ecosystem: "pip"
+    directory: "/"
+    schedule:
+      interval: "monthly"
+    commit-message:
+      prefix: "chore"
+      include: "scope"

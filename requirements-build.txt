@@ -1,0 +1,4 @@
+# Tooling for packaging the addon (scons) and the pre-commit code checks.
+markdown==3.10.3
+pre-commit==4.6.1
+scons==4.10.1
