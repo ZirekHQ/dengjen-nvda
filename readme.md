@@ -2,7 +2,7 @@
 
 > **Maintenance fork notice**
 >
-> The original author, Musharraf Omer ([@mush42](https://github.com/mush42)), [announced on the NVDA Add-ons list](https://nvda-addons.groups.io/g/nvda-addons/message/27636) that commercial contract conflicts prevent him from continuing to maintain this open-source add-on. This fork continues the project to keep the add-on working on current NVDA releases (2026.1+). All credit for the original work belongs to Musharraf Omer; this fork only carries minimal compatibility fixes.
+> The original author, Musharraf Omer ([@mush42](https://github.com/mush42)), [announced on the NVDA Add-ons list](https://nvda-addons.groups.io/g/nvda-addons/message/27636) that commercial contract conflicts prevent him from continuing to maintain this open-source add-on. This fork continues the project to keep the add-on working on current NVDA releases, and carries compatibility updates alongside bug fixes to the voice manager and the synthesizer driver. All credit for the original work belongs to Musharraf Omer.
 
 This add-on implements a speech synthesizer driver for NVDA using neural TTS models. It supports [Piper](https://github.com/rhasspy/piper).
 
@@ -12,6 +12,11 @@ You can listen to Piper's voice samples here: [Piper voice samples](https://rhas
 
 This add-on uses [Sonata: A cross-platform Rust engine for neural TTS models](https://github.com/mush42/sonata) which is being developed by Musharraf Omer.
 
+
+# Requirements
+
+- NVDA 2025.1 or later (tested up to 2026.1).
+- The [Microsoft Visual C++ 2015-2022 Redistributable (x64)](https://aka.ms/vs/17/release/vc_redist.x64.exe). The speech engine bundled with the add-on is built with MSVC and cannot start without it. If it is missing, the add-on shows a message pointing you to that download; install it and restart NVDA. Most Windows machines already have it.
 
 # Installation
 
@@ -45,4 +50,4 @@ Luckily, the `Piper` developer and some developers from the blind and vision-imp
 
 # License
 
-Copyright(c) 2024, Musharraf Omer. This software is licensed under The GNU GENERAL PUBLIC LICENSE Version 2 (GPL v2).
+Copyright(c) 2024, Musharraf Omer. Copyright(c) 2026, Ali Ustek and contributors to this fork. This software is licensed under The GNU GENERAL PUBLIC LICENSE Version 2 (GPL v2).
