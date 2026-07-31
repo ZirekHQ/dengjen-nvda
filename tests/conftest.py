@@ -243,6 +243,9 @@ _grpc_client.get_synth_options = MagicMock(
 )
 _grpc_client.set_synth_options = MagicMock(return_value=_make_ready_future(None))
 _grpc_client.SONATA_GRPC_SERVER_PORT = 50051
+_grpc_client.SERVER_CHECK_TIMEOUT = 15
+_grpc_client.STARTUP_TIMEOUT = 20
+_grpc_client.CALL_TIMEOUT = 10
 
 # aio — starts real threads/event loops; stub completely
 _aio = _stub_module("sonata_neural_voices.aio")

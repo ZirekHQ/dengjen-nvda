@@ -8,9 +8,12 @@ No real gRPC server is required.
 
 import sys
 import pytest
+from concurrent.futures import Future
+from concurrent.futures import TimeoutError as FuturesTimeoutError
 from pathlib import Path
 from unittest.mock import MagicMock
 
+from sonata_neural_voices import grpc_client
 from sonata_neural_voices.tts_system import (
     SonataVoice,
     SonataTextToSpeechSystem,
@@ -302,6 +305,46 @@ class TestSpeakerSingleVoice:
     def test_set_speaker_on_non_multispeaker_is_noop(self, tts):
         # Should not raise
         tts.speaker = FALLBACK_SPEAKER_NAME
+
+
+# ---------------------------------------------------------------------------
+# Synthesis options (gRPC-backed accessors)
+# ---------------------------------------------------------------------------
+
+class TestSynthOptionAccessors:
+
+    @pytest.mark.parametrize(
+        "name, expected",
+        [("noise_scale", 0.667), ("length_scale", 1.0), ("noise_w", 0.8)],
+    )
+    def test_getter_reads_option_from_server(self, multi_voice, name, expected):
+        assert getattr(multi_voice, name) == expected
+
+    @pytest.mark.parametrize("name", ["noise_scale", "length_scale", "noise_w"])
+    def test_setter_forwards_option_to_server(self, multi_voice, name):
+        grpc_client.set_synth_options.reset_mock()
+        setattr(multi_voice, name, 1.5)
+        grpc_client.set_synth_options.assert_called_once_with(
+            multi_voice.remote_id, **{name: 1.5}
+        )
+
+    def test_speaker_getter_reads_from_server_for_multi_speaker(self, multi_voice):
+        assert multi_voice.speaker == "default"
+
+    def test_speaker_setter_forwards_to_server_for_multi_speaker(self, multi_voice):
+        grpc_client.set_synth_options.reset_mock()
+        multi_voice.speaker = "Bob"
+        grpc_client.set_synth_options.assert_called_once_with(
+            multi_voice.remote_id, speaker="Bob"
+        )
+
+    def test_accessors_bound_the_wait_on_the_server(self, multi_voice, monkeypatch):
+        monkeypatch.setattr(grpc_client, "CALL_TIMEOUT", 0.05)
+        monkeypatch.setattr(
+            grpc_client, "get_synth_options", MagicMock(return_value=Future())
+        )
+        with pytest.raises(FuturesTimeoutError):
+            multi_voice.noise_scale
 
 
 # ---------------------------------------------------------------------------

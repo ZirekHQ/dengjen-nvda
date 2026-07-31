@@ -74,6 +74,10 @@ GRPC_SERVER_PROCESS = None
 CHANNEL = None
 SONATA_GRPC_SERVICE = None
 SERVER_CHECK_TIMEOUT = 15
+# Outer bound on the startup futures; must exceed SERVER_CHECK_TIMEOUT so the
+# coroutine's own error surfaces instead of a bare future timeout.
+STARTUP_TIMEOUT = SERVER_CHECK_TIMEOUT + 5
+CALL_TIMEOUT = 10
 
 
 def start_grpc_server():
@@ -137,20 +141,21 @@ async def initialize():
     start_grpc_server()
     if CHANNEL is not None:
         try:
+            # grpc.aio binds a channel to the loop that created it, so a channel
+            # outliving its loop has to be replaced rather than reused.
             channel_loop = getattr(CHANNEL, "_loop", None)
             if channel_loop is aio.ASYNCIO_EVENT_LOOP and aio.ASYNCIO_EVENT_LOOP.is_running():
                 return
         except Exception:
-            pass
+            log.debug("Failed to inspect the existing GRPC channel", exc_info=True)
         try:
             await CHANNEL.close()
         except Exception:
-            pass
+            log.debug("Failed to close the stale GRPC channel", exc_info=True)
         CHANNEL = None
     port = SONATA_GRPC_SERVER_PORT
     CHANNEL = grpc.aio.insecure_channel(f"localhost:{port}")
     SONATA_GRPC_SERVICE = sonata_grpcStub(CHANNEL)
-
 
 
 @atexit.register
