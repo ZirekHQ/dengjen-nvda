@@ -121,8 +121,10 @@ def start_grpc_server():
         "SONATA_GRPC": "info",
     })
     log.info(
-        "Starting Sonata with execution provider %s (GPU threshold: %s phonemes)",
+        "Starting Sonata with standard provider %s, streaming provider %s "
+        "(GPU threshold: %s phonemes)",
         env["SONATA_EXECUTION_PROVIDER"],
+        env["SONATA_STREAMING_EXECUTION_PROVIDER"],
         env["SONATA_GPU_MIN_PHONEMES"],
     )
     creationflags = (

@@ -5,6 +5,7 @@ from sonata_neural_voices.engine_runtime import (
     DEFAULT_DIRECTML_DEVICE_ID,
     DEFAULT_EXECUTION_PROVIDER,
     DEFAULT_GPU_MIN_PHONEMES,
+    DEFAULT_STREAMING_EXECUTION_PROVIDER,
     build_engine_environment,
 )
 
@@ -17,6 +18,10 @@ def test_build_engine_environment_sets_safe_defaults(tmp_path):
         Path(tmp_path).resolve() / "onnxruntime.dll"
     )
     assert env["SONATA_EXECUTION_PROVIDER"] == DEFAULT_EXECUTION_PROVIDER
+    assert (
+        env["SONATA_STREAMING_EXECUTION_PROVIDER"]
+        == DEFAULT_STREAMING_EXECUTION_PROVIDER
+    )
     assert env["SONATA_GPU_MIN_PHONEMES"] == str(DEFAULT_GPU_MIN_PHONEMES)
     assert env["SONATA_DIRECTML_DEVICE_ID"] == str(DEFAULT_DIRECTML_DEVICE_ID)
     assert env["PATH"].split(os.pathsep)[0] == os.fspath(Path(tmp_path).resolve())

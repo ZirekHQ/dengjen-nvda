@@ -7,6 +7,7 @@ No real gRPC server is required.
 """
 
 import asyncio
+from array import array
 import sys
 import pytest
 from pathlib import Path
@@ -15,7 +16,8 @@ from unittest.mock import MagicMock
 
 from sonata_neural_voices import grpc_client
 from sonata_neural_voices.tts_system import (
-    LOW_LATENCY_CHUNK_WORDS,
+    LOW_LATENCY_FIRST_CHUNK_WORDS,
+    LOW_LATENCY_FOLLOWING_CHUNK_WORDS,
     SonataVoice,
     SonataTextToSpeechSystem,
     SpeechOptions,
@@ -24,6 +26,7 @@ from sonata_neural_voices.tts_system import (
     SpeakerNotFoundError,
     Scales,
     split_text_for_low_latency,
+    trim_intermediate_trailing_silence,
 )
 from sonata_neural_voices.const import (
     DEFAULT_RATE,
@@ -155,10 +158,14 @@ class TestLowLatencySynthesis:
         chunks = split_text_for_low_latency(text)
 
         assert chunks == [
-            "one two three four five six seven eight",
-            "nine ten eleven",
+            "one two three",
+            "four five six seven eight nine ten eleven",
         ]
-        assert all(len(chunk.split()) <= LOW_LATENCY_CHUNK_WORDS for chunk in chunks)
+        assert len(chunks[0].split()) <= LOW_LATENCY_FIRST_CHUNK_WORDS
+        assert all(
+            len(chunk.split()) <= LOW_LATENCY_FOLLOWING_CHUNK_WORDS
+            for chunk in chunks[1:]
+        )
 
     def test_prefers_natural_sentence_and_phrase_breaks(self):
         text = "One. two three four five, six seven eight nine ten."
@@ -190,8 +197,8 @@ class TestLowLatencySynthesis:
         audio = asyncio.run(collect())
 
         assert audio == [
-            b"one two three four five six seven eight",
-            b"nine ten",
+            b"one two three",
+            b"four five six seven eight nine ten",
         ]
         assert [call["appended_silence_ms"] for call in calls] == [0, 75]
         assert all(call["streaming"] is False for call in calls)
@@ -228,6 +235,19 @@ class TestLowLatencySynthesis:
         assert len(calls) == 1
         assert calls[0]["streaming"] is True
         assert calls[0]["appended_silence_ms"] == 75
+
+    def test_trims_long_tail_silence_but_keeps_twenty_milliseconds(self):
+        samples = array("h", [1000] * 10 + [0] * 100)
+
+        trimmed = trim_intermediate_trailing_silence(samples.tobytes(), 1000)
+
+        assert len(trimmed) == (10 + 20) * 2
+
+    def test_does_not_trim_a_short_natural_tail(self):
+        samples = array("h", [1000] * 10 + [0] * 30)
+        audio = samples.tobytes()
+
+        assert trim_intermediate_trailing_silence(audio, 1000) == audio
 
 
 # ---------------------------------------------------------------------------

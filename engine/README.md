@@ -7,10 +7,11 @@ The bundled `sonata-grpc.exe` is built from
 
 The patch keeps CPU sessions as a fallback and creates DirectML sessions for
 both standard and streaming `+RT` Piper voices when DirectML is available.
-The default threshold is zero, so every standard utterance uses DirectML.
-Streaming `+RT` voices also use DirectML at all text lengths. The NVDA client
-keeps standard requests short so the first completed waveform can start
-playing while the next request is generated.
+Standard voices default to CPU, which has lower burst latency for the short
+requests used by the NVDA client. Streaming `+RT` voices use DirectML at all
+text lengths. The client starts standard speech with three words, generates
+following chunks during playback, and removes long model tail silence between
+chunks.
 DirectML sessions are serialized because the provider does not support
 concurrent `Run` calls on one session; CPU sessions remain concurrent.
 Streaming encoder or decoder initialization failures fall back to CPU without

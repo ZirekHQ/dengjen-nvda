@@ -100,7 +100,7 @@ index c13980b..07689c1 100644
 +
 +fn accelerator_min_phonemes() -> Option<usize> {
 +    let provider = std::env::var("SONATA_EXECUTION_PROVIDER")
-+        .unwrap_or_else(|_| "auto".to_string())
++        .unwrap_or_else(|_| "cpu".to_string())
 +        .to_ascii_lowercase();
 +    if provider == "cpu" {
 +        return None;

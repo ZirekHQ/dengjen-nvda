@@ -37,22 +37,22 @@ You can also install voices from local archives. After obtaining the voice's fil
 
 ## GPU acceleration
 
-Sonata prioritizes time to first audio. Standard Piper voices are synthesized
-in short natural chunks of at most eight words, so NVDA can start playing the
-first chunk while the following chunk is generated. Streaming `+RT` voices
-keep their native real-time output. This changes response latency, not the
-configured speaking rate.
+Sonata prioritizes when the voice actually starts speaking and whether it can
+continue without gaps. Standard Piper voices begin with a natural chunk of at
+most three words on CPU. Following chunks of at most eight words are generated
+while that first speech is playing. Long model-generated tail silence is
+removed between chunks, while the final requested sentence silence is kept.
 
-On supported Windows computers, both standard and `+RT` voices consistently
-use DirectML at every text length and for every voice quality. This avoids
-latency changes caused by switching between CPU and GPU. DirectML works with
-DirectX 12-capable NVIDIA, AMD, and Intel GPUs and does not require the CUDA
-toolkit. If DirectML or a compatible GPU is unavailable, each voice falls back
-to CPU inference automatically.
+Streaming `+RT` voices keep native real-time output and use DirectML on
+supported GPUs. This fixed routing avoids latency changes from switching
+providers within one voice type and applies to low, medium, and high quality
+voices. The configured speaking rate is not changed.
 
-The earlier adaptive threshold optimized complete generation time. The
-current default instead optimizes the screen-reader experience: playback
-begins as soon as the first useful audio chunk is available.
+On the two installed Swedish standard voices used for burst testing, CPU
+delivered one, three, and eight words in approximately 43, 75, and 188 ms.
+DirectML took approximately 112, 219, and 235 ms for the same cases. The
+short CPU start therefore begins standard speech sooner, while background
+generation keeps subsequent audio ahead of playback.
 The reproducible first-audio benchmark is included as
 `tools/benchmark_execution_providers.py`.
 
@@ -61,11 +61,13 @@ cancels speech or switches synthesizers. CPU sessions remain concurrent.
 
 Advanced users can set these environment variables before starting NVDA:
 
-- `SONATA_EXECUTION_PROVIDER=cpu` disables GPU acceleration. The default is
-  `auto`; `directml` also enables DirectML.
+- `SONATA_EXECUTION_PROVIDER` controls standard voices. The low-latency default
+  is `cpu`; `auto` or `directml` enables DirectML.
 - `SONATA_GPU_MIN_PHONEMES` changes the standard-voice crossover point. The
-  low-latency default is `0`, which uses GPU at every text length.
-- `SONATA_STREAMING_EXECUTION_PROVIDER=cpu` keeps only `+RT` voices on CPU.
+  default is `0`; it is used only when the standard provider is `auto` or
+  `directml` and is ignored by the default CPU route.
+- `SONATA_STREAMING_EXECUTION_PROVIDER` controls `+RT` voices. The default is
+  `directml`; `cpu` disables their GPU acceleration.
 - `SONATA_DIRECTML_DEVICE_ID` selects a DirectML adapter. The default is `0`.
 
 ## A note on voice quality

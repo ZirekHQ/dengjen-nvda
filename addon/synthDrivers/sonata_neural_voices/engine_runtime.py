@@ -7,7 +7,8 @@ import os
 from pathlib import Path
 
 
-DEFAULT_EXECUTION_PROVIDER = "auto"
+DEFAULT_EXECUTION_PROVIDER = "cpu"
+DEFAULT_STREAMING_EXECUTION_PROVIDER = "directml"
 DEFAULT_GPU_MIN_PHONEMES = 0
 DEFAULT_DIRECTML_DEVICE_ID = 0
 ONNXRUNTIME_DLL = "onnxruntime.dll"
@@ -25,6 +26,10 @@ def build_engine_environment(bin_directory, base_environment=None):
     env = dict(os.environ if base_environment is None else base_environment)
     env["ORT_DYLIB_PATH"] = os.fspath(bin_directory / ONNXRUNTIME_DLL)
     env.setdefault("SONATA_EXECUTION_PROVIDER", DEFAULT_EXECUTION_PROVIDER)
+    env.setdefault(
+        "SONATA_STREAMING_EXECUTION_PROVIDER",
+        DEFAULT_STREAMING_EXECUTION_PROVIDER,
+    )
     env.setdefault("SONATA_GPU_MIN_PHONEMES", str(DEFAULT_GPU_MIN_PHONEMES))
     env.setdefault("SONATA_DIRECTML_DEVICE_ID", str(DEFAULT_DIRECTML_DEVICE_ID))
 
