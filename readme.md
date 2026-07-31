@@ -40,6 +40,41 @@ Note that we recommend choosing the `low` or `medium` quality voices for your ta
 
 You can also install voices from local archives. After obtaining the voice's file, open the voice manager, in the installed tab, click the button labeled `Install from local file`. Choose the voice file, wait for the voice to install, and restart NVDA to refresh the voices list.
 
+## GPU acceleration
+
+Sonata prioritizes when the voice actually starts speaking and whether it can
+continue without gaps. Standard Piper voices begin with a natural chunk of at
+most three words on CPU. Following chunks of at most eight words are generated
+while that first speech is playing. Long model-generated tail silence is
+removed between chunks, while the final requested sentence silence is kept.
+
+Streaming `+RT` voices keep native real-time output and use DirectML on
+supported GPUs. This fixed routing avoids latency changes from switching
+providers within one voice type and applies to low, medium, and high quality
+voices. The configured speaking rate is not changed.
+
+On the two installed Swedish standard voices used for burst testing, CPU
+delivered one, three, and eight words in approximately 43, 75, and 188 ms.
+DirectML took approximately 112, 219, and 235 ms for the same cases. The
+short CPU start therefore begins standard speech sooner, while background
+generation keeps subsequent audio ahead of playback.
+The reproducible first-audio benchmark is included as
+`tools/benchmark_execution_providers.py`.
+
+DirectML calls are serialized to prevent overlapping inference when NVDA
+cancels speech or switches synthesizers. CPU sessions remain concurrent.
+
+Advanced users can set these environment variables before starting NVDA:
+
+- `SONATA_EXECUTION_PROVIDER` controls standard voices. The low-latency default
+  is `cpu`; `auto` or `directml` enables DirectML.
+- `SONATA_GPU_MIN_PHONEMES` changes the standard-voice crossover point. The
+  default is `0`; it is used only when the standard provider is `auto` or
+  `directml` and is ignored by the default CPU route.
+- `SONATA_STREAMING_EXECUTION_PROVIDER` controls `+RT` voices. The default is
+  `directml`; `cpu` disables their GPU acceleration.
+- `SONATA_DIRECTML_DEVICE_ID` selects a DirectML adapter. The default is `0`.
+
 ## A note on voice quality
 
 The currently available voices are trained using freely available TTS datasets, which are generally of low quality (mostly public domain audio books or research quality recordings).

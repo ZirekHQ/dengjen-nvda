@@ -1,0 +1,389 @@
+diff --git a/crates/frontends/grpc/Cargo.toml b/crates/frontends/grpc/Cargo.toml
+index 8491026..f4f7f33 100644
+--- a/crates/frontends/grpc/Cargo.toml
++++ b/crates/frontends/grpc/Cargo.toml
+@@ -6,6 +6,7 @@ edition = "2021"
+ [features]
+ default = []
+ ort-dylib = ["ort/load-dynamic"]
++directml = ["ort/directml"]
+ 
+ [dependencies]
+ async-stream = "0.3.5"
+diff --git a/crates/sonata/models/piper/Cargo.toml b/crates/sonata/models/piper/Cargo.toml
+index e08edbe..904f1f4 100644
+--- a/crates/sonata/models/piper/Cargo.toml
++++ b/crates/sonata/models/piper/Cargo.toml
+@@ -9,6 +9,7 @@ sonata-core = { path = "../../core" }
+ ndarray = "0.16.1"
+ serde = { version = "1.0.160", features = ["derive"] }
+ serde_json = "1.0.89"
++log = "0.4.21"
+ 
+ [dependencies.libtashkeel_core]
+ version = "1.2.0"
+diff --git a/crates/sonata/models/piper/src/lib.rs b/crates/sonata/models/piper/src/lib.rs
+index c13980b..07689c1 100644
+--- a/crates/sonata/models/piper/src/lib.rs
++++ b/crates/sonata/models/piper/src/lib.rs
+@@ -12,15 +12,57 @@ use std::any::Any;
+ use std::borrow::Cow;
+ use std::collections::HashMap;
+ use std::fs::File;
++use std::ops::Deref;
+ use std::path::{Path, PathBuf};
+-use std::sync::{Arc, RwLock};
++use std::sync::{Arc, Mutex, MutexGuard, RwLock};
+ 
+ const MIN_CHUNK_SIZE: isize = 44;
+ const MAX_CHUNK_SIZE: usize = 1024;
++const DEFAULT_GPU_MIN_PHONEMES: usize = 0;
+ const BOS: char = '^';
+ const EOS: char = '$';
+ const PAD: char = '_';
+ 
++enum InferenceSession {
++    Concurrent(Session),
++    Serialized(Mutex<Session>),
++}
++
++enum InferenceSessionAccess<'a> {
++    Concurrent(&'a Session),
++    Serialized(MutexGuard<'a, Session>),
++}
++
++impl Deref for InferenceSessionAccess<'_> {
++    type Target = Session;
++
++    fn deref(&self) -> &Self::Target {
++        match self {
++            Self::Concurrent(session) => session,
++            Self::Serialized(session) => session,
++        }
++    }
++}
++
++impl InferenceSession {
++    fn concurrent(session: Session) -> Self {
++        Self::Concurrent(session)
++    }
++
++    fn serialized(session: Session) -> Self {
++        Self::Serialized(Mutex::new(session))
++    }
++
++    fn access(&self) -> InferenceSessionAccess<'_> {
++        match self {
++            Self::Concurrent(session) => InferenceSessionAccess::Concurrent(session),
++            Self::Serialized(session) => InferenceSessionAccess::Serialized(
++                session.lock().unwrap_or_else(|error| error.into_inner()),
++            ),
++        }
++    }
++}
++
+ #[inline(always)]
+ fn reversed_mapping<K, V>(input: &HashMap<K, V>) -> HashMap<V, K>
+ where
+@@ -76,12 +118,49 @@ fn create_tashkeel_engine(
+     }
+ }
+ 
+-fn create_inference_session(model_path: &Path) -> Result<Session, ort::Error> {
++fn create_cpu_inference_session(model_path: &Path) -> Result<Session, ort::Error> {
++    Session::builder()?
++        .with_execution_providers([
++            ort::execution_providers::CPUExecutionProvider::default().build()
++        ])?
++        .commit_from_file(model_path)
++}
++
++fn accelerator_min_phonemes() -> Option<usize> {
++    let provider = std::env::var("SONATA_EXECUTION_PROVIDER")
++        .unwrap_or_else(|_| "cpu".to_string())
++        .to_ascii_lowercase();
++    if provider == "cpu" {
++        return None;
++    }
++    if provider != "auto" && provider != "directml" {
++        log::warn!(
++            "Unknown SONATA_EXECUTION_PROVIDER value `{provider}`; using automatic selection"
++        );
++    }
++    Some(
++        std::env::var("SONATA_GPU_MIN_PHONEMES")
++            .ok()
++            .and_then(|value| value.parse().ok())
++            .unwrap_or(DEFAULT_GPU_MIN_PHONEMES),
++    )
++}
++
++fn create_directml_inference_session(model_path: &Path) -> Result<Session, ort::Error> {
++    let device_id = std::env::var("SONATA_DIRECTML_DEVICE_ID")
++        .ok()
++        .and_then(|value| value.parse().ok())
++        .unwrap_or(0);
+     Session::builder()?
+-        // .with_parallel_execution(true)?
+-        // .with_inter_threads(16)?
+-        // .with_optimization_level(ort::GraphOptimizationLevel::Level3)?
+-        // .with_memory_pattern(false)?
++        .with_parallel_execution(false)?
++        .with_memory_pattern(false)?
++        .with_execution_providers([
++            ort::execution_providers::DirectMLExecutionProvider::default()
++                .with_device_id(device_id)
++                .build()
++                .error_on_failure(),
++            ort::execution_providers::CPUExecutionProvider::default().build(),
++        ])?
+         .commit_from_file(model_path)
+ }
+ 
+@@ -292,7 +371,8 @@ pub struct VitsModel {
+     synth_config: RwLock<PiperSynthesisConfig>,
+     config: ModelConfig,
+     speaker_map: HashMap<i64, String>,
+-    session: Session,
++    session: InferenceSession,
++    accelerator_session: Option<(InferenceSession, usize)>,
+     tashkeel_engine: Option<libtashkeel_core::DynamicInferenceEngine>,
+ }
+ 
+@@ -308,8 +388,8 @@ impl VitsModel {
+         synth_config: PiperSynthesisConfig,
+         onnx_path: &Path,
+     ) -> SonataResult<Self> {
+-        let session = match create_inference_session(onnx_path) {
+-            Ok(session) => session,
++        let session = match create_cpu_inference_session(onnx_path) {
++            Ok(session) => InferenceSession::concurrent(session),
+             Err(err) => {
+                 return Err(SonataError::OperationError(format!(
+                     "Failed to initialize onnxruntime inference session: `{}`",
+@@ -317,6 +397,26 @@ impl VitsModel {
+                 )))
+             }
+         };
++        let accelerator_session = accelerator_min_phonemes().and_then(
++            |min_phonemes| match create_directml_inference_session(onnx_path) {
++                Ok(session) => {
++                    log::info!(
++                        "DirectML acceleration enabled for `{}` (minimum {} phonemes)",
++                        onnx_path.display(),
++                        min_phonemes
++                    );
++                    Some((InferenceSession::serialized(session), min_phonemes))
++                }
++                Err(error) => {
++                    log::warn!(
++                        "DirectML is unavailable for `{}`; continuing on CPU: {}",
++                        onnx_path.display(),
++                        error
++                    );
++                    None
++                }
++            },
++        );
+         let speaker_map = reversed_mapping(&config.speaker_id_map);
+         let tashkeel_engine = if config.espeak.voice == "ar" {
+             match libtashkeel_core::create_inference_engine(None) {
+@@ -336,6 +436,7 @@ impl VitsModel {
+             config,
+             speaker_map,
+             session,
++            accelerator_session,
+             tashkeel_engine,
+         })
+     }
+@@ -357,7 +458,21 @@ impl VitsModel {
+             None
+         };
+ 
+-        let session = &self.session;
++        let use_accelerator = self
++            .accelerator_session
++            .as_ref()
++            .filter(|(_, min_phonemes)| input_len >= *min_phonemes)
++            .is_some();
++        if use_accelerator {
++            log::debug!("Using DirectML for an inference with {input_len} phonemes");
++        }
++        let session = self
++            .accelerator_session
++            .as_ref()
++            .filter(|(_, min_phonemes)| input_len >= *min_phonemes)
++            .map(|(session, _)| session)
++            .unwrap_or(&self.session)
++            .access();
+         let timer = std::time::Instant::now();
+         let outputs = {
+             let outputs = if let Some(sid_tensor) = speaker_id.clone() {
+@@ -481,8 +596,8 @@ pub struct VitsStreamingModel {
+     synth_config: RwLock<PiperSynthesisConfig>,
+     config: ModelConfig,
+     speaker_map: HashMap<i64, String>,
+-    encoder_model: Session,
+-    decoder_model: Arc<Session>,
++    encoder_model: InferenceSession,
++    decoder_model: Arc<InferenceSession>,
+     tashkeel_engine: Option<libtashkeel_core::DynamicInferenceEngine>,
+ }
+ 
+@@ -493,23 +608,71 @@ impl VitsStreamingModel {
+         encoder_path: &Path,
+         decoder_path: &Path,
+     ) -> SonataResult<Self> {
+-        let encoder_model = match create_inference_session(encoder_path) {
+-            Ok(model) => model,
+-            Err(err) => {
+-                return Err(SonataError::OperationError(format!(
+-                    "Failed to initialize onnxruntime inference session: `{}`",
+-                    err
+-                )))
++        let streaming_provider = std::env::var("SONATA_STREAMING_EXECUTION_PROVIDER")
++            .or_else(|_| std::env::var("SONATA_EXECUTION_PROVIDER"))
++            .unwrap_or_else(|_| "auto".to_string())
++            .to_ascii_lowercase();
++        let use_directml = match streaming_provider.as_str() {
++            "cpu" => false,
++            "auto" | "directml" => true,
++            unknown => {
++                log::warn!(
++                    "Unknown SONATA_STREAMING_EXECUTION_PROVIDER value `{unknown}`; \
++                    using automatic selection"
++                );
++                true
+             }
+         };
+-        let decoder_model = match create_inference_session(decoder_path) {
+-            Ok(model) => Arc::new(model),
+-            Err(err) => {
+-                return Err(SonataError::OperationError(format!(
++
++        let accelerated_sessions = if use_directml {
++            match (
++                create_directml_inference_session(encoder_path),
++                create_directml_inference_session(decoder_path),
++            ) {
++                (Ok(encoder), Ok(decoder)) => Some((encoder, decoder)),
++                (encoder, decoder) => {
++                    log::warn!(
++                        "DirectML streaming acceleration is unavailable; continuing on CPU. \
++                        Encoder error: {:?}. Decoder error: {:?}",
++                        encoder.err(),
++                        decoder.err()
++                    );
++                    None
++                }
++            }
++        } else {
++            None
++        };
++
++        let (encoder_model, decoder_model) = if let Some((encoder, decoder)) =
++            accelerated_sessions
++        {
++            log::info!(
++                "DirectML streaming acceleration enabled for `{}` and `{}`",
++                encoder_path.display(),
++                decoder_path.display()
++            );
++            (
++                InferenceSession::serialized(encoder),
++                Arc::new(InferenceSession::serialized(decoder)),
++            )
++        } else {
++            let encoder = create_cpu_inference_session(encoder_path).map_err(|err| {
++                SonataError::OperationError(format!(
+                     "Failed to initialize onnxruntime inference session: `{}`",
+                     err
+-                )))
+-            }
++                ))
++            })?;
++            let decoder = create_cpu_inference_session(decoder_path).map_err(|err| {
++                SonataError::OperationError(format!(
++                    "Failed to initialize onnxruntime inference session: `{}`",
++                    err
++                ))
++            })?;
++            (
++                InferenceSession::concurrent(encoder),
++                Arc::new(InferenceSession::concurrent(decoder)),
++            )
+         };
+         let speaker_map = reversed_mapping(&config.speaker_id_map);
+         let tashkeel_engine = create_tashkeel_engine(&config)?;
+@@ -526,7 +689,8 @@ impl VitsStreamingModel {
+     fn infer_with_values(&self, input_phonemes: Vec<i64>) -> SonataAudioResult {
+         let timer = std::time::Instant::now();
+         let encoder_output = self.infer_encoder(input_phonemes)?;
+-        let audio = encoder_output.infer_decoder(self.decoder_model.as_ref())?;
++        let decoder_model = self.decoder_model.access();
++        let audio = encoder_output.infer_decoder(&decoder_model)?;
+         let inference_ms = timer.elapsed().as_millis() as f32;
+         Ok(Audio::new(
+             audio,
+@@ -554,7 +718,7 @@ impl VitsStreamingModel {
+             None
+         };
+ 
+-        let session = &self.encoder_model;
++        let session = self.encoder_model.access();
+         {
+             let outputs = if let Some(sid_tensor) = speaker_id.clone() {
+                 let inputs = ort::inputs![phoneme_inputs, input_lengths, scales, sid_tensor].unwrap();
+@@ -763,7 +927,7 @@ impl EncoderOutputs {
+ }
+ 
+ struct SpeechStreamer {
+-    decoder_model: Arc<Session>,
++    decoder_model: Arc<InferenceSession>,
+     encoder_outputs: EncoderOutputs,
+     mel_chunker: AdaptiveMelChunker,
+     one_shot: bool,
+@@ -771,7 +935,7 @@ struct SpeechStreamer {
+ 
+ impl SpeechStreamer {
+     fn new(
+-        decoder_model: Arc<Session>,
++        decoder_model: Arc<InferenceSession>,
+         encoder_outputs: EncoderOutputs,
+         chunk_size: usize,
+         chunk_padding: usize,
+@@ -796,8 +960,8 @@ impl SpeechStreamer {
+         audio_index: ndarray::Slice,
+     ) -> SonataResult<AudioSamples> {
+         // println!("Mel index: {:?}\nAudio Index: {:?}", mel_index, audio_index);
+-        let audio = {
+-            let session: Arc<Session> = Arc::clone(&self.decoder_model);
++        let audio_values = {
++            let session = self.decoder_model.access();
+             let z_view = self.encoder_outputs.z.view();
+             let y_mask_view = self.encoder_outputs.y_mask.view();
+             let z_chunk = z_view.slice_axis(Axis(2), mel_index);
+@@ -819,8 +983,9 @@ impl SpeechStreamer {
+             let audio_t = outputs[0].try_extract_tensor::<f32>().map_err(|e| {
+                 SonataError::OperationError(format!("Failed to run model inference. Error: {}", e))
+             })?;
+-            self.process_chunk_audio(audio_t.view().view(), audio_index)?
++            audio_t.view().to_owned()
+         };
++        let audio = self.process_chunk_audio(audio_values.view(), audio_index)?;
+         Ok(audio)
+     }
+     #[inline(always)]
+@@ -847,10 +1012,8 @@ impl Iterator for SpeechStreamer {
+         let (mel_index, audio_index) = self.mel_chunker.next()?;
+         if self.one_shot {
+             self.mel_chunker.consume();
+-            Some(
+-                self.encoder_outputs
+-                    .infer_decoder(self.decoder_model.as_ref()),
+-            )
++            let session = self.decoder_model.access();
++            Some(self.encoder_outputs.infer_decoder(&session))
+         } else {
+             Some(self.synthesize_chunk(mel_index, audio_index))
+         }

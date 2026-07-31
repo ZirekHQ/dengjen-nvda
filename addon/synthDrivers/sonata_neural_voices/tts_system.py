@@ -6,6 +6,8 @@
 import copy
 import operator
 import os
+import re
+from array import array
 from abc import ABC, abstractmethod
 from contextlib import contextmanager
 from dataclasses import dataclass, field
@@ -19,6 +21,105 @@ from . import aio
 from . import grpc_client
 from .const import *
 from .helpers import import_bundled_library, LIB_DIRECTORY
+
+
+# Standard Piper models return a complete waveform for each request. A short
+# first request starts speaking quickly; larger following requests are then
+# generated while that first audio is playing.
+LOW_LATENCY_FIRST_CHUNK_WORDS = 3
+LOW_LATENCY_FOLLOWING_CHUNK_WORDS = 8
+_MIN_PHRASE_BREAK_WORDS = 4
+_SENTENCE_ENDINGS = frozenset(".!?…")
+_PHRASE_ENDINGS = frozenset(",;:")
+_TRAILING_CLOSERS = "\"'\u2019\u201d)]}"
+_SILENCE_AMPLITUDE = 256
+_SILENCE_TO_KEEP_MS = 20
+_MIN_SILENCE_TO_TRIM_MS = 40
+
+
+def split_text_for_low_latency(
+    text,
+    first_chunk_words=LOW_LATENCY_FIRST_CHUNK_WORDS,
+    following_chunk_words=LOW_LATENCY_FOLLOWING_CHUNK_WORDS,
+):
+    """Split text into short, natural synthesis requests.
+
+    Whitespace-only text is ignored. Sentence endings are always respected;
+    commas and similar phrase endings are preferred after a few words. A hard
+    word limit guarantees that even one unusually long sentence starts
+    playing promptly.
+    """
+    if first_chunk_words < 1 or following_chunk_words < 1:
+        raise ValueError("chunk word limits must be at least 1")
+
+    words = list(re.finditer(r"\S+", text))
+    if not words:
+        return []
+
+    chunks = []
+    first_word = 0
+    chunk_start = 0
+    word_count = len(words)
+    while first_word < word_count:
+        chunk_word_limit = (
+            first_chunk_words if first_word == 0 else following_chunk_words
+        )
+        hard_end = min(first_word + chunk_word_limit, word_count)
+        break_after = None
+        phrase_break_after = None
+
+        for word_index in range(first_word, hard_end):
+            token = words[word_index].group().rstrip(_TRAILING_CLOSERS)
+            ending = token[-1:] if token else ""
+            words_in_chunk = word_index - first_word + 1
+            if ending in _SENTENCE_ENDINGS:
+                break_after = word_index + 1
+                break
+            if (
+                words_in_chunk >= _MIN_PHRASE_BREAK_WORDS
+                and ending in _PHRASE_ENDINGS
+            ):
+                phrase_break_after = word_index + 1
+
+        if break_after is None:
+            break_after = phrase_break_after or hard_end
+
+        if break_after < word_count:
+            chunk_end = words[break_after].start()
+        else:
+            chunk_end = len(text)
+        chunk = text[chunk_start:chunk_end].strip()
+        if chunk:
+            chunks.append(chunk)
+        chunk_start = chunk_end
+        first_word = break_after
+
+    return chunks
+
+
+def trim_intermediate_trailing_silence(wav_samples, sample_rate):
+    """Remove a model's long tail silence between standard-voice chunks.
+
+    A small amount of silence is retained for a natural boundary. Final audio
+    is never passed here, so requested sentence silence remains untouched.
+    """
+    if not wav_samples or sample_rate <= 0 or len(wav_samples) % 2:
+        return wav_samples
+
+    samples = array("h")
+    samples.frombytes(wav_samples)
+    last_active = len(samples) - 1
+    while last_active >= 0 and abs(samples[last_active]) <= _SILENCE_AMPLITUDE:
+        last_active -= 1
+
+    silent_samples = len(samples) - last_active - 1
+    minimum_trim_samples = int(sample_rate * _MIN_SILENCE_TO_TRIM_MS / 1000)
+    if silent_samples < minimum_trim_samples:
+        return wav_samples
+
+    keep_samples = int(sample_rate * _SILENCE_TO_KEEP_MS / 1000)
+    end_sample = min(len(samples), last_active + 1 + keep_samples)
+    return wav_samples[: end_sample * 2]
 
 
 class VoiceNotFoundError(LookupError):
@@ -179,17 +280,30 @@ class SonataVoice:
     async def synthesize(self, text, rate, volume, pitch, sentence_silence_ms):
         if (len(text) < 10) and (set(text.strip()).issubset(IGNORED_PUNCS)):
             return
-        stream = grpc_client.speak(
-            voice_id=self.remote_id,
-            text=text,
-            rate=rate,
-            volume=volume,
-            pitch=pitch,
-            appended_silence_ms=sentence_silence_ms,
-            streaming=self.supports_streaming_output
-        )
-        async for ret in stream:
-            yield ret.wav_samples
+        if self.supports_streaming_output:
+            text_chunks = [text]
+        else:
+            text_chunks = split_text_for_low_latency(text)
+
+        for chunk_index, text_chunk in enumerate(text_chunks):
+            is_last_chunk = chunk_index == len(text_chunks) - 1
+            stream = grpc_client.speak(
+                voice_id=self.remote_id,
+                text=text_chunk,
+                rate=rate,
+                volume=volume,
+                pitch=pitch,
+                appended_silence_ms=(sentence_silence_ms if is_last_chunk else 0),
+                streaming=self.supports_streaming_output,
+            )
+            async for ret in stream:
+                wav_samples = ret.wav_samples
+                if not self.supports_streaming_output and not is_last_chunk:
+                    wav_samples = trim_intermediate_trailing_silence(
+                        wav_samples,
+                        self.sample_rate,
+                    )
+                yield wav_samples
 
 
 class SpeechOptions:
