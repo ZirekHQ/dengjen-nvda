@@ -75,5 +75,5 @@ class GlobalPlugin(globalPluginHandler.GlobalPlugin):
     def terminate(self):
         try:
             gui.mainFrame.sysTrayIcon.menu.DestroyItem(self.itemHandle)
-        except:
-            pass
+        except Exception:
+            log.debug("Failed to remove the Sonata menu item", exc_info=True)

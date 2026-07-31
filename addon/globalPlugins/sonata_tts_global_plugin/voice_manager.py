@@ -157,7 +157,7 @@ class InstalledSonataVoicesPanel(SizedPanel):
         if retval == wx.YES:
             try:
                 shutil.rmtree(selected.location)
-            except:
+            except Exception:
                 log.exception("Failed to remove voice directory", exc_info=True)
                 gui.messageBox(
                     # Translators: message in a message box
@@ -296,7 +296,7 @@ class OnlineSonataVoicesPanel(SizedPanel):
     def _voice_list_retrieved_callback(self, future):
         try:
             result = future.result()
-        except:
+        except Exception:
             log.exception("Failed to retreive voices list", exc_info=True)
             wx.CallAfter(
                 gui.messageBox,

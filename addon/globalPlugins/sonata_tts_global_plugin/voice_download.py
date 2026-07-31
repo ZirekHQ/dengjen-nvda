@@ -363,7 +363,7 @@ class PiperRTVoiceDownloader:
             )
             try:
                 install_voice_from_tar_archive(result, SONATA_VOICES_DIR)
-            except:
+            except Exception:
                 log.exception("Failed to extract voice archive", exc_info=True)
                 has_error = True
         self.progress_dialog.Hide()
@@ -564,7 +564,7 @@ def get_available_voices(force_online=False):
         try:
             with open(PIPER_VOICES_JSON_LOCAL_CACHE, "rb") as file:
                 voices = json.load(file)
-        except:
+        except Exception:
             log.exception("Failed to get voices from local file", exc_info=True)
         else:
             installed_voices = SonataTextToSpeechSystem.load_piper_voices_from_nvda_config_dir()
