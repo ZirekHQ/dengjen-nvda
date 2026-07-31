@@ -326,10 +326,12 @@ msgstr "&Pêşdîtin"
 msgid "&Download standard variant"
 msgstr "Guhertoya &standard daxîne"
 
+# Draft translation added by the fork maintainer; review welcome.
+# Accelerator moved to D: B collided with the "&Bigire" dialog button.
 #. Translators: label of a button to download the fast variant of voice
 #: addon\globalPlugins\sonata_tts_global_plugin\voice_manager.py:270
 msgid "Download &fast variant"
-msgstr "Guhertoya &bilez daxîne"
+msgstr "Guhertoya bilez &daxîne"
 
 #. Translators: label of a button to refresh the voices list
 #: addon\globalPlugins\sonata_tts_global_plugin\voice_manager.py:272

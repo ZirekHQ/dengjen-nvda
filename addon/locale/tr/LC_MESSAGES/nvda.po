@@ -171,10 +171,12 @@ msgstr "Dil"
 msgid "&Voice model card..."
 msgstr "&Ses model kartı..."
 
+# Draft translation added by the fork maintainer; review welcome.
+# Accelerator moved to D: K collided with the "&Kapat" dialog button.
 #. Translators: label for a button for removing a voice
 #: addon\globalPlugins\sonata_tts_global_plugin\voice_manager.py:62
 msgid "&Remove voice..."
-msgstr "Sesi &kaldır..."
+msgstr "Sesi kal&dır..."
 
 #. Translators: the main label of the install button
 #: addon\globalPlugins\sonata_tts_global_plugin\voice_manager.py:67

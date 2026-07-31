@@ -349,9 +349,11 @@ msgstr "&Hablante"
 msgid "&Noise scale"
 msgstr "&Escala de ruido"
 
+# Draft translation added by the fork maintainer; review welcome.
+# Accelerator moved to D: E collided with "&Escala de ruido" in the same panel.
 #: addon\synthDrivers\sonata_neural_voices\__init__.py:169
 msgid "&Length scale"
-msgstr "&Escala de duración"
+msgstr "Escala de &duración"
 
 #: addon\synthDrivers\sonata_neural_voices\__init__.py:170
 msgid "Noise &w"
@@ -392,10 +394,12 @@ msgstr ""
 "Verifica el registro de NVDA para más detalles."
 
 # Draft translation added by the fork maintainer; review welcome.
+# Accelerator moved to P: D collided with "&Descarga variante estándar" on the same
+# tab, and P matches the "&Probar" state of this same button.
 #. Translators: label of the preview button while audio is playing
 #: addon\globalPlugins\sonata_tts_global_plugin\voice_manager.py:361
 msgid "&Stop preview"
-msgstr "&Detener prueba"
+msgstr "Detener &prueba"
 
 # Draft translation added by the fork maintainer; review welcome.
 #. Translators: error shown when voice preview fails to play

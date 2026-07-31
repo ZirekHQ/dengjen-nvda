@@ -165,10 +165,12 @@ msgstr "Qualité"
 msgid "Language"
 msgstr "Langue"
 
+# Draft translation added by the fork maintainer; review welcome.
+# Accelerator moved to M: F collided with the "&Fermer" dialog button.
 #. Translators: label for a button for showing voice model card
 #: addon\globalPlugins\sonata_tts_global_plugin\voice_manager.py:60
 msgid "&Voice model card..."
-msgstr "&Fiche du modèle de la voix..."
+msgstr "Fiche du &modèle de la voix..."
 
 #. Translators: label for a button for removing a voice
 #: addon\globalPlugins\sonata_tts_global_plugin\voice_manager.py:62
