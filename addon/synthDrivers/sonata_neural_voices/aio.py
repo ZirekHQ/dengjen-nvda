@@ -16,6 +16,15 @@ ASYNCIO_EVENT_LOOP = None
 ASYNCIO_LOOP_THREAD = None
 
 
+def _close_loop(loop):
+    if loop is None or loop.is_closed() or loop.is_running():
+        return
+    try:
+        loop.close()
+    except RuntimeError:
+        log.debug("Failed to close the asyncio event loop", exc_info=True)
+
+
 def initialize():
     global THREADED_EXECUTOR, ASYNCIO_EVENT_LOOP, ASYNCIO_LOOP_THREAD
 
@@ -30,6 +39,7 @@ def initialize():
             return
         ASYNCIO_LOOP_THREAD.join(timeout=2)
 
+    _close_loop(ASYNCIO_EVENT_LOOP)
     ASYNCIO_EVENT_LOOP = asyncio.new_event_loop()
 
     def _thread_target(loop):
@@ -68,7 +78,8 @@ def terminate():
         if ASYNCIO_EVENT_LOOP is not None and ASYNCIO_EVENT_LOOP.is_running():
             ASYNCIO_EVENT_LOOP.call_soon_threadsafe(ASYNCIO_EVENT_LOOP.stop)
         loop_thread.join(timeout=2)
-
+    _close_loop(ASYNCIO_EVENT_LOOP)
+    ASYNCIO_EVENT_LOOP = None
 
 
 def asyncio_create_task(coro):

@@ -33,7 +33,6 @@ from . import grpc_client
 from ._config import SonataConfig
 from .helpers import update_displaied_params_on_voice_change
 from .aio import (
-    ASYNCIO_EVENT_LOOP,
     CancelledError,
     asyncio,
     asyncio_cancel_task,
@@ -149,7 +148,7 @@ async def _process_speech_sequence(speech_seq):
 @asyncio_coroutine_to_concurrent_future
 async def process_speech(speech_seq):
     speech_task = _process_speech_sequence(speech_seq)
-    return ASYNCIO_EVENT_LOOP.create_task(speech_task)
+    return asyncio.get_running_loop().create_task(speech_task)
 
 
 
