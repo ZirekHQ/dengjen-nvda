@@ -13,6 +13,7 @@ import tarfile
 import tempfile
 import typing
 import urllib.parse
+from contextlib import contextmanager
 from dataclasses import dataclass
 from enum import Enum, auto
 from fnmatch import fnmatch
@@ -49,6 +50,9 @@ VOICE_INFO_REGEX = re.compile(
     re.I
 )
 THREAD_POOL_EXECUTOR = ThreadPoolExecutor()
+REDIRECT_STATUSES = (301, 302, 303, 307, 308)
+REDIRECT_LIMIT = 5
+DOWNLOAD_CHUNK_SIZE = 4096
 
 
 class PiperVoiceQualityLevel(Enum):
@@ -179,6 +183,43 @@ class PiperVoice:
         return f"{RT_VOICE_DOWNLOAD_URL_PREFIX}/{rt_voice_key}.tar.gz"
 
 
+@contextmanager
+def _follow_redirects(url, label):
+    # mureq does not follow redirects, and HuggingFace serves every file as one.
+    for _redirect in range(REDIRECT_LIMIT):
+        with request.yield_response('GET', url) as response:
+            if response.status in REDIRECT_STATUSES:
+                location = response.getheader("Location")
+                if not location:
+                    raise ValueError("Redirect without Location header.")
+                url = urllib.parse.urljoin(url, location)
+                continue
+
+            if response.status != 200:
+                raise RuntimeError(f"Download failed for {label} (status {response.status})")
+
+            content_type = response.getheader("Content-Type", "").lower()
+            if "text/html" in content_type or "xml" in content_type:
+                raise RuntimeError(f"Wrong content-type while downloading {label}: {content_type}")
+
+            yield response
+            return
+
+    raise RuntimeError(f"Too many redirects while downloading {label}")
+
+
+def _stream_to_file(response, target_file, total_size, progress_callback, hasher=None):
+    downloaded_til_now = 0
+    with open(target_file, "wb") as file_buffer:
+        for chunk in iter(partial(response.read, DOWNLOAD_CHUNK_SIZE), b""):
+            file_buffer.write(chunk)
+            if hasher is not None:
+                hasher.update(chunk)
+            downloaded_til_now += len(chunk)
+            if total_size > 0:
+                progress_callback(math.floor((downloaded_til_now / total_size) * 100))
+
+
 class PiperVoiceDownloader:
     def __init__(self, voice: PiperVoice, success_callback):
         self.voice = voice
@@ -287,42 +328,14 @@ class PiperVoiceDownloader:
         os.makedirs(os.path.dirname(target_file), exist_ok=True)
 
         hasher = md5(usedforsecurity=False)
-        total_size = file.size_in_bytes
-        downloaded_til_now = 0
-
-        url = file.download_url
-        redirect_limit = 5
-
-        for _redirect in range(redirect_limit):
-            with request.yield_response('GET', url) as response:
-                if response.status in (301, 302, 303, 307, 308):
-                    location = response.getheader("Location")
-                    if not location:
-                        raise ValueError("Redirect without Location header.")
-                    url = urllib.parse.urljoin(url, location)
-                    continue
-
-                if response.status != 200:
-                    raise RuntimeError(f"Download failed for {file.file_path} (status {response.status})")
-
-                content_type = response.getheader("Content-Type", "").lower()
-                if "text/html" in content_type or "xml" in content_type:
-                    raise RuntimeError(f"Wrong content-type while downloading {file.file_path}: {content_type}")
-
-                with open(target_file, "wb") as file_buffer:
-                    while True:
-                        chunk = response.read(4096)
-                        if not chunk:
-                            break
-                        file_buffer.write(chunk)
-                        hasher.update(chunk)
-                        downloaded_til_now += len(chunk)
-                        if total_size > 0:
-                            progress = math.floor((downloaded_til_now / total_size) * 100)
-                            progress_callback(progress)
-                break
-        else:
-            raise RuntimeError(f"Too many redirects while downloading {file.file_path}")
+        with _follow_redirects(file.download_url, file.file_path) as response:
+            _stream_to_file(
+                response,
+                target_file,
+                file.size_in_bytes,
+                progress_callback,
+                hasher,
+            )
 
         return (file, target_file, hasher.hexdigest())
 
@@ -428,40 +441,13 @@ class PiperRTVoiceDownloader:
     @classmethod
     def _do_download_archive(cls, download_url, voice_name, download_dir, progress_callback):
         target_file = os.path.join(download_dir, voice_name)
-        url = download_url
-        redirect_limit = 5
-
-        for _redirect in range(redirect_limit):
-            with request.yield_response('GET', url) as response:
-                if response.status in (301, 302, 303, 307, 308):
-                    location = response.getheader("Location")
-                    if not location:
-                        raise ValueError("Redirect without Location header.")
-                    url = urllib.parse.urljoin(url, location)
-                    continue
-
-                if response.status != 200:
-                    raise RuntimeError(f"Download failed for {voice_name} (status {response.status})")
-
-                content_type = response.getheader("Content-Type", "").lower()
-                if "text/html" in content_type or "xml" in content_type:
-                    raise RuntimeError(f"Wrong content-type while downloading {voice_name}: {content_type}")
-
-                total_size = int(response.getheader("Content-Length", 0))
-                downloaded_til_now = 0
-                with open(target_file, "wb") as file_buffer:
-                    while True:
-                        chunk = response.read(4096)
-                        if not chunk:
-                            break
-                        file_buffer.write(chunk)
-                        downloaded_til_now += len(chunk)
-                        if total_size > 0:
-                            progress = math.floor((downloaded_til_now / total_size) * 100)
-                            progress_callback(progress)
-                break
-        else:
-            raise RuntimeError(f"Too many redirects while downloading {voice_name}")
+        with _follow_redirects(download_url, voice_name) as response:
+            _stream_to_file(
+                response,
+                target_file,
+                int(response.getheader("Content-Length", 0)),
+                progress_callback,
+            )
 
         return target_file
 
@@ -558,29 +544,34 @@ def install_voice_from_tar_archive(tar_path, voices_dir):
     return voice_key
 
 
-def get_available_voices(force_online=False):
-    # Trry an offline cache first
-    if not force_online and os.path.exists(PIPER_VOICES_JSON_LOCAL_CACHE):
-        try:
-            with open(PIPER_VOICES_JSON_LOCAL_CACHE, "rb") as file:
-                voices = json.load(file)
-        except Exception:
-            log.exception("Failed to get voices from local file", exc_info=True)
-        else:
-            installed_voices = SonataTextToSpeechSystem.load_piper_voices_from_nvda_config_dir()
-            installed_voice_keys = {voice.key for voice in installed_voices}
-            not_installed = []
-            for (key, value) in voices.items():
-                std_key, rt_key = SonataTextToSpeechSystem.get_voice_variants(key)
-                value["standard_variant_installed"] = std_key in installed_voice_keys
-                value["fast_variant_installed"] = rt_key in installed_voice_keys
-                if value["standard_variant_installed"] and value["fast_variant_installed"]:
-                    continue
-                if value["standard_variant_installed"] and not value["has_rt_variant"]:
-                    continue
-                not_installed.append(value)
-            voice_objs = PiperVoice.from_list_of_dicts(not_installed)
-            return voice_objs
+def _select_not_installed_voices(voices):
+    installed_voices = SonataTextToSpeechSystem.load_piper_voices_from_nvda_config_dir()
+    installed_voice_keys = {voice.key for voice in installed_voices}
+    not_installed = []
+    for (key, value) in voices.items():
+        std_key, rt_key = SonataTextToSpeechSystem.get_voice_variants(key)
+        value["standard_variant_installed"] = std_key in installed_voice_keys
+        value["fast_variant_installed"] = rt_key in installed_voice_keys
+        if value["standard_variant_installed"] and value["fast_variant_installed"]:
+            continue
+        if value["standard_variant_installed"] and not value["has_rt_variant"]:
+            continue
+        not_installed.append(value)
+    return not_installed
+
+
+def _get_voices_from_cache():
+    """Return the not-installed voices from the on-disk cache, or None if unreadable."""
+    try:
+        with open(PIPER_VOICES_JSON_LOCAL_CACHE, "rb") as file:
+            voices = json.load(file)
+    except Exception:
+        log.exception("Failed to get voices from local file", exc_info=True)
+        return None
+    return PiperVoice.from_list_of_dicts(_select_not_installed_voices(voices))
+
+
+def _refresh_voices_cache():
     std_resp = request.get(PIPER_VOICE_LIST_URL)
     std_resp.raise_for_status()
     std_voices = std_resp.json()
@@ -592,12 +583,20 @@ def get_available_voices(force_online=False):
     }
     voice_list = {}
     for vname, vdata in std_voices.items():
-        if vname in rt_voice_names:
-            vdata["has_rt_variant"] = True
-        else:
-            vdata["has_rt_variant"] = False
+        vdata["has_rt_variant"] = vname in rt_voice_names
         voice_list[vname] = vdata
     with open(PIPER_VOICES_JSON_LOCAL_CACHE, "w", encoding="utf-8") as file:
         json.dump(voice_list, file, ensure_ascii=False, indent=2)
-    return get_available_voices()
+
+
+def get_available_voices(force_online=False):
+    if not force_online and os.path.exists(PIPER_VOICES_JSON_LOCAL_CACHE):
+        cached_voices = _get_voices_from_cache()
+        if cached_voices is not None:
+            return cached_voices
+    _refresh_voices_cache()
+    voices = _get_voices_from_cache()
+    if voices is None:
+        raise RuntimeError("Failed to read the voice list cache that was just written")
+    return voices
 
