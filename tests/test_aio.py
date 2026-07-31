@@ -65,8 +65,9 @@ class TestCoroutineToConcurrentFuture:
         async def boom():
             raise ValueError("nope")
 
+        future = boom()
         with pytest.raises(ValueError, match="nope"):
-            boom().result(timeout=5)
+            future.result(timeout=5)
 
     def test_preserves_the_wrapped_function_metadata(self, running_aio):
         @running_aio.asyncio_coroutine_to_concurrent_future
