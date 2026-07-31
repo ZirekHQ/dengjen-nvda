@@ -157,7 +157,8 @@ def terminate():
 
 @aio.asyncio_coroutine_to_concurrent_future
 async def check_grpc_server(timeout=15) -> str:
-    return await asyncio.wait_for(get_sonata_version(), timeout)
+    async with asyncio.timeout(timeout):
+        return await get_sonata_version()
 
 
 async def get_sonata_version():

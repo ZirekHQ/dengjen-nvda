@@ -249,6 +249,11 @@ class SynthDriver(synthDriverHandler.SynthDriver):
 
     def _fast_prepare_and_run_speech_task(self, speech_sequence):
         self.cancel()
+        self._current_task = process_speech(
+            self._build_speech_tasks(speech_sequence)
+        ).result()
+
+    def _build_speech_tasks(self, speech_sequence):
         speech_seq = []
         text_list = []
         index_command_list = []
@@ -258,42 +263,18 @@ class SynthDriver(synthDriverHandler.SynthDriver):
             if item_type is IndexCommand:
                 index_command_list.append(item.index)
                 continue
-            elif item_type is str:
+            if item_type is str:
                 text_list.append(item)
                 continue
+            # Pending text must be flushed before the command takes effect.
             if any(text_list):
-                speech_seq.append(
-                    SpeechTask(
-                        self.tts.create_speech_provider("\n".join(text_list)),
-                        self._player,
-                    )
-                )
+                speech_seq.append(self._create_speech_task(text_list))
                 text_list.clear()
-            if item_type is BreakCommand:
-                speech_seq.append(
-                    BreakTask(
-                        self.tts.create_break_provider(item.time),
-                        self._player,
-                    )
-                )
-            elif item_type is LangChangeCommand:
-                if item.isDefault:
-                    self.tts.language = default_lang
-                else:
-                    self.tts.language = item.lang
-            elif item_type is RateCommand:
-                self.tts.rate = item.newValue
-            elif item_type is VolumeCommand:
-                self.tts.volume = item.newValue
-            elif item_type is PitchCommand:
-                self.tts.pitch = item.newValue
+            break_task = self._apply_speech_command(item, default_lang)
+            if break_task is not None:
+                speech_seq.append(break_task)
         if any(text_list):
-            speech_seq.append(
-                SpeechTask(
-                    self.tts.create_speech_provider("\n".join(text_list)),
-                    self._player,
-                )
-            )
+            speech_seq.append(self._create_speech_task(text_list))
         if any(index_command_list):
             speech_seq.append(IndexReachedTask(self._on_index_reached, index_command_list))
         speech_seq.append(
@@ -301,9 +282,30 @@ class SynthDriver(synthDriverHandler.SynthDriver):
                 self._player, self._on_index_reached
             )
         )
-        self._current_task = process_speech(
-            speech_seq
-        ).result()
+        return speech_seq
+
+    def _create_speech_task(self, text_list):
+        return SpeechTask(
+            self.tts.create_speech_provider("\n".join(text_list)),
+            self._player,
+        )
+
+    def _apply_speech_command(self, item, default_lang):
+        item_type = type(item)
+        if item_type is BreakCommand:
+            return BreakTask(
+                self.tts.create_break_provider(item.time),
+                self._player,
+            )
+        if item_type is LangChangeCommand:
+            self.tts.language = default_lang if item.isDefault else item.lang
+        elif item_type is RateCommand:
+            self.tts.rate = item.newValue
+        elif item_type is VolumeCommand:
+            self.tts.volume = item.newValue
+        elif item_type is PitchCommand:
+            self.tts.pitch = item.newValue
+        return None
 
     def cancel(self):
         if self._current_task is not None:
