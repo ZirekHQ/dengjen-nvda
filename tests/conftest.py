@@ -45,16 +45,33 @@ _TESTS_DIR = os.path.dirname(__file__)
 _SYNTH_DIR = os.path.join(_TESTS_DIR, "..", "addon", "synthDrivers")
 _SYNTH_PKG_DIR = os.path.join(_SYNTH_DIR, "sonata_neural_voices")
 
+REPO_ROOT = os.path.abspath(os.path.join(_TESTS_DIR, ".."))
+SYNTH_PKG_DIR = os.path.abspath(_SYNTH_PKG_DIR)
 
-def _load_real_module(module_name: str, filename: str) -> types.ModuleType:
-    """Execute a real .py file as a registered module (with relative imports)."""
-    path = os.path.join(_SYNTH_PKG_DIR, filename)
+
+def load_module_from_path(
+    module_name: str, path: str, package: str = None
+) -> types.ModuleType:
+    """Execute a real .py file as a registered module.
+
+    Tests use this to reach modules the NVDA runtime would normally import, so
+    they register under a private name and leave any same-named stub installed
+    below untouched. Coverage attributes by file path, not module name.
+    """
     spec = importlib.util.spec_from_file_location(module_name, path)
     mod = importlib.util.module_from_spec(spec)
-    mod.__package__ = "sonata_neural_voices"
+    if package:
+        mod.__package__ = package
     sys.modules[module_name] = mod
     spec.loader.exec_module(mod)
     return mod
+
+
+def _load_real_module(module_name: str, filename: str) -> types.ModuleType:
+    """Execute a real package submodule (with relative imports)."""
+    return load_module_from_path(
+        module_name, os.path.join(_SYNTH_PKG_DIR, filename), "sonata_neural_voices"
+    )
 
 
 # ---------------------------------------------------------------------------
