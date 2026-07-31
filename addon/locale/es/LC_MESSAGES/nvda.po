@@ -359,11 +359,19 @@ msgstr "Escala de &duración"
 msgid "Noise &w"
 msgstr "Ruido de &anchura"
 
+# Draft translation added by the fork maintainer; review welcome.
 #. Add-on description
 #. Translators: Long description to be shown for this add-on on add-on information from add-ons manager
 #: buildVars.py:26
-msgid "Neural voices for NVDA based on Sonata"
-msgstr "Voces neuronales para NVDA basado en Sonata"
+msgid ""
+"Adds fast, local neural text-to-speech voices to NVDA. Provides a "
+"synthesizer driver for Piper voice models via the Sonata engine, together "
+"with a voice manager for downloading and installing voices."
+msgstr ""
+"Añade a NVDA voces neuronales de texto a voz rápidas y locales. Proporciona "
+"un controlador de sintetizador para modelos de voz de Piper mediante el "
+"motor Sonata, junto con un administrador de voces para descargar e instalar "
+"voces."
 
 # Draft translation added by the fork maintainer; review welcome.
 #. Translators: file dialog filter for tar archives

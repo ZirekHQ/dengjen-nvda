@@ -21,7 +21,9 @@ addon_info = AddonInfo(
 	addon_summary=_("Sonata Neural Voices"),
 	# Add-on description
 	# Translators: Long description to be shown for this add-on on add-on information from add-on store
-	addon_description=_("""Neural voices for NVDA based on Sonata"""),
+	addon_description=_(
+		"""Adds fast, local neural text-to-speech voices to NVDA. Provides a synthesizer driver for Piper voice models via the Sonata engine, together with a voice manager for downloading and installing voices."""
+	),
 	# version
 	addon_version="3.2.0",
 	# Brief changelog for this version
