@@ -1,0 +1,3 @@
+# Tooling for the test matrix and the Sonar coverage run.
+pytest==9.1.1
+pytest-cov==7.1.0
