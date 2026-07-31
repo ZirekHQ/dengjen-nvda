@@ -7,6 +7,12 @@ on:
     branches: [ main ]
   workflow_dispatch:
 
+# SonarCloud keeps whichever report finishes processing last, not the newest
+# commit, so overlapping scans can leave main showing an older analysis.
+concurrency:
+  group: sonar-${{ github.ref }}
+  cancel-in-progress: true
+
 permissions:
   contents: read
 
