@@ -14,3 +14,6 @@ manifest.ini
 .coverage
 coverage.xml
 .pytest_cache/
+.envrc
+.sonar/
+.scannerwork/
