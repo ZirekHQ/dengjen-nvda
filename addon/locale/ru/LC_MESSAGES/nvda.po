@@ -292,20 +292,24 @@ msgstr "Диктор"
 msgid "&Preview"
 msgstr "&Прослушать образец"
 
+# Draft translation added by the fork maintainer; review welcome.
+# Accelerator moved to С: З collided with the "&Закрыть" dialog button.
 #. Translators: label of a button to download the standard variant of the voice
 #: addon\globalPlugins\sonata_tts_global_plugin\voice_manager.py:265
 msgid "&Download standard variant"
-msgstr "&Загрузить стандартный вариант"
+msgstr "Загрузить &стандартный вариант"
 
 #. Translators: label of a button to download the fast variant of voice
 #: addon\globalPlugins\sonata_tts_global_plugin\voice_manager.py:267
 msgid "Download &fast variant"
 msgstr "Загрузить &быстрый вариант"
 
+# Draft translation added by the fork maintainer; review welcome.
+# Accelerator moved to Г: О collided with "&Остановить воспроизведение" on the same tab.
 #. Translators: label of a button to refresh the voices list
 #: addon\globalPlugins\sonata_tts_global_plugin\voice_manager.py:269
 msgid "&Refresh voices list"
-msgstr "&Обновить список голосов"
+msgstr "Обновить список &голосов"
 
 #. Translators: message in a dialog
 #: addon\globalPlugins\sonata_tts_global_plugin\voice_manager.py:289
@@ -349,9 +353,12 @@ msgstr "&Диктор"
 msgid "&Noise scale"
 msgstr "&Уровень шума"
 
+# Draft translation added by the fork maintainer; review welcome.
+# Was "Уровень паузы между словами" (level of pause between words), which described
+# the wrong parameter: length_scale scales the duration of every speech sound.
 #: addon\synthDrivers\sonata_neural_voices\__init__.py:169
 msgid "&Length scale"
-msgstr "&Уровень паузы между словами"
+msgstr "&Масштаб длительности"
 
 #: addon\synthDrivers\sonata_neural_voices\__init__.py:170
 msgid "Noise &w"
