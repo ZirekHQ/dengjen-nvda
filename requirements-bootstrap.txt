@@ -1,0 +1,3 @@
+# Installer tooling pinned so CI never resolves pip/wheel at run time.
+pip==26.2
+wheel==0.47.0

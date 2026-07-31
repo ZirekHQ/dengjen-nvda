@@ -9,7 +9,8 @@ updates:
       prefix: "ci"
       include: "scope"
 
-  # CI tooling pinned in requirements-build.txt / requirements-test.txt.
+  # CI tooling pinned in requirements-bootstrap.txt / requirements-build.txt /
+  # requirements-test.txt.
   # The libraries vendored under addon/.../lib are NOT covered here; they are
   # recorded in lib/VENDORED.txt and bumped via the repo-root update_*.py scripts.
   - package-ecosystem: "pip"
