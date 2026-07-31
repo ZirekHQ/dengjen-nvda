@@ -1,0 +1,14 @@
+[run]
+# A single repo-root source keeps coverage.xml paths repo-root-relative, which is
+# what Sonar resolves against. Listing the addon package dirs here would also
+# report never-imported modules at 0%, but it makes coverage emit paths relative
+# to each source root (bare `__init__.py`), which Sonar cannot resolve.
+source = .
+omit =
+    .venv/*
+    tests/*
+    site_scons/*
+    update_*.py
+    addon/synthDrivers/sonata_neural_voices/lib/*
+    addon/synthDrivers/sonata_neural_voices/grpc_client/grpc_protos/*
+relative_files = True
