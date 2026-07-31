@@ -4,10 +4,14 @@ Tests for aio module lifecycle resilience and re-initialization behavior.
 """
 
 import ast
+import asyncio
+import gc
 import os
 import glob
 import threading
 import time
+import types
+import warnings
 import importlib.util
 
 _STRESS_THREADS = 8
@@ -18,8 +22,42 @@ _PKG_DIR = os.path.join(
     _TESTS_DIR, "..", "addon", "synthDrivers", "sonata_neural_voices"
 )
 _AIO_PATH = os.path.join(_PKG_DIR, "aio.py")
+_GRPC_CLIENT_PATH = os.path.join(_PKG_DIR, "grpc_client", "__init__.py")
 
 _LOOP_THREAD_NAME = "piper4nvda_asyncio"
+
+
+def _load_module_function(path, name, namespace):
+    """Exec a single top-level function against a stubbed namespace.
+
+    grpc_client imports grpc and NVDA globals, so it cannot be imported here.
+    """
+    with open(path, "r", encoding="utf-8") as f:
+        source = f.read()
+    for node in ast.parse(source, filename=path).body:
+        if isinstance(node, ast.FunctionDef) and node.name == name:
+            exec(ast.get_source_segment(source, node), namespace)
+            return namespace[name]
+    raise LookupError(f"{name} not found in {path}")
+
+
+class _FakeAioChannel:
+    """Stands in for grpc.aio.Channel, whose close() is a coroutine."""
+
+    def __init__(self):
+        self.close_awaited = False
+        self.closed_on_loop = None
+
+    async def _close(self):
+        self.close_awaited = True
+        self.closed_on_loop = asyncio.get_running_loop()
+
+    def close(self):
+        return self._close()
+
+
+def _never_awaited_warnings(caught):
+    return [w for w in caught if "never awaited" in str(w.message)]
 
 
 def _load_real_aio():
@@ -205,6 +243,60 @@ class TestAioGlobalsAreNotAliased:
             "aio.initialize() rebinds the loop. Reference aio.ASYNCIO_EVENT_LOOP or "
             "asyncio.get_running_loop() instead."
         )
+
+
+class TestGrpcChannelTeardown:
+
+    def setup_method(self):
+        aio.initialize()
+
+    def teardown_method(self):
+        aio.terminate()
+
+    def _close_channel_with(self, channel):
+        namespace = {
+            "asyncio": asyncio,
+            "aio": aio,
+            "log": types.SimpleNamespace(debug=lambda *a, **k: None),
+            "CHANNEL": channel,
+            "CHANNEL_CLOSE_TIMEOUT": 5,
+        }
+        close_channel = _load_module_function(
+            _GRPC_CLIENT_PATH, "close_channel", namespace
+        )
+        with warnings.catch_warnings(record=True) as caught:
+            warnings.simplefilter("always")
+            close_channel()
+            gc.collect()
+        return namespace, caught
+
+    def test_dropping_the_close_coroutine_is_detectable(self):
+        """Self-check: the assertions below are only meaningful if this warns."""
+        channel = _FakeAioChannel()
+        with warnings.catch_warnings(record=True) as caught:
+            warnings.simplefilter("always")
+            channel.close()
+            gc.collect()
+
+        assert _never_awaited_warnings(caught)
+
+    def test_close_channel_awaits_close_on_the_owning_loop(self):
+        channel = _FakeAioChannel()
+        namespace, caught = self._close_channel_with(channel)
+
+        assert channel.close_awaited
+        assert channel.closed_on_loop is aio.ASYNCIO_EVENT_LOOP
+        assert namespace["CHANNEL"] is None
+        assert _never_awaited_warnings(caught) == []
+
+    def test_close_channel_discards_coroutine_when_loop_is_gone(self):
+        aio.terminate()
+        channel = _FakeAioChannel()
+        namespace, caught = self._close_channel_with(channel)
+
+        assert not channel.close_awaited
+        assert namespace["CHANNEL"] is None
+        assert _never_awaited_warnings(caught) == []
 
 
 class TestCrossModuleAttributesResolve:

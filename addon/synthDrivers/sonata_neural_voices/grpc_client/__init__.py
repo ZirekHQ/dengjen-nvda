@@ -78,6 +78,7 @@ SERVER_CHECK_TIMEOUT = 15
 # coroutine's own error surfaces instead of a bare future timeout.
 STARTUP_TIMEOUT = SERVER_CHECK_TIMEOUT + 5
 CALL_TIMEOUT = 10
+CHANNEL_CLOSE_TIMEOUT = 5
 
 
 def start_grpc_server():
@@ -158,14 +159,35 @@ async def initialize():
     SONATA_GRPC_SERVICE = sonata_grpcStub(CHANNEL)
 
 
+def close_channel():
+    """Close the aio channel on the loop that owns it.
+
+    Channel.close() is a coroutine whose internals walk the running loop's
+    task set, so it cannot be driven from another thread or a stopped loop.
+    """
+    global CHANNEL
+    if CHANNEL is None:
+        return
+    channel, CHANNEL = CHANNEL, None
+    loop = aio.ASYNCIO_EVENT_LOOP
+    if loop is None or not loop.is_running():
+        log.debug("Discarding the GRPC channel: its event loop is gone")
+        channel.close().close()
+        return
+    try:
+        asyncio.run_coroutine_threadsafe(channel.close(), loop).result(
+            timeout=CHANNEL_CLOSE_TIMEOUT
+        )
+    except Exception:
+        log.debug("Failed to close the GRPC channel cleanly", exc_info=True)
+
+
 @atexit.register
 def terminate():
-    global CHANNEL, GRPC_SERVER_PROCESS, SONATA_GRPC_SERVER_PORT
+    global GRPC_SERVER_PROCESS, SONATA_GRPC_SERVER_PORT
     SONATA_GRPC_SERVER_PORT = None
+    close_channel()
     aio.terminate()
-    if CHANNEL is not None:
-        CHANNEL.close()
-        CHANNEL = None
     if GRPC_SERVER_PROCESS is not None:
         GRPC_SERVER_PROCESS.terminate()
         GRPC_SERVER_PROCESS = None
