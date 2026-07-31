@@ -5,6 +5,8 @@ import os
 import shutil
 import glob
 
+import vendored_manifest
+
 # PyPI JSON API for cffi
 url = "https://pypi.org/pypi/cffi/json"
 
@@ -74,6 +76,8 @@ shutil.copytree(os.path.join(extract_dir, "cffi"), cffi_target)
 print("Cleaning up...")
 os.remove(wheel_path)
 shutil.rmtree(extract_dir)
+
+vendored_manifest.record_version("cffi", version)
 
 print("\nSuccessfully updated bundled cffi to 64-bit Python 3.13!")
 print("The addon is now natively compatible with NVDA 2026.1.")

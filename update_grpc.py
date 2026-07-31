@@ -4,6 +4,8 @@ import zipfile
 import os
 import shutil
 
+import vendored_manifest
+
 # PyPI JSON API for grpcio
 url = "https://pypi.org/pypi/grpcio/json"
 
@@ -58,6 +60,8 @@ shutil.copytree(os.path.join(extract_dir, "grpc"), target_dir)
 print("Cleaning up...")
 os.remove(wheel_path)
 shutil.rmtree(extract_dir)
+
+vendored_manifest.record_version("grpcio", version)
 
 print("\nSuccessfully updated bundled grpc to 64-bit Python 3.13!")
 print("The addon is now natively compatible with NVDA 2026.1.")

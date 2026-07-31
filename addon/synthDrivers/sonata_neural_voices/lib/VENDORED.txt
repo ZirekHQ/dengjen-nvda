@@ -1,0 +1,16 @@
+# Third-party libraries vendored into this directory.
+# Target runtime: CPython 3.13 / win_amd64 (NVDA 2026.1).
+#
+# Audit for known vulnerabilities with:  pip-audit -r VENDORED.txt
+#
+# cffi, grpcio and miniaudio are rewritten by the repo-root update_*.py
+# scripts. The rest were vendored by hand and must be bumped by hand.
+
+cffi==2.0.0
+grpcio==1.80.0
+miniaudio==1.71
+
+protobuf==4.24.4
+psutil==5.9.6
+pycparser==2.22
+mureq==0.2.0
