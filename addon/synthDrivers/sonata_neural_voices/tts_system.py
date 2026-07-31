@@ -17,7 +17,14 @@ from languageHandler import normalizeLanguage
 
 from . import aio
 from . import grpc_client
-from .const import *
+from .const import (
+    DEFAULT_PITCH,
+    DEFAULT_RATE,
+    DEFAULT_VOLUME,
+    FALLBACK_SPEAKER_NAME,
+    IGNORED_PUNCS,
+    SONATA_VOICES_DIR,
+)
 from .helpers import import_bundled_library, LIB_DIRECTORY
 
 
@@ -64,8 +71,8 @@ class SpeechProvider(AudioProvider):
         self.text = text
         self.speech_options = speech_options
 
-    async def generate_audio(self):
-        return await self.speech_options.speak_text(self.text)
+    def generate_audio(self):
+        return self.speech_options.speak_text(self.text)
 
 
 @dataclass
@@ -218,7 +225,7 @@ class SpeechOptions:
     def copy(self):
         return copy.copy(self)
 
-    async def speak_text(self, text):
+    def speak_text(self, text):
         return self.voice.synthesize(
             text,
             self.rate,
@@ -251,6 +258,8 @@ class SonataTextToSpeechSystem:
         self.speech_options = old_speech_options
 
     def shutdown(self):
+        # No-op by design: the gRPC engine process outlives any single TTS
+        # system, so it is torn down by grpc_client's atexit handler instead.
         pass
 
     @property

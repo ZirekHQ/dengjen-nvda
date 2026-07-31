@@ -93,7 +93,7 @@ class SpeechTask:
         if sayAll.SayAllHandler.isRunning():
             self.task.text = self.task.text.replace("\n", " ")
             self.task.speech_options.sentence_silence_ms = 50
-        speech_stream = await self.task.generate_audio()
+        speech_stream = self.task.generate_audio()
         feed_func = self.player.feed
         async for wave_samples in speech_stream:
             await run_in_executor(feed_func, wave_samples)
