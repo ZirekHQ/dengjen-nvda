@@ -4,6 +4,8 @@ import zipfile
 import os
 import shutil
 
+import vendored_manifest
+
 # PyPI JSON API for miniaudio
 url = "https://pypi.org/pypi/miniaudio/json"
 
@@ -62,6 +64,8 @@ for name in ("_miniaudio.pyd", "miniaudio.py"):
 print("Cleaning up...")
 os.remove(wheel_path)
 shutil.rmtree(extract_dir)
+
+vendored_manifest.record_version("miniaudio", version)
 
 print("\nSuccessfully updated bundled miniaudio to 64-bit Python 3.13!")
 print("The addon is now natively compatible with NVDA 2026.1.")
