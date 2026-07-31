@@ -107,7 +107,7 @@ def start_grpc_server():
         server_log_file = os.path.join(SONATA_VOICES_BASE_DIR, "logs", "sonata-grpc.log")
         Path(server_log_file).parent.mkdir(parents=True, exist_ok=True)
         server_stdout = open(server_log_file, "wb")
-    except:
+    except OSError:
         log.exception("Failed to open server log file for writing", exc_info=True)
         server_stdout = subprocess.DEVNULL
     try:
@@ -119,7 +119,7 @@ def start_grpc_server():
             stdout=server_stdout,
             stderr=subprocess.STDOUT,
         )
-    except:
+    except Exception:
         log.exception(
             "Failed to start Sonata GRPC server. The synth will not be available.",
             exc_info=True

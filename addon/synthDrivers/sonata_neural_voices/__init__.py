@@ -197,7 +197,7 @@ class SynthDriver(synthDriverHandler.SynthDriver):
             return
         try:
             sonata_grpc_server_version = grpc_client.check_grpc_server().result()
-        except:
+        except Exception:
             log.exception(
                 f"Failed to connect to sonata GRPC server. Synthesizer will not be available.",
                 exc_info=True,
