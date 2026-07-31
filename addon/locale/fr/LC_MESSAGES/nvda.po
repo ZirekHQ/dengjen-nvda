@@ -165,10 +165,12 @@ msgstr "Qualité"
 msgid "Language"
 msgstr "Langue"
 
+# Draft translation added by the fork maintainer; review welcome.
+# Accelerator moved to M: F collided with the "&Fermer" dialog button.
 #. Translators: label for a button for showing voice model card
 #: addon\globalPlugins\sonata_tts_global_plugin\voice_manager.py:60
 msgid "&Voice model card..."
-msgstr "&Fiche du modèle de la voix..."
+msgstr "Fiche du &modèle de la voix..."
 
 #. Translators: label for a button for removing a voice
 #: addon\globalPlugins\sonata_tts_global_plugin\voice_manager.py:62
@@ -358,11 +360,19 @@ msgstr "Échelle de &durée"
 msgid "Noise &w"
 msgstr "Ha&uteur de bruit"
 
+# Draft translation added by the fork maintainer; review welcome.
 #. Add-on description
 #. Translators: Long description to be shown for this add-on on add-on information from add-ons manager
 #: buildVars.py:26
-msgid "Neural voices for NVDA based on Sonata"
-msgstr "Voix neuronales pour NVDA basées sur Sonata"
+msgid ""
+"Adds fast, local neural text-to-speech voices to NVDA. Provides a "
+"synthesizer driver for Piper voice models via the Sonata engine, together "
+"with a voice manager for downloading and installing voices."
+msgstr ""
+"Ajoute à NVDA des voix de synthèse vocale neuronales rapides et locales. "
+"Fournit un pilote de synthétiseur pour les modèles de voix Piper via le "
+"moteur Sonata, ainsi qu'un gestionnaire de voix pour télécharger et "
+"installer des voix."
 
 # Draft translation added by the fork maintainer; review welcome.
 #. Translators: file dialog filter for tar archives

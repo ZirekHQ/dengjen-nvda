@@ -171,10 +171,12 @@ msgstr "Dil"
 msgid "&Voice model card..."
 msgstr "&Ses model kartı..."
 
+# Draft translation added by the fork maintainer; review welcome.
+# Accelerator moved to D: K collided with the "&Kapat" dialog button.
 #. Translators: label for a button for removing a voice
 #: addon\globalPlugins\sonata_tts_global_plugin\voice_manager.py:62
 msgid "&Remove voice..."
-msgstr "Sesi &kaldır..."
+msgstr "Sesi kal&dır..."
 
 #. Translators: the main label of the install button
 #: addon\globalPlugins\sonata_tts_global_plugin\voice_manager.py:67
@@ -405,11 +407,18 @@ msgstr "&Uzunluk ölçeği"
 msgid "Noise &w"
 msgstr "Gürültü &w"
 
+# Draft translation added by the fork maintainer; review welcome.
 #. Add-on description
 #. Translators: Long description to be shown for this add-on on add-on information from add-on store
 #: buildVars.py:24
-msgid "Neural voices for NVDA based on Sonata"
-msgstr "Sonata tabanlı, NVDA için sinir ağı sesleri"
+msgid ""
+"Adds fast, local neural text-to-speech voices to NVDA. Provides a "
+"synthesizer driver for Piper voice models via the Sonata engine, together "
+"with a voice manager for downloading and installing voices."
+msgstr ""
+"NVDA'ya hızlı, yerel sinir ağı tabanlı metin okuma sesleri ekler. Sonata "
+"motoru aracılığıyla Piper ses modelleri için bir sentezleyici sürücüsü ve "
+"sesleri indirip kurmak için bir ses yöneticisi sağlar."
 
 #. Brief changelog for this version
 #. Translators: what's new content for the add-on version to be shown in the add-on store

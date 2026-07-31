@@ -349,19 +349,29 @@ msgstr "&Hablante"
 msgid "&Noise scale"
 msgstr "&Escala de ruido"
 
+# Draft translation added by the fork maintainer; review welcome.
+# Accelerator moved to D: E collided with "&Escala de ruido" in the same panel.
 #: addon\synthDrivers\sonata_neural_voices\__init__.py:169
 msgid "&Length scale"
-msgstr "&Escala de duración"
+msgstr "Escala de &duración"
 
 #: addon\synthDrivers\sonata_neural_voices\__init__.py:170
 msgid "Noise &w"
 msgstr "Ruido de &anchura"
 
+# Draft translation added by the fork maintainer; review welcome.
 #. Add-on description
 #. Translators: Long description to be shown for this add-on on add-on information from add-ons manager
 #: buildVars.py:26
-msgid "Neural voices for NVDA based on Sonata"
-msgstr "Voces neuronales para NVDA basado en Sonata"
+msgid ""
+"Adds fast, local neural text-to-speech voices to NVDA. Provides a "
+"synthesizer driver for Piper voice models via the Sonata engine, together "
+"with a voice manager for downloading and installing voices."
+msgstr ""
+"Añade a NVDA voces neuronales de texto a voz rápidas y locales. Proporciona "
+"un controlador de sintetizador para modelos de voz de Piper mediante el "
+"motor Sonata, junto con un administrador de voces para descargar e instalar "
+"voces."
 
 # Draft translation added by the fork maintainer; review welcome.
 #. Translators: file dialog filter for tar archives
@@ -392,10 +402,12 @@ msgstr ""
 "Verifica el registro de NVDA para más detalles."
 
 # Draft translation added by the fork maintainer; review welcome.
+# Accelerator moved to P: D collided with "&Descarga variante estándar" on the same
+# tab, and P matches the "&Probar" state of this same button.
 #. Translators: label of the preview button while audio is playing
 #: addon\globalPlugins\sonata_tts_global_plugin\voice_manager.py:361
 msgid "&Stop preview"
-msgstr "&Detener prueba"
+msgstr "Detener &prueba"
 
 # Draft translation added by the fork maintainer; review welcome.
 #. Translators: error shown when voice preview fails to play

@@ -326,10 +326,12 @@ msgstr "&Pêşdîtin"
 msgid "&Download standard variant"
 msgstr "Guhertoya &standard daxîne"
 
+# Draft translation added by the fork maintainer; review welcome.
+# Accelerator moved to D: B collided with the "&Bigire" dialog button.
 #. Translators: label of a button to download the fast variant of voice
 #: addon\globalPlugins\sonata_tts_global_plugin\voice_manager.py:270
 msgid "Download &fast variant"
-msgstr "Guhertoya &bilez daxîne"
+msgstr "Guhertoya bilez &daxîne"
 
 #. Translators: label of a button to refresh the voices list
 #: addon\globalPlugins\sonata_tts_global_plugin\voice_manager.py:272
@@ -405,11 +407,18 @@ msgstr "Pîvana &dirêjahiyê"
 msgid "Noise &w"
 msgstr "Xişîn &w"
 
+# Draft translation added by the fork maintainer; review welcome.
 #. Add-on description
 #. Translators: Long description to be shown for this add-on on add-on information from add-on store
 #: buildVars.py:24
-msgid "Neural voices for NVDA based on Sonata"
-msgstr "Dengên neuronî yên NVDA-yê li ser bingeha Sonata"
+msgid ""
+"Adds fast, local neural text-to-speech voices to NVDA. Provides a "
+"synthesizer driver for Piper voice models via the Sonata engine, together "
+"with a voice manager for downloading and installing voices."
+msgstr ""
+"Dengên metin-bo-deng ên neuronî yên bilez û herêmî li NVDA-yê zêde dike. Ji "
+"bo modelên dengî yên Piper bi rêya motora Sonata ajokarek sentezker, û ji bo "
+"daxistin û sazkirina dengan rêveberek dengan pêşkêş dike."
 
 #. Brief changelog for this version
 #. Translators: what's new content for the add-on version to be shown in the add-on store
