@@ -261,12 +261,6 @@ msgstr "Terminé"
 msgid "Choose voice archive file "
 msgstr "Choisissez le fichier d'archive de la voix "
 
-#: addon\globalPlugins\sonata_tts_global_plugin\voice_manager.py:213
-msgid "Failed to install voice from archive. See NVDA's log for more details."
-msgstr ""
-"Échec de l'installation de la voix à partir des archives. Voir le journal de "
-"NVDA pour plus de détails."
-
 #: addon\globalPlugins\sonata_tts_global_plugin\voice_manager.py:215
 msgid "Voice installation failed"
 msgstr "L'installation de la voix a échoué"
@@ -327,11 +321,6 @@ msgstr ""
 "Impossible de récupérer la liste des voix.\n"
 "Veuillez vérifier votre connexion et réessayer."
 
-#. Translators: message in a dialog
-#: addon\globalPlugins\sonata_tts_global_plugin\voice_manager.py:352
-msgid "Playing preview..."
-msgstr "Lecture de l'aperçu..."
-
 #. Translators: title of voice manager dialog
 #: addon\globalPlugins\sonata_tts_global_plugin\voice_manager.py:411
 msgid "Sonata voice manager"
@@ -374,3 +363,74 @@ msgstr "Ha&uteur de bruit"
 #: buildVars.py:26
 msgid "Neural voices for NVDA based on Sonata"
 msgstr "Voix neuronales pour NVDA basées sur Sonata"
+
+# Draft translation added by the fork maintainer; review welcome.
+#. Translators: file dialog filter for tar archives
+#: addon\globalPlugins\sonata_tts_global_plugin\voice_manager.py:187
+msgid "Tar archives (*.tar.gz, *.tgz)"
+msgstr "Archives tar (*.tar.gz, *.tgz)"
+
+# Draft translation added by the fork maintainer; review welcome.
+#. Translators: file dialog filter for all files
+#: addon\globalPlugins\sonata_tts_global_plugin\voice_manager.py:189
+msgid "All files"
+msgstr "Tous les fichiers"
+
+# Draft translation added by the fork maintainer; review welcome.
+#. Translators: message telling the user that installing the voice has failed
+#: addon\globalPlugins\sonata_tts_global_plugin\voice_manager.py:212
+msgid ""
+"Failed to install voice from archive.\n"
+"\n"
+"{detail}\n"
+"\n"
+"See NVDA's log for more details."
+msgstr ""
+"Échec de l'installation de la voix à partir de l'archive.\n"
+"\n"
+"{detail}\n"
+"\n"
+"Voir le journal de NVDA pour plus de détails."
+
+# Draft translation added by the fork maintainer; review welcome.
+#. Translators: label of the preview button while audio is playing
+#: addon\globalPlugins\sonata_tts_global_plugin\voice_manager.py:361
+msgid "&Stop preview"
+msgstr "&Arrêter l'aperçu"
+
+# Draft translation added by the fork maintainer; review welcome.
+#. Translators: error shown when voice preview fails to play
+#: addon\globalPlugins\sonata_tts_global_plugin\voice_manager.py:378
+msgid ""
+"Could not play voice preview.\n"
+"Check your connection and try again."
+msgstr ""
+"Impossible de lire l'aperçu de la voix.\n"
+"Vérifiez votre connexion et réessayez."
+
+# Draft translation added by the fork maintainer; review welcome.
+#. Translators: title of an error message box
+#: addon\globalPlugins\sonata_tts_global_plugin\voice_manager.py:380
+msgid "Preview failed"
+msgstr "Échec de l'aperçu"
+
+# Draft translation added by the fork maintainer; review welcome.
+#. Brief changelog for this version
+#. Translators: what's new content for the add-on version to be shown in the add-on store
+#: buildVars.py:29
+msgid ""
+"First stable release of the maintenance fork. Adds NVDA 2026.1 "
+"compatibility (Python 3.13, 64-bit) by rebuilding the bundled gRPC, "
+"miniaudio, and cffi binaries. Fixes voice list URL handling, voice install "
+"regex for names containing digits, voice list refresh after a successful "
+"download, install-from-local-file UX and error messages, and adds a Visual "
+"C++ Redistributable pre-flight check."
+msgstr ""
+"Première version stable de ce fork de maintenance. Ajoute la compatibilité "
+"avec NVDA 2026.1 (Python 3.13, 64 bits) en reconstruisant les binaires "
+"gRPC, miniaudio et cffi fournis. Corrige la gestion de l'URL de la liste "
+"des voix, l'expression régulière d'installation pour les noms contenant "
+"des chiffres, le rafraîchissement de la liste des voix après un "
+"téléchargement réussi, l'installation à partir d'un fichier local et ses "
+"messages d'erreur, et ajoute une vérification préalable du Redistribuable "
+"Visual C++."
