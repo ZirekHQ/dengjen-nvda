@@ -13,13 +13,12 @@ concurrency:
   group: sonar-${{ github.ref }}
   cancel-in-progress: true
 
-permissions:
-  contents: read
-
 jobs:
   sonar:
     name: Sonar
     runs-on: ubuntu-latest
+    permissions:
+      contents: read
     # Fork PRs are never given repository secrets, so SONAR_TOKEN would be empty
     # and the scan would fail with a red X the contributor cannot clear.
     if: github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository

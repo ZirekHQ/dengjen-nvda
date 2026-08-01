@@ -14,9 +14,6 @@ on:  # zizmor: ignore[dangerous-triggers]
   pull_request_target:
     branches: [ main ]
 
-permissions:
-  statuses: write
-
 concurrency:
   group: sonar-fork-fallback-${{ github.event.pull_request.number }}
   cancel-in-progress: true
@@ -25,6 +22,8 @@ jobs:
   neutral_status:
     name: Sonar fork fallback
     runs-on: ubuntu-latest
+    permissions:
+      statuses: write
     # Same-repo PRs get a real analysis; never overwrite it.
     if: github.event.pull_request.head.repo.full_name != github.repository
     steps:
