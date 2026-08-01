@@ -11,13 +11,12 @@ on:
 
   workflow_dispatch:
 
-permissions:
-  contents: read
-
 jobs:
   build:
 
     runs-on: ubuntu-latest
+    permissions:
+      contents: read
 
     steps:
     - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5.1.0
@@ -51,6 +50,8 @@ jobs:
 
   test_matrix:
     runs-on: ${{ matrix.os }}
+    permissions:
+      contents: read
     strategy:
       matrix:
         os: [windows-latest, ubuntu-latest]
@@ -77,6 +78,7 @@ jobs:
   # "test_matrix (<os>)", so the bare name would never be published.
   test:
     runs-on: ubuntu-latest
+    permissions: {}
     needs: ["test_matrix"]
     if: always()
     steps:
