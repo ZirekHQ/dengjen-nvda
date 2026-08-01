@@ -5,3 +5,8 @@ repos:
       - id: check-ast
       - id: check-case-conflict
       - id: check-yaml
+
+  - repo: https://github.com/zizmorcore/zizmor-pre-commit
+    rev: v1.28.0
+    hooks:
+      - id: zizmor

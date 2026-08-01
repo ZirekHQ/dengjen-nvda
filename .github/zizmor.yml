@@ -1,0 +1,7 @@
+rules:
+  superfluous-actions:
+    ignore:
+      # `gh release create` cannot replace this step: it has no equivalent of
+      # fail_on_unmatched_files, which is what keeps a release from publishing
+      # without the .nvda-addon attached.
+      - build_addon.yml

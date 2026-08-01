@@ -5,6 +5,10 @@ updates:
     directory: "/"
     schedule:
       interval: "monthly"
+    # Skip versions published in the last week, so a compromised release has time
+    # to be yanked before Dependabot proposes it.
+    cooldown:
+      default-days: 7
     commit-message:
       prefix: "ci"
       include: "scope"
@@ -17,6 +21,8 @@ updates:
     directory: "/"
     schedule:
       interval: "monthly"
+    cooldown:
+      default-days: 7
     commit-message:
       prefix: "chore"
       include: "scope"

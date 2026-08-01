@@ -10,7 +10,7 @@ name: Sonar fork fallback
 # That trigger runs in the base repo's context with its secrets, so this
 # workflow deliberately does NOT check out or execute anything from the PR.
 
-on:
+on:  # zizmor: ignore[dangerous-triggers]
   pull_request_target:
     branches: [ main ]
 
