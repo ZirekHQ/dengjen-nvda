@@ -1,5 +1,8 @@
 # Sonata neural voices for NVDA
 
+
+harmless change
+
 > **Maintenance fork notice**
 >
 > The original author, Musharraf Omer ([@mush42](https://github.com/mush42)), [announced on the NVDA Add-ons list](https://nvda-addons.groups.io/g/nvda-addons/message/27636) that commercial contract conflicts prevent him from continuing to maintain this open-source add-on. This fork continues the project to keep the add-on working on current NVDA releases, and carries compatibility updates alongside bug fixes to the voice manager and the synthesizer driver. All credit for the original work belongs to Musharraf Omer.
