@@ -25,13 +25,12 @@ addon_info = AddonInfo(
 		"""Adds fast, local neural text-to-speech voices to NVDA. Provides a synthesizer driver for Piper voice models via the Sonata engine, together with a voice manager for downloading and installing voices."""
 	),
 	# version
-	addon_version="3.2.0",
+	addon_version="3.2.1",
 	# Brief changelog for this version
 	# Translators: what's new content for the add-on version to be shown in the add-on store
 	addon_changelog=_(
-		"First stable release of the maintenance fork. "
-		"Adds NVDA 2026.1 compatibility (Python 3.13, 64-bit) by rebuilding the bundled gRPC, miniaudio, and cffi binaries. "
-		"Fixes voice list URL handling, voice install regex for names containing digits, voice list refresh after a successful download, install-from-local-file UX and error messages, and adds a Visual C++ Redistributable pre-flight check."
+		"Fixes NVDA falling silent after reloading configuration profiles (NVDA+Control+R double-tap). "
+		"The shared background event loop is no longer shut down when a synthesizer instance is terminated, and its startup and shutdown are now thread-safe."
 	),
 	# Author(s)
 	addon_author="Musharraf Omer (original) <ibnomer2011@hotmail.com>, Ali Ustek (maintainer) <13117393+austek@users.noreply.github.com>",
