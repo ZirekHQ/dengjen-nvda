@@ -29,11 +29,11 @@ from synthDriverHandler import (
     synthIndexReached,
 )
 
+from . import aio
 from . import grpc_client
 from ._config import SonataConfig
 from .helpers import update_displaied_params_on_voice_change
 from .aio import (
-    ASYNCIO_EVENT_LOOP,
     CancelledError,
     asyncio,
     asyncio_cancel_task,
@@ -49,10 +49,6 @@ from .tts_system import (
 import addonHandler
 
 addonHandler.initTranslation()
-
-
-aio.initialize()
-_GRPC_IS_INIT = grpc_client.initialize()
 
 
 class DoneSpeakingTask:
@@ -149,7 +145,7 @@ async def _process_speech_sequence(speech_seq):
 @asyncio_coroutine_to_concurrent_future
 async def process_speech(speech_seq):
     speech_task = _process_speech_sequence(speech_seq)
-    return ASYNCIO_EVENT_LOOP.create_task(speech_task)
+    return asyncio.get_running_loop().create_task(speech_task)
 
 
 
@@ -187,8 +183,17 @@ class SynthDriver(synthDriverHandler.SynthDriver):
 
     def __init__(self):
         super().__init__()
+        # Set before any early return below so terminate() stays safe when
+        # initialization bails out.
+        self._current_task = None
+        self._rateBoost = False
+        self.tts = None
+        self._player = None
+        self._players = {}
+        aio.ensure_running()
+        grpc_init_fut = grpc_client.initialize()
         try:
-            _GRPC_IS_INIT.result()
+            grpc_init_fut.result(timeout=grpc_client.STARTUP_TIMEOUT)
         except Exception:
             log.exception(
                 "Failed to initialize Sonata services. Synthesizer will not be available.",
@@ -196,7 +201,9 @@ class SynthDriver(synthDriverHandler.SynthDriver):
             )
             return
         try:
-            sonata_grpc_server_version = grpc_client.check_grpc_server().result()
+            sonata_grpc_server_version = grpc_client.check_grpc_server().result(
+                timeout=grpc_client.STARTUP_TIMEOUT
+            )
         except Exception:
             log.exception(
                 "Failed to connect to sonata GRPC server. Synthesizer will not be available.",
@@ -211,8 +218,6 @@ class SynthDriver(synthDriverHandler.SynthDriver):
                 "No installed voices were found for Sonata. Synthesizer will not be available."
             )
             return
-        self._current_task = None
-        self._rateBoost = False
         self.voices = SonataTextToSpeechSystem.load_piper_voices_from_nvda_config_dir()
         try:
             voice_key = config.conf["speech"]["sonata_neural_voices"]["voice"]
@@ -225,7 +230,6 @@ class SynthDriver(synthDriverHandler.SynthDriver):
         self.tts = SonataTextToSpeechSystem(
             self.voices, speech_options=init_speech_options
         )
-        self._players = {}
         self._player = self._get_or_create_player(
             self.tts.speech_options.voice.sample_rate
         )
@@ -237,11 +241,11 @@ class SynthDriver(synthDriverHandler.SynthDriver):
 
     def terminate(self):
         self.cancel()
-        self.tts.shutdown()
+        if self.tts is not None:
+            self.tts.shutdown()
         for player in self._players.values():
             player.close()
         self._players.clear()
-        aio.terminate()
 
     def speak(self, speechSequence):
         with self.tts.create_synthesis_context():
@@ -310,10 +314,12 @@ class SynthDriver(synthDriverHandler.SynthDriver):
     def cancel(self):
         if self._current_task is not None:
             asyncio_cancel_task(self._current_task)
-        self._player.stop()
+        if self._player is not None:
+            self._player.stop()
 
     def pause(self, switch):
-        self._player.pause(switch)
+        if self._player is not None:
+            self._player.pause(switch)
 
     def _on_index_reached(self, index):
         if index is not None:

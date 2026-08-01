@@ -114,7 +114,7 @@ class SonataVoice:
             )
         voice_info = grpc_client.load_voice(
             os.fspath(self.config_path)
-        ).result()
+        ).result(timeout=grpc_client.CALL_TIMEOUT)
         self.remote_id = voice_info.voice_id
         self.supports_streaming_output = voice_info.supports_streaming_output
         default_synth_options = voice_info.synth_options
@@ -132,40 +132,51 @@ class SonataVoice:
         else:
             self.default_speaker = None
 
+    def _get_synth_option(self, name):
+        options = grpc_client.get_synth_options(self.remote_id).result(
+            timeout=grpc_client.CALL_TIMEOUT
+        )
+        return getattr(options, name)
+
+    def _set_synth_option(self, **kwargs):
+        grpc_client.set_synth_options(self.remote_id, **kwargs).result(
+            timeout=grpc_client.CALL_TIMEOUT
+        )
+
     @property
     def speaker(self):
         if self.is_multi_speaker:
-            return grpc_client.get_synth_options(self.remote_id).result().speaker
+            return self._get_synth_option("speaker")
         return FALLBACK_SPEAKER_NAME
 
     @speaker.setter
     def speaker(self, value):
         if self.is_multi_speaker:
-            grpc_client.set_synth_options(self.remote_id, speaker=value).result()
+            self._set_synth_option(speaker=value)
 
     @property
     def noise_scale(self):
-        return grpc_client.get_synth_options(self.remote_id).result().noise_scale
+        return self._get_synth_option("noise_scale")
 
     @noise_scale.setter
     def noise_scale(self, value):
-        grpc_client.set_synth_options(self.remote_id, noise_scale=value).result()
+        self._set_synth_option(noise_scale=value)
 
     @property
     def length_scale(self):
-        return grpc_client.get_synth_options(self.remote_id).result().length_scale
+        return self._get_synth_option("length_scale")
 
     @length_scale.setter
     def length_scale(self, value):
-        grpc_client.set_synth_options(self.remote_id, length_scale=value).result()
+        self._set_synth_option(length_scale=value)
 
     @property
     def noise_w(self):
-        return grpc_client.get_synth_options(self.remote_id).result().noise_w
+        return self._get_synth_option("noise_w")
 
     @noise_w.setter
     def noise_w(self, value):
-        grpc_client.set_synth_options(self.remote_id, noise_w=value).result()
+        self._set_synth_option(noise_w=value)
 
     @property
     def is_fast(self):
