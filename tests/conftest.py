@@ -140,7 +140,33 @@ _stub_module("configobj", ConfigObj=MagicMock())
 _stub_module("logHandler", log=MagicMock())
 
 # synthDriverHandler
-class _FakeSynthDriver:
+class _AutoPropertyMeta(type):
+    """Stand-in for NVDA's baseObject.AutoPropertyObject: turns `_get_x`/
+    `_set_x` method pairs into a real `x` property. The real SynthDriver's
+    rate/volume/voice/etc. settings are plain attribute access at the call
+    site (`self.rate = value`) and only work because NVDA wires them up this
+    way; without it they'd silently shadow the getter/setter methods instead
+    of calling them."""
+
+    def __new__(mcs, name, bases, namespace):
+        cls = super().__new__(mcs, name, bases, namespace)
+        prop_names = set()
+        for klass in cls.__mro__:
+            for attr_name in vars(klass):
+                if attr_name.startswith("_get_"):
+                    prop_names.add(attr_name[len("_get_"):])
+                elif attr_name.startswith("_set_"):
+                    prop_names.add(attr_name[len("_set_"):])
+        for prop_name in prop_names:
+            if prop_name in cls.__dict__:
+                continue
+            getter = getattr(cls, f"_get_{prop_name}", None)
+            setter = getattr(cls, f"_set_{prop_name}", None)
+            setattr(cls, prop_name, property(getter, setter))
+        return cls
+
+
+class _FakeSynthDriver(metaclass=_AutoPropertyMeta):
     cachePropertiesByDefault = False
     VoiceSetting = MagicMock(return_value=MagicMock())
     VariantSetting = MagicMock(return_value=MagicMock())
