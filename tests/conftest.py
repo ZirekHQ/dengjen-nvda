@@ -14,6 +14,7 @@ Strategy
 5. Load the real submodules we want to test (const, helpers, tts_system).
 """
 
+import builtins
 import sys
 import os
 import types
@@ -186,7 +187,11 @@ _stub_module(
 )
 
 # addonHandler
-_stub_module("addonHandler", initTranslation=MagicMock())
+# initTranslation() installs gettext's `_`, which module-level `_("...")` needs at import.
+def _init_translation():
+    builtins._ = lambda message: message
+
+_stub_module("addonHandler", initTranslation=_init_translation)
 
 # wx / gui
 _stub_module("wx", ID_ANY=0, YES=1, NO=2, YES_NO=3, ICON_WARNING=4, EVT_MENU=MagicMock())
@@ -250,6 +255,7 @@ _grpc_client.CALL_TIMEOUT = 10
 # aio — starts real threads/event loops; stub completely
 _aio = _stub_module("sonata_neural_voices.aio")
 _aio.initialize = MagicMock()
+_aio.ensure_running = MagicMock()
 _aio.terminate = MagicMock()
 _aio.ASYNCIO_EVENT_LOOP = MagicMock()
 _aio.CancelledError = Exception
