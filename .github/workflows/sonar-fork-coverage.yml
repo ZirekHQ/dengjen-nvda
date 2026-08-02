@@ -1,41 +1,68 @@
-name: Sonar fork fallback
+name: Sonar fork coverage
 
-# "SonarCloud Code Analysis" is a required check on main, but the Sonar job in
-# sonar.yml is deliberately skipped for fork PRs because forks are never given
-# SONAR_TOKEN. A required check that never reports leaves the PR stuck on
-# "Expected — waiting for status", so this posts the context itself.
+# The Sonar job in sonar.yml is deliberately skipped for fork PRs because
+# forks are never given SONAR_TOKEN. This workflow builds the pieces a real
+# scan needs -- the coverage report and PR metadata -- using only the
+# read-only, secret-less token that `pull_request` gets for fork PRs.
 #
-# pull_request_target is used because GITHUB_TOKEN is read-only on
-# pull_request for forks, and writing a commit status needs write access.
-# That trigger runs in the base repo's context with its secrets, so this
-# workflow deliberately does NOT check out or execute anything from the PR.
+# sonar-fork-scan.yml (triggered by workflow_run, running in the base repo's
+# trusted context with SONAR_TOKEN) picks up the artifact produced here and
+# performs the actual scan. This workflow must never gain `secrets:` access
+# and must never do anything beyond running the PR's own test suite, exactly
+# as any other fork `pull_request` job already safely does.
 
-on:  # zizmor: ignore[dangerous-triggers]
-  pull_request_target:
+on:
+  pull_request:
     branches: [ main ]
 
+permissions: {}
+
 concurrency:
-  group: sonar-fork-fallback-${{ github.event.pull_request.number }}
+  group: sonar-fork-coverage-${{ github.event.pull_request.number }}
   cancel-in-progress: true
 
 jobs:
-  neutral_status:
-    name: Sonar fork fallback
+  coverage:
+    name: Build coverage for fork scan
     runs-on: ubuntu-latest
     permissions:
-      statuses: write
-    # Same-repo PRs get a real analysis; never overwrite it.
+      contents: read
+    # Same-repo PRs are scanned directly by sonar.yml; only forks need this.
     if: github.event.pull_request.head.repo.full_name != github.repository
     steps:
-      - name: Report the Sonar check as skipped
-        env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          REPO: ${{ github.repository }}
-          HEAD_SHA: ${{ github.event.pull_request.head.sha }}
-          RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+      - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5.1.0
+        with:
+          persist-credentials: false
+
+      - name: Set up Python
+        uses: actions/setup-python@ece7cb06caefa5fff74198d8649806c4678c61a1 # v6.3.0
+        with:
+          python-version: "3.13"
+
+      - name: Install test dependencies
         run: |
-          gh api --method POST "repos/${REPO}/statuses/${HEAD_SHA}" \
-            -f state=success \
-            -f context='SonarCloud Code Analysis' \
-            -f description='Skipped for fork PR: SONAR_TOKEN is unavailable' \
-            -f target_url="${RUN_URL}"
+          python -m pip install --upgrade --only-binary :all: -r requirements-bootstrap.txt
+          pip install --only-binary :all: -r requirements-test.txt
+
+      - name: Run tests with coverage
+        run: pytest --cov --cov-report=xml
+
+      - name: Record PR metadata for the trusted scan workflow
+        env:
+          PR_NUMBER: ${{ github.event.pull_request.number }}
+          HEAD_SHA: ${{ github.event.pull_request.head.sha }}
+          HEAD_REF: ${{ github.event.pull_request.head.ref }}
+        run: |
+          printf '%s\n' "$PR_NUMBER" > pr_number.txt
+          printf '%s\n' "$HEAD_SHA" > pr_sha.txt
+          printf '%s\n' "$HEAD_REF" > pr_ref.txt
+
+      - uses: actions/upload-artifact@330a01c490aca151604b8cf639adc76d48f6c5d4 # v5.0.0
+        with:
+          name: sonar-fork-coverage
+          path: |
+            coverage.xml
+            pr_number.txt
+            pr_sha.txt
+            pr_ref.txt
+          retention-days: 1
