@@ -235,6 +235,25 @@ class TestTTSVoiceSwitching:
 
         assert system.voice == dialect_voice.key
 
+    @pytest.mark.parametrize("requested", ["en-US", "en_US", "EN-us", "en_us"])
+    def test_set_language_normalizes_dash_and_case(self, requested):
+        """normalizeLanguage converts dashes to underscores and fixes casing
+        before the driver ever compares languages, so a dash- or
+        differently-cased request must resolve to the same dialect voice as
+        the canonical 'en_US' form."""
+        dialect_voice = _make_voice(key="en_US-alex-medium", name="Alex", language="en_US")
+        opts = SpeechOptions.__new__(SpeechOptions)
+        opts.voice = dialect_voice
+        opts.rate = opts.volume = opts.pitch = opts.sentence_silence_ms = None
+        system = SonataTextToSpeechSystem.__new__(SonataTextToSpeechSystem)
+        system.voices = [dialect_voice]
+        system.speech_options = opts
+
+        system.language = requested
+
+        assert system.voice == dialect_voice.key
+        assert system.language == "en_US"
+
 
 # ---------------------------------------------------------------------------
 # SonataTextToSpeechSystem — rate / volume / pitch
