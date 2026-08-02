@@ -74,6 +74,16 @@ jobs:
       - name: Run tests
         run: pytest
 
+      # Separate invocation, not folded into `pytest` above: testpaths=tests
+      # already keeps this out of that run, and tests_contract/'s conftest.py
+      # imports the real grpc package (incompatible with tests/conftest.py's
+      # MagicMock stub of it). sonata-grpc.exe is a Windows binary, so this
+      # only does anything on the windows-latest leg of the matrix; the test
+      # module self-skips on other platforms.
+      - name: Run gRPC contract tests
+        if: runner.os == 'Windows'
+        run: pytest tests_contract/ -v
+
   # Stable check name for branch protection: matrix jobs report as
   # "test_matrix (<os>)", so the bare name would never be published.
   test:
