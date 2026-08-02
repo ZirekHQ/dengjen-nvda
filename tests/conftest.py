@@ -45,9 +45,12 @@ def _make_ready_future(value=None) -> _Future:
 _TESTS_DIR = os.path.dirname(__file__)
 _SYNTH_DIR = os.path.join(_TESTS_DIR, "..", "addon", "synthDrivers")
 _SYNTH_PKG_DIR = os.path.join(_SYNTH_DIR, "sonata_neural_voices")
+_GLOBAL_PLUGIN_DIR = os.path.join(_TESTS_DIR, "..", "addon", "globalPlugins")
+_GLOBAL_PLUGIN_PKG_DIR = os.path.join(_GLOBAL_PLUGIN_DIR, "sonata_tts_global_plugin")
 
 REPO_ROOT = os.path.abspath(os.path.join(_TESTS_DIR, ".."))
 SYNTH_PKG_DIR = os.path.abspath(_SYNTH_PKG_DIR)
+GLOBAL_PLUGIN_PKG_DIR = os.path.abspath(_GLOBAL_PLUGIN_PKG_DIR)
 
 
 def load_module_from_path(
@@ -231,10 +234,18 @@ def _init_translation():
 _stub_module("addonHandler", initTranslation=_init_translation)
 
 # wx / gui
-_stub_module("wx", ID_ANY=0, YES=1, NO=2, YES_NO=3, ICON_WARNING=4, EVT_MENU=MagicMock())
-_stub_module("gui")
+# CallAfter runs synchronously (no real event loop under test) so callers can
+# assert on its effects immediately instead of needing to pump wx's queue.
+_stub_module(
+    "wx",
+    ID_ANY=0, YES=1, NO=2, YES_NO=3, ICON_WARNING=4, ICON_ERROR=5, ICON_INFORMATION=6,
+    EVT_MENU=MagicMock(),
+    CallAfter=MagicMock(side_effect=lambda func, *a, **kw: func(*a, **kw)),
+    ProgressDialog=MagicMock(return_value=MagicMock()),
+)
+_stub_module("gui", messageBox=MagicMock(), mainFrame=MagicMock(), runScriptModalDialog=MagicMock())
 _stub_module("gui.settingsDialogs", NVDASettingsDialog=MagicMock(), SpeechSettingsPanel=MagicMock())
-_stub_module("core", postNvdaStartup=MagicMock())
+_stub_module("core", postNvdaStartup=MagicMock(), restart=MagicMock())
 _stub_module("globalPluginHandler", GlobalPlugin=MagicMock())
 
 
@@ -309,3 +320,24 @@ _aio.run_in_executor = MagicMock()
 _load_real_module("sonata_neural_voices.const", "const.py")
 _load_real_module("sonata_neural_voices.helpers", "helpers.py")
 _load_real_module("sonata_neural_voices.tts_system", "tts_system.py")
+
+
+# ---------------------------------------------------------------------------
+# 6. Register `sonata_tts_global_plugin` as a package WITHOUT running its
+#    __init__.py. That file pulls in voice_manager.py/components.py, which
+#    subclass real wx widgets (wx.ListCtrl, the vendored sized_controls.py
+#    SizedDialog) — a MagicMock `wx` can't stand in as a base class for those,
+#    so that GUI layer is out of scope here. Only expose the names
+#    __init__.py itself re-exports from sonata_neural_voices, since
+#    voice_download.py reaches them via `from . import SonataTextToSpeechSystem,
+#    helpers, SONATA_VOICES_DIR`.
+# ---------------------------------------------------------------------------
+
+_gui_plugin_pkg = types.ModuleType("sonata_tts_global_plugin")
+_gui_plugin_pkg.__path__ = [_GLOBAL_PLUGIN_PKG_DIR]
+_gui_plugin_pkg.__package__ = "sonata_tts_global_plugin"
+_gui_plugin_pkg.SonataTextToSpeechSystem = sys.modules["sonata_neural_voices.tts_system"].SonataTextToSpeechSystem
+_gui_plugin_pkg.SONATA_VOICES_DIR = sys.modules["sonata_neural_voices.tts_system"].SONATA_VOICES_DIR
+_gui_plugin_pkg.helpers = sys.modules["sonata_neural_voices.helpers"]
+_gui_plugin_pkg.aio = _aio
+sys.modules["sonata_tts_global_plugin"] = _gui_plugin_pkg
