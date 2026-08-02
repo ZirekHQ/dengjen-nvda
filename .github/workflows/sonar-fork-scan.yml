@@ -34,9 +34,12 @@ jobs:
       actions: read # needed by download-artifact to fetch an artifact from another run
     env:
       SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
-      ARTIFACT_DIR: ${{ runner.temp }}/sonar-fork-coverage
     steps:
+      # The `runner` context isn't available in a job-level `env:` block (only
+      # in steps and later), so ARTIFACT_DIR is set per-step below instead.
       - name: Download coverage artifact
+        env:
+          ARTIFACT_DIR: ${{ runner.temp }}/sonar-fork-coverage
         uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4.3.0
         with:
           name: sonar-fork-coverage
@@ -48,6 +51,8 @@ jobs:
       # below doesn't wipe it before it's copied into place.
       - name: Read PR metadata
         id: meta
+        env:
+          ARTIFACT_DIR: ${{ runner.temp }}/sonar-fork-coverage
         run: |
           {
             echo "pr_number=$(cat "$ARTIFACT_DIR/pr_number.txt")"
@@ -62,6 +67,8 @@ jobs:
           persist-credentials: false
 
       - name: Place coverage report
+        env:
+          ARTIFACT_DIR: ${{ runner.temp }}/sonar-fork-coverage
         run: cp "$ARTIFACT_DIR/coverage.xml" coverage.xml
 
       - name: SonarQube scan
