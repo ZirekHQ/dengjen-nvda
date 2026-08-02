@@ -215,6 +215,26 @@ class TestTTSVoiceSwitching:
         tts.language = "en"
         assert tts.language == "en"
 
+    def test_set_bare_language_matches_dialect_voice(self, single_voice):
+        """A bare language code (e.g. 'en' from a LangChangeCommand) must match an
+        installed dialect voice (e.g. 'en_US') rather than raising VoiceNotFoundError.
+
+        Regression test for issue #63: the prefix match compared against a
+        hyphen-joined code ('en-') while voice.language is underscore-joined
+        ('en_US'), so the match always failed for dialect voices.
+        """
+        dialect_voice = _make_voice(key="en_US-alex-medium", name="Alex", language="en_US")
+        opts = SpeechOptions.__new__(SpeechOptions)
+        opts.voice = dialect_voice
+        opts.rate = opts.volume = opts.pitch = opts.sentence_silence_ms = None
+        system = SonataTextToSpeechSystem.__new__(SonataTextToSpeechSystem)
+        system.voices = [dialect_voice]
+        system.speech_options = opts
+
+        system.language = "en"
+
+        assert system.voice == dialect_voice.key
+
 
 # ---------------------------------------------------------------------------
 # SonataTextToSpeechSystem — rate / volume / pitch

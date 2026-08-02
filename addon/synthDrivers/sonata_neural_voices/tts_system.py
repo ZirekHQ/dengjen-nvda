@@ -316,7 +316,7 @@ class SonataTextToSpeechSystem:
         lang = normalizeLanguage(new_language)
         if self.speech_options.voice.language == lang:
             return
-        lang_code = lang.split("-")[0] + "-"
+        lang_code = lang.split("_")[0] + "_"
         possible_voices = []
         for voice in self.voices:
             if voice.language == lang:
