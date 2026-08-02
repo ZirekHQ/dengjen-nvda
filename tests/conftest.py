@@ -14,6 +14,7 @@ Strategy
 5. Load the real submodules we want to test (const, helpers, tts_system).
 """
 
+import builtins
 import sys
 import os
 import types
@@ -98,7 +99,18 @@ _stub_module("globalVars", appArgs=types.SimpleNamespace(configPath="/tmp/nvda_t
 
 # languageHandler
 def _normalize_language(lang: str) -> str:
-    return lang.lower().replace("_", "-")
+    """Port of NVDA's languageHandler.normalizeLanguage: dash -> underscore,
+    lowercase language, uppercase dialect. Kept in sync with NVDA's real
+    implementation so tests catch separator/casing bugs the real driver
+    would hit (see issue #63)."""
+    lang = lang.replace("-", "_")
+    ld = lang.split("_")
+    ld[0] = ld[0].lower()
+    if ld[0] == "x":
+        return None
+    if len(ld) >= 2:
+        ld[1] = ld[1].upper()
+    return "_".join(ld)
 
 _stub_module("languageHandler", normalizeLanguage=_normalize_language)
 
@@ -128,7 +140,33 @@ _stub_module("configobj", ConfigObj=MagicMock())
 _stub_module("logHandler", log=MagicMock())
 
 # synthDriverHandler
-class _FakeSynthDriver:
+class _AutoPropertyMeta(type):
+    """Stand-in for NVDA's baseObject.AutoPropertyObject: turns `_get_x`/
+    `_set_x` method pairs into a real `x` property. The real SynthDriver's
+    rate/volume/voice/etc. settings are plain attribute access at the call
+    site (`self.rate = value`) and only work because NVDA wires them up this
+    way; without it they'd silently shadow the getter/setter methods instead
+    of calling them."""
+
+    def __new__(mcs, name, bases, namespace):
+        cls = super().__new__(mcs, name, bases, namespace)
+        prop_names = set()
+        for klass in cls.__mro__:
+            for attr_name in vars(klass):
+                if attr_name.startswith("_get_"):
+                    prop_names.add(attr_name[len("_get_"):])
+                elif attr_name.startswith("_set_"):
+                    prop_names.add(attr_name[len("_set_"):])
+        for prop_name in prop_names:
+            if prop_name in cls.__dict__:
+                continue
+            getter = getattr(cls, f"_get_{prop_name}", None)
+            setter = getattr(cls, f"_set_{prop_name}", None)
+            setattr(cls, prop_name, property(getter, setter))
+        return cls
+
+
+class _FakeSynthDriver(metaclass=_AutoPropertyMeta):
     cachePropertiesByDefault = False
     VoiceSetting = MagicMock(return_value=MagicMock())
     VariantSetting = MagicMock(return_value=MagicMock())
@@ -186,7 +224,11 @@ _stub_module(
 )
 
 # addonHandler
-_stub_module("addonHandler", initTranslation=MagicMock())
+# initTranslation() installs gettext's `_`, which module-level `_("...")` needs at import.
+def _init_translation():
+    builtins._ = lambda message: message
+
+_stub_module("addonHandler", initTranslation=_init_translation)
 
 # wx / gui
 _stub_module("wx", ID_ANY=0, YES=1, NO=2, YES_NO=3, ICON_WARNING=4, EVT_MENU=MagicMock())
@@ -250,6 +292,7 @@ _grpc_client.CALL_TIMEOUT = 10
 # aio — starts real threads/event loops; stub completely
 _aio = _stub_module("sonata_neural_voices.aio")
 _aio.initialize = MagicMock()
+_aio.ensure_running = MagicMock()
 _aio.terminate = MagicMock()
 _aio.ASYNCIO_EVENT_LOOP = MagicMock()
 _aio.CancelledError = Exception

@@ -1,0 +1,68 @@
+name: Sonar fork coverage
+
+# The Sonar job in sonar.yml is deliberately skipped for fork PRs because
+# forks are never given SONAR_TOKEN. This workflow builds the pieces a real
+# scan needs -- the coverage report and PR metadata -- using only the
+# read-only, secret-less token that `pull_request` gets for fork PRs.
+#
+# sonar-fork-scan.yml (triggered by workflow_run, running in the base repo's
+# trusted context with SONAR_TOKEN) picks up the artifact produced here and
+# performs the actual scan. This workflow must never gain `secrets:` access
+# and must never do anything beyond running the PR's own test suite, exactly
+# as any other fork `pull_request` job already safely does.
+
+on:
+  pull_request:
+    branches: [ main ]
+
+permissions: {}
+
+concurrency:
+  group: sonar-fork-coverage-${{ github.event.pull_request.number }}
+  cancel-in-progress: true
+
+jobs:
+  coverage:
+    name: Build coverage for fork scan
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    # Same-repo PRs are scanned directly by sonar.yml; only forks need this.
+    if: github.event.pull_request.head.repo.full_name != github.repository
+    steps:
+      - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5.1.0
+        with:
+          persist-credentials: false
+
+      - name: Set up Python
+        uses: actions/setup-python@ece7cb06caefa5fff74198d8649806c4678c61a1 # v6.3.0
+        with:
+          python-version: "3.13"
+
+      - name: Install test dependencies
+        run: |
+          python -m pip install --upgrade --only-binary :all: -r requirements-bootstrap.txt
+          pip install --only-binary :all: -r requirements-test.txt
+
+      - name: Run tests with coverage
+        run: pytest --cov --cov-report=xml
+
+      - name: Record PR metadata for the trusted scan workflow
+        env:
+          PR_NUMBER: ${{ github.event.pull_request.number }}
+          HEAD_SHA: ${{ github.event.pull_request.head.sha }}
+          HEAD_REF: ${{ github.event.pull_request.head.ref }}
+        run: |
+          printf '%s\n' "$PR_NUMBER" > pr_number.txt
+          printf '%s\n' "$HEAD_SHA" > pr_sha.txt
+          printf '%s\n' "$HEAD_REF" > pr_ref.txt
+
+      - uses: actions/upload-artifact@330a01c490aca151604b8cf639adc76d48f6c5d4 # v5.0.0
+        with:
+          name: sonar-fork-coverage
+          path: |
+            coverage.xml
+            pr_number.txt
+            pr_sha.txt
+            pr_ref.txt
+          retention-days: 1

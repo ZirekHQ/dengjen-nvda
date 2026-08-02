@@ -1,0 +1,76 @@
+name: Sonar fork scan
+
+# Runs the real SonarCloud scan for fork PRs, using the coverage report and
+# PR metadata built by sonar-fork-coverage.yml. workflow_run executes this
+# file from the base branch in the base repo's trusted context, so
+# SONAR_TOKEN is available -- but nothing here ever runs code from the PR:
+# it only downloads a pre-built artifact and checks out the PR's source so
+# the scanner can read it statically. It must never install dependencies
+# from the fork or execute its test suite; that already happened, safely,
+# in the untrusted coverage workflow.
+#
+# workflow_run does not execute workflow files from the PR branch either --
+# only this file, as it exists on main -- so a fork PR cannot alter what
+# this workflow does.
+
+on:  # zizmor: ignore[dangerous-triggers]
+  workflow_run:
+    workflows: [ "Sonar fork coverage" ]
+    types: [ completed ]
+
+permissions: {}
+
+concurrency:
+  group: sonar-fork-scan-${{ github.event.workflow_run.id }}
+  cancel-in-progress: true
+
+jobs:
+  scan:
+    name: Sonar fork scan
+    runs-on: ubuntu-latest
+    if: github.event.workflow_run.conclusion == 'success'
+    permissions:
+      contents: read
+      actions: read # needed by download-artifact to fetch an artifact from another run
+    env:
+      SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
+      ARTIFACT_DIR: ${{ runner.temp }}/sonar-fork-coverage
+    steps:
+      - name: Download coverage artifact
+        uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4.3.0
+        with:
+          name: sonar-fork-coverage
+          path: ${{ runner.temp }}/sonar-fork-coverage
+          run-id: ${{ github.event.workflow_run.id }}
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+
+      # Downloaded outside GITHUB_WORKSPACE (above) so checkout's `git clean`
+      # below doesn't wipe it before it's copied into place.
+      - name: Read PR metadata
+        id: meta
+        run: |
+          {
+            echo "pr_number=$(cat "$ARTIFACT_DIR/pr_number.txt")"
+            echo "head_ref=$(cat "$ARTIFACT_DIR/pr_ref.txt")"
+          } >> "$GITHUB_OUTPUT"
+
+      - name: Checkout PR head (read-only; no PR code is executed)
+        uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5.1.0
+        with:
+          ref: refs/pull/${{ steps.meta.outputs.pr_number }}/head
+          fetch-depth: 0 # Sonar needs full history for new-code detection and blame
+          persist-credentials: false
+
+      - name: Place coverage report
+        run: cp "$ARTIFACT_DIR/coverage.xml" coverage.xml
+
+      - name: SonarQube scan
+        if: env.SONAR_TOKEN != ''
+        uses: SonarSource/sonarqube-scan-action@22918119ff8e1ca75a623e15c8296b6ea4fbe28f # v8.2.1
+        with:
+          # Not auto-detected: this runs under workflow_run, not the native
+          # pull_request event the scanner normally reads PR context from.
+          args: >
+            -Dsonar.pullrequest.key=${{ steps.meta.outputs.pr_number }}
+            -Dsonar.pullrequest.branch=${{ steps.meta.outputs.head_ref }}
+            -Dsonar.pullrequest.base=main
