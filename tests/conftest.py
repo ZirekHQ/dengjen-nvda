@@ -99,7 +99,18 @@ _stub_module("globalVars", appArgs=types.SimpleNamespace(configPath="/tmp/nvda_t
 
 # languageHandler
 def _normalize_language(lang: str) -> str:
-    return lang.lower().replace("_", "-")
+    """Port of NVDA's languageHandler.normalizeLanguage: dash -> underscore,
+    lowercase language, uppercase dialect. Kept in sync with NVDA's real
+    implementation so tests catch separator/casing bugs the real driver
+    would hit (see issue #63)."""
+    lang = lang.replace("-", "_")
+    ld = lang.split("_")
+    ld[0] = ld[0].lower()
+    if ld[0] == "x":
+        return None
+    if len(ld) >= 2:
+        ld[1] = ld[1].upper()
+    return "_".join(ld)
 
 _stub_module("languageHandler", normalizeLanguage=_normalize_language)
 
