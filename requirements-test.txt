@@ -1,3 +1,10 @@
 # Tooling for the test matrix and the Sonar coverage run.
 pytest==9.1.1
 pytest-cov==7.1.0
+
+# The vendored `grpc` under synthDrivers/sonata_neural_voices/lib/ eagerly
+# imports grpc.aio, which needs this. NVDA's own bundled Python already has
+# it (pulled in by some other dependency), so production never hits this;
+# a bare CI Python does. Only tests_contract/ (Windows-only) exercises the
+# real grpc package -- everywhere else it's a MagicMock stub.
+typing_extensions==4.16.0

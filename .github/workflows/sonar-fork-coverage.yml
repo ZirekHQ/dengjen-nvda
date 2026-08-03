@@ -1,15 +1,20 @@
 name: Sonar fork coverage
 
 # The Sonar job in sonar.yml is deliberately skipped for fork PRs because
-# forks are never given SONAR_TOKEN. This workflow builds the pieces a real
-# scan needs -- the coverage report and PR metadata -- using only the
-# read-only, secret-less token that `pull_request` gets for fork PRs.
+# forks are never given SONAR_TOKEN. This workflow builds what a real scan
+# needs -- a full checkout (including git history, for Sonar's blame/new-code
+# detection) plus a coverage report -- using only the read-only, secret-less
+# token that `pull_request` gets for fork PRs, and packages it as a plain tar
+# archive artifact.
 #
-# sonar-fork-scan.yml (triggered by workflow_run, running in the base repo's
-# trusted context with SONAR_TOKEN) picks up the artifact produced here and
-# performs the actual scan. This workflow must never gain `secrets:` access
-# and must never do anything beyond running the PR's own test suite, exactly
-# as any other fork `pull_request` job already safely does.
+# sonar-fork-scan.yml (workflow_dispatch, manually triggered by a maintainer
+# after reviewing the diff) extracts that archive with plain `tar`, never a
+# git operation, so it never runs git fetch/checkout against fork content and
+# never executes anything from the fork -- the archive is only read
+# statically by the Sonar scanner. This workflow must never gain
+# `secrets:` access and must never do anything beyond running the PR's own
+# test suite, exactly as any other fork `pull_request` job already safely
+# does.
 
 on:
   pull_request:
@@ -32,6 +37,7 @@ jobs:
     steps:
       - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5.1.0
         with:
+          fetch-depth: 0 # Sonar needs full history for new-code detection and blame
           persist-credentials: false
 
       - name: Set up Python
@@ -47,22 +53,11 @@ jobs:
       - name: Run tests with coverage
         run: pytest --cov --cov-report=xml
 
-      - name: Record PR metadata for the trusted scan workflow
-        env:
-          PR_NUMBER: ${{ github.event.pull_request.number }}
-          HEAD_SHA: ${{ github.event.pull_request.head.sha }}
-          HEAD_REF: ${{ github.event.pull_request.head.ref }}
-        run: |
-          printf '%s\n' "$PR_NUMBER" > pr_number.txt
-          printf '%s\n' "$HEAD_SHA" > pr_sha.txt
-          printf '%s\n' "$HEAD_REF" > pr_ref.txt
+      - name: Archive workspace for the manual scan workflow
+        run: tar -czf "$RUNNER_TEMP/workspace.tar.gz" -C "$GITHUB_WORKSPACE" .
 
       - uses: actions/upload-artifact@330a01c490aca151604b8cf639adc76d48f6c5d4 # v5.0.0
         with:
-          name: sonar-fork-coverage
-          path: |
-            coverage.xml
-            pr_number.txt
-            pr_sha.txt
-            pr_ref.txt
-          retention-days: 1
+          name: sonar-fork-workspace
+          path: ${{ runner.temp }}/workspace.tar.gz
+          retention-days: 7
