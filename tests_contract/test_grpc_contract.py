@@ -28,6 +28,7 @@ if sys.platform != "win32":
     pytest.skip("sonata-grpc.exe is a Windows binary", allow_module_level=True)
 
 import grpc
+import espeakng_loader
 
 import grpc_protos.sonata_grpc_pb2 as msgs
 import grpc_protos.sonata_grpc_pb2_grpc as pb2_grpc
@@ -51,12 +52,17 @@ def grpc_server():
     port = _find_free_port()
     log_path = os.path.join(tempfile.mkdtemp(), "sonata-grpc.log")
     env = os.environ.copy()
+    # The server needs real espeak-ng phonemization data to synthesize text
+    # (not just a valid directory), or SynthesizeUtterance aborts with
+    # "Failed to initialize eSpeak-ng". Production gets this for free from
+    # NVDA's own bundled eSpeak NG driver; espeakng-loader vendors the same
+    # data as a plain pip package for exactly this kind of standalone use.
+    # SONATA_ESPEAKNG_DATA_DIRECTORY must be the directory that *contains*
+    # an `espeak-ng-data` subfolder, not that subfolder itself.
+    espeakng_data_dir = os.path.dirname(espeakng_loader.get_data_path())
     env.update({
         "SONATA_GRPC_SERVER_PORT": str(port),
-        # Only needed for voice loading/synthesis, which this handshake-only
-        # test never exercises; an empty directory is enough for the server
-        # to start.
-        "SONATA_ESPEAKNG_DATA_DIRECTORY": tempfile.mkdtemp(),
+        "SONATA_ESPEAKNG_DATA_DIRECTORY": espeakng_data_dir,
         "SONATA_GRPC": "info",
     })
 
