@@ -8,3 +8,10 @@ pytest-cov==7.1.0
 # a bare CI Python does. Only tests_contract/ (Windows-only) exercises the
 # real grpc package -- everywhere else it's a MagicMock stub.
 typing_extensions==4.16.0
+
+# sonata-grpc.exe needs real espeak-ng-data to phonemize text for synthesis.
+# Production gets this for free from NVDA's own bundled eSpeak NG driver;
+# this vendors the same data as a plain pip package so
+# tests_contract/test_grpc_contract.py's synthesis test has something to
+# point SONATA_ESPEAKNG_DATA_DIRECTORY at.
+espeakng-loader==0.2.4
