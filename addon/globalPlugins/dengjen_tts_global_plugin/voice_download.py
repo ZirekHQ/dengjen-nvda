@@ -23,10 +23,13 @@ from http.client import HTTPException
 from io import BytesIO
 
 import wx
+import addonHandler
 import core
 import gui
 from languageHandler import normalizeLanguage
 from logHandler import log
+
+addonHandler.initTranslation()
 
 from . import DengjenTextToSpeechSystem, helpers, DENGJEN_VOICES_DIR
 
