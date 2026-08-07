@@ -45,15 +45,16 @@ class _PendingExecutor:
         return self.future
 
 
-def _fire_key_up(window, keycode):
-    event = wx.KeyEvent(wx.EVT_KEY_UP.typeId)
+def _fire_char_hook(dialog, keycode):
+    event = wx.KeyEvent(wx.EVT_CHAR_HOOK.typeId)
     event.SetKeyCode(keycode)
-    # wx.KeyEvent's constructor takes no id, unlike wx.CommandEvent's, and the
-    # Bind carries a source filter -- leave the id at 0 and wx silently drops
-    # the event before it reaches the handler.
-    event.SetId(window.GetId())
-    event.SetEventObject(window)
-    window.ProcessEvent(event)
+    # The id is left at 0 deliberately. A real char hook carries the id of the
+    # window the key went to, never the dialog's, so a source filter on the Bind
+    # would drop it in production -- and this event would then stop reaching the
+    # handler here too.
+    event.SetEventObject(dialog)
+    dialog.ProcessEvent(event)
+    return event
 
 
 def _as_function(obj):
@@ -97,8 +98,9 @@ def test_every_annotation_in_components_resolves(components):
 
 class TestSnakDialogKeyboard:
     """Escape is the only key SnakDialog handles, and getButtons() returns None,
-    so it is the only way a user can act on the toast at all -- yet the whole of
-    onKeyUp was unexecuted by any test (#97)."""
+    so it is the only way a user can act on the toast at all -- yet the handler
+    was bound to a control that cannot hold focus, which made it dead code on
+    every platform this ships to (#101)."""
 
     @pytest.fixture
     def dismissable(self, components, nvda_gui):
@@ -115,16 +117,36 @@ class TestSnakDialogKeyboard:
 
     def test_escape_asks_the_dismiss_callback(self, dismissable):
         dialog, calls = dismissable
-        _fire_key_up(dialog.staticMessage, wx.WXK_ESCAPE)
-        # onKeyUp -> Close() -> onClose -> dismiss_callback is the only route to
-        # this list, so it is what proves the EVT_KEY_UP binding is live.
+        _fire_char_hook(dialog, wx.WXK_ESCAPE)
+        # onCharHook -> Close() -> onClose -> dismiss_callback is the only route
+        # to this list, so it is what proves the binding is live.
         assert calls == ["asked"]
 
     def test_another_key_is_ignored(self, dismissable):
         dialog, calls = dismissable
-        _fire_key_up(dialog.staticMessage, ord("a"))
+        _fire_char_hook(dialog, ord("a"))
         # Without this, a handler that dismissed on every key would pass above.
         assert calls == []
+
+    def test_escape_is_swallowed_rather_than_passed_on(self, dismissable):
+        dialog, _ = dismissable
+        # Skipping it would hand the same Escape to wxDialog's own char hook and
+        # then to the focused child, on a dialog that is already closing.
+        assert _fire_char_hook(dialog, wx.WXK_ESCAPE).GetSkipped() is False
+        assert _fire_char_hook(dialog, ord("a")).GetSkipped() is True
+
+    def test_the_message_cannot_hold_the_focus_a_key_binding_would_need(
+        self, dismissable
+    ):
+        dialog, _ = dismissable
+        # Why the hook is on the dialog. Both are hard-coded, not incidental:
+        # wxStaticTextBase overrides AcceptsFocus() to return false in every
+        # port, and AcceptsFocusFromKeyboard() -- the gate wxSetFocusToChild
+        # uses when the dialog is shown -- is `!m_disableFocusFromKbd &&
+        # AcceptsFocus()`. SetCanFocus(), which used to be called here to
+        # overrule that, is implemented only in the GTK port (#101).
+        assert dialog.staticMessage.AcceptsFocus() is False
+        assert dialog.staticMessage.AcceptsFocusFromKeyboard() is False
 
     def test_close_is_vetoed_when_there_is_nothing_to_ask(self, components, nvda_gui):
         dialog = components.SnakDialog("Please wait...", nvda_gui)
