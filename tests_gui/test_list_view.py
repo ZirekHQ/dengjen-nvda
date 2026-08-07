@@ -2,10 +2,8 @@
 """
 Smoke tests for components.py against real wxPython: ImmutableObjectListView
 actually populates a wx.ListCtrl from ColumnDefns, get_selected maps the
-focused row back to the source object, and the EVT_LIST_INSERT_ITEM /
-EVT_LIST_DELETE_ITEM bindings reach the immutability guard. wx swallows the
-RuntimeError those handlers raise, though, so the guard never actually blocks
-a mutation -- it only logs one to stderr.
+focused row back to the source object, and every row mutator raises rather
+than mutating unless set_objects is holding the guard open.
 
 These assert wiring, not decisions -- the wx-free decisions live in
 voice_manager_logic.py and are covered on both CI legs by
@@ -98,33 +96,46 @@ class TestImmutableObjectListView:
         list_view.set_objects([])
         assert list_view.get_selected() is None
 
-    def test_mutation_guard_raises_outside_set_objects(self, list_view):
-        # Not asserted via InsertItem: wx swallows exceptions raised inside
-        # event handlers, so onInsertItem's RuntimeError reaches stderr but
-        # never propagates to the caller -- pytest.raises would see nothing.
+    @pytest.mark.parametrize(
+        "mutate",
+        [
+            pytest.param(lambda v: v.InsertItem(0, "smuggled"), id="InsertItem"),
+            pytest.param(lambda v: v.Append(["smuggled", "High"]), id="Append"),
+            pytest.param(lambda v: v.DeleteItem(0), id="DeleteItem"),
+            pytest.param(lambda v: v.DeleteAllItems(), id="DeleteAllItems"),
+            pytest.param(lambda v: v.ClearAll(), id="ClearAll"),
+        ],
+    )
+    def test_row_mutators_raise_and_leave_the_list_untouched(self, list_view, mutate):
+        list_view.set_objects([_Row("amy", "medium"), _Row("ryan", "high")])
         with pytest.raises(RuntimeError, match="List is immutable"):
-            list_view.prevent_mutations()
+            mutate(list_view)
+        assert list_view.ItemCount == 2
+        assert list_view.GetItemText(0, 0) == "amy"
+        # ClearAll drops the columns too, so a guard that let it through would
+        # show up here rather than in the row assertions.
+        assert list_view.GetColumnCount() == 2
 
-    def test_insert_item_reaches_the_mutation_guard_through_the_binding(
-        self, list_view, monkeypatch
-    ):
-        calls = []
-        monkeypatch.setattr(list_view, "prevent_mutations", lambda: calls.append(1))
-        list_view.InsertItem(0, "smuggled")
-        assert calls  # the EVT_LIST_INSERT_ITEM binding reached the guard
-
-    def test_set_objects_leaves_the_mutation_guard_armed_afterwards(self, list_view):
-        # prevent_mutations() IS called by onInsertItem during set_objects's
-        # own Append calls -- it just doesn't raise, because __unsafe_modify
-        # holds the guard open for exactly that duration. So "does the guard
-        # fire during set_objects" isn't a real question; what set_objects
-        # must not do is leave the guard permanently disarmed afterwards.
-        with pytest.raises(RuntimeError, match="List is immutable"):
-            list_view.prevent_mutations()
+    def test_the_guard_re_arms_after_set_objects(self, list_view):
         list_view.set_objects([_Row("amy", "medium")])
         assert list_view.ItemCount == 1
         with pytest.raises(RuntimeError, match="List is immutable"):
-            list_view.prevent_mutations()
+            list_view.DeleteAllItems()
+
+    def test_the_guard_re_arms_when_set_objects_raises(self, list_view):
+        class _Exploding:
+            name = "amy"
+
+            @property
+            def quality(self):
+                raise ValueError("boom")
+
+        with pytest.raises(ValueError, match="boom"):
+            list_view.set_objects([_Exploding()])
+        # The failure happened inside __unsafe_modify. Without try/finally the
+        # flag stays set and the list is writable from then on.
+        with pytest.raises(RuntimeError, match="List is immutable"):
+            list_view.DeleteAllItems()
 
     def test_set_focused_item_past_the_end_is_a_no_op(self, list_view):
         list_view.set_objects([_Row("amy", "medium")], set_focus=False)
