@@ -200,12 +200,18 @@ def install(*, stub_wx: bool = True) -> None:
         def _percentToParam(self, percent, min_val, max_val):
             return min_val + (max_val - min_val) * percent / 100
 
+    # Non-dengjen by default so callers that check the active synth's name
+    # (e.g. update_voices_list) never take the dengjen branch that calls
+    # synth.terminate()/__init__() on this stub.
+    _default_synth = types.SimpleNamespace(name="espeak", voice="default")
+
     _stub_module(
         "synthDriverHandler",
         SynthDriver=_FakeSynthDriver,
         VoiceInfo=MagicMock(side_effect=lambda id, name, lang: (id, name, lang)),
         synthDoneSpeaking=MagicMock(),
         synthIndexReached=MagicMock(),
+        getSynth=lambda: _default_synth,
     )
 
     # autoSettingsUtils
