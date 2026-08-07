@@ -94,6 +94,18 @@ def warn_if_old_addon_installed(addons=None):
     )
 
 
+def onInstall():
+    for step in (
+        warn_if_old_addon_installed,
+        migrate_voices_directory,
+        migrate_speech_config,
+    ):
+        try:
+            step()
+        except Exception:
+            log.exception(f"Upgrade step {step.__name__} failed")
+
+
 def onUninstall():
     with _temporary_import_psutil() as psutil:
         force_kill_sonata_grpc_server(psutil)

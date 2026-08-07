@@ -140,6 +140,27 @@ class TestWarnIfOldAddonInstalled:
         assert len(shown) == 1
         assert "Sonata" in shown[0][0][0]
 
+    def test_shows_the_warning_via_wx_CallAfter_not_directly(self, monkeypatch):
+        # gui.messageBox must be deferred through wx.CallAfter rather than
+        # called directly, or it would stack a modal dialog on top of NVDA's
+        # add-on installation dialog.
+        call_after_calls = []
+        monkeypatch.setattr(
+            install_tasks.wx,
+            "CallAfter",
+            lambda func, *a, **kw: call_after_calls.append((func, a, kw)),
+        )
+        message_box_calls = []
+        monkeypatch.setattr(
+            install_tasks.gui,
+            "messageBox",
+            lambda *a, **kw: message_box_calls.append((a, kw)),
+        )
+        install_tasks.warn_if_old_addon_installed([_FakeAddon("sonata_neural_voices")])
+        assert len(call_after_calls) == 1
+        assert call_after_calls[0][0] is install_tasks.gui.messageBox
+        assert message_box_calls == []
+
     def test_stays_quiet_when_it_is_absent(self, monkeypatch):
         shown = []
         monkeypatch.setattr(
@@ -147,3 +168,35 @@ class TestWarnIfOldAddonInstalled:
         )
         install_tasks.warn_if_old_addon_installed([])
         assert shown == []
+
+
+class TestOnInstall:
+    def test_runs_every_step_in_order(self, monkeypatch):
+        ran = []
+        monkeypatch.setattr(
+            install_tasks, "warn_if_old_addon_installed", lambda: ran.append("warn")
+        )
+        monkeypatch.setattr(
+            install_tasks, "migrate_voices_directory", lambda: ran.append("voices")
+        )
+        monkeypatch.setattr(
+            install_tasks, "migrate_speech_config", lambda: ran.append("config")
+        )
+        install_tasks.onInstall()
+        assert ran == ["warn", "voices", "config"]
+
+    def test_a_failing_step_does_not_abort_the_install(self, monkeypatch):
+        ran = []
+
+        def _boom():
+            raise OSError("permission denied")
+
+        monkeypatch.setattr(install_tasks, "warn_if_old_addon_installed", _boom)
+        monkeypatch.setattr(
+            install_tasks, "migrate_voices_directory", lambda: ran.append("voices")
+        )
+        monkeypatch.setattr(
+            install_tasks, "migrate_speech_config", lambda: ran.append("config")
+        )
+        install_tasks.onInstall()
+        assert ran == ["voices", "config"]

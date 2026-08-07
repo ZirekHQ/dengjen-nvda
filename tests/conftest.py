@@ -242,7 +242,10 @@ _stub_module(
 # assert on its effects immediately instead of needing to pump wx's queue.
 _stub_module(
     "wx",
-    ID_ANY=0, YES=1, NO=2, YES_NO=3, OK=7, ICON_WARNING=4, ICON_ERROR=5, ICON_INFORMATION=6,
+    # Distinct bit flags, as in real wx, so bitwise-OR combinations (e.g.
+    # wx.YES_NO | wx.ICON_WARNING) can't collide with any other stubbed
+    # constant, including ones ORed together elsewhere (e.g. wx.OK).
+    ID_ANY=0, YES=1, NO=2, YES_NO=3, OK=4, ICON_WARNING=8, ICON_ERROR=16, ICON_INFORMATION=32,
     EVT_MENU=MagicMock(),
     CallAfter=MagicMock(side_effect=lambda func, *a, **kw: func(*a, **kw)),
     ProgressDialog=MagicMock(return_value=MagicMock()),
