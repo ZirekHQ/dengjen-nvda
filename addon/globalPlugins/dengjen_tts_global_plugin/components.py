@@ -155,9 +155,8 @@ class AsyncSnakDialog:
     ):
         self.snak_dg = SnakDialog(*sdg_args, **sdg_kwargs)
         self.done_callback = done_callback
-        self.future = executor.submit(func).add_done_callback(
-            self.on_future_completed
-        )
+        self.future = executor.submit(func)
+        self.future.add_done_callback(self.on_future_completed)
         self.snak_dg.CenterOnScreen()
         gui.runScriptModalDialog(self.snak_dg)
 
