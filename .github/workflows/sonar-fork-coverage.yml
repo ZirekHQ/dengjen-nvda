@@ -37,6 +37,12 @@ jobs:
     steps:
       - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5.1.0
         with:
+          # Pinned to the actual PR head, not actions/checkout's default
+          # ephemeral merge commit -- otherwise the scanner analyzes a
+          # commit SHA that doesn't match the PR, and SonarCloud can't
+          # attach its status to the commit branch protection actually
+          # checks.
+          ref: ${{ github.event.pull_request.head.sha }}
           fetch-depth: 0 # Sonar needs full history for new-code detection and blame
           persist-credentials: false
 
