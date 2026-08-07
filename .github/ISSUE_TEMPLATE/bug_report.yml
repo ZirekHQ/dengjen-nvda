@@ -11,7 +11,7 @@ body:
   - type: input
     id: addon-version
     attributes:
-      label: Sonata Neural Voices version
+      label: Dengjen Neural Voices version
       description: From the add-on store, or the version number embedded in the file you installed.
       placeholder: e.g. 3.2.0 / v3.2.0-beta.5
     validations:
@@ -39,7 +39,7 @@ body:
     id: voice
     attributes:
       label: Voice / variant tested
-      description: Which Sonata voice was active when the bug happened. Skip if the bug isn't tied to a specific voice.
+      description: Which Dengjen voice was active when the bug happened. Skip if the bug isn't tied to a specific voice.
       placeholder: e.g. en_US-lessac-medium (standard) / fr_FR-mls_1840-low (fast)
 
   - type: textarea

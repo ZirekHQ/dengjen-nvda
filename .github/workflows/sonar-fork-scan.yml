@@ -135,4 +135,4 @@ jobs:
             -f state="$STATE" \
             -f context='SonarCloud Code Analysis' \
             -f description="$DESC" \
-            -f target_url="https://sonarcloud.io/dashboard?id=austek_sonata-nvda&pullRequest=$PR_NUMBER"
+            -f target_url="https://sonarcloud.io/dashboard?id=austek_dengjen-nvda&pullRequest=$PR_NUMBER"
