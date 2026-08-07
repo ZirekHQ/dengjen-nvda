@@ -1,8 +1,9 @@
 # coding: utf-8
 """
 Contract tests for components.py that are not about a specific widget:
-AsyncSnakDialog's done-callback protocol, and a sweep proving every
-annotation in the module names something that actually exists.
+AsyncSnakDialog's done-callback protocol, SnakDialog's Escape handling, and a
+sweep proving every annotation in the module names something that actually
+exists.
 
 The sweep is the general net for a bug class this module has hit twice --
 #86 (`t.Union`) and #88 (`DoneCallback`) were both names that did not exist,
@@ -20,6 +21,8 @@ if sys.platform != "win32":
     # A skipif marker is not enough: pytest imports the module during
     # collection, and `import wx` fails outright without a Windows wheel.
     pytest.skip("real wxPython is Windows-only here", allow_module_level=True)
+
+import wx
 
 
 @pytest.fixture
@@ -40,6 +43,13 @@ class _PendingExecutor:
 
     def submit(self, func, *args, **kwargs):
         return self.future
+
+
+def _fire_key_up(window, keycode):
+    event = wx.KeyEvent(wx.EVT_KEY_UP.typeId)
+    event.SetKeyCode(keycode)
+    event.SetEventObject(window)
+    window.ProcessEvent(event)
 
 
 def _as_function(obj):
@@ -79,6 +89,52 @@ def test_every_annotation_in_components_resolves(components):
         except NameError as exc:
             unresolvable[obj.__qualname__] = str(exc)
     assert not unresolvable
+
+
+class TestSnakDialogKeyboard:
+    """Escape is the only key SnakDialog handles, and getButtons() returns None,
+    so it is the only way a user can act on the toast at all -- yet the whole of
+    onKeyUp was unexecuted by any test (#97)."""
+
+    @pytest.fixture
+    def dismissable(self, components, nvda_gui):
+        """dismiss_callback returning True is the path that actually dismisses;
+        returning False, or having no callback, vetoes the close."""
+        calls = []
+        dialog = components.SnakDialog(
+            "Retrieving voices list. Please wait...",
+            nvda_gui,
+            dismiss_callback=lambda: calls.append("asked") or True,
+        )
+        yield dialog, calls
+        dialog.Destroy()
+
+    def test_escape_asks_the_dismiss_callback(self, dismissable):
+        dialog, calls = dismissable
+        _fire_key_up(dialog.staticMessage, wx.WXK_ESCAPE)
+        # onKeyUp -> Close() -> onClose -> dismiss_callback is the only route to
+        # this list, so it is what proves the EVT_KEY_UP binding is live.
+        assert calls == ["asked"]
+
+    def test_another_key_is_ignored(self, dismissable):
+        dialog, calls = dismissable
+        _fire_key_up(dialog.staticMessage, ord("a"))
+        # Without this, a handler that dismissed on every key would pass above.
+        assert calls == []
+
+    def test_close_is_vetoed_when_there_is_nothing_to_ask(self, components, nvda_gui):
+        dialog = components.SnakDialog("Please wait...", nvda_gui)
+        try:
+            event = wx.CloseEvent(wx.EVT_CLOSE.typeId, dialog.GetId())
+            event.SetEventObject(dialog)
+            event.SetCanVeto(True)
+            dialog.ProcessEvent(event)
+            # Shipped behaviour, pinned rather than endorsed: with no
+            # dismiss_callback the toast refuses to close, so Escape does
+            # nothing until whatever spawned it settles.
+            assert event.GetVeto() is True
+        finally:
+            dialog.Destroy()
 
 
 class TestAsyncSnakDialog:
