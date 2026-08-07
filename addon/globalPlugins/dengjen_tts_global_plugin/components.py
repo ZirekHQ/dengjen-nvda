@@ -175,7 +175,7 @@ class ColumnDefn:
     title: str
     alignment: str
     width: int
-    string_converter: t.Union[typing.Callable[[typing.Any], str], str]
+    string_converter: typing.Callable[[typing.Any], str] | str
 
     _ALIGNMENT_FLAGS = {
         "left": wx.LIST_FORMAT_LEFT,

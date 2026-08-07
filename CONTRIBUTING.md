@@ -42,27 +42,54 @@ scons pot
 ## Running tests
 
 ```bash
-pytest
+pytest                    # the stub-based suite -- runs anywhere, incl. Linux
+pytest tests_contract/    # real sonata-grpc.exe        (Windows only)
+pytest tests_gui/         # real wxPython               (Windows only)
 ```
 
-The test suite (under `tests/`) covers add-on metadata, build helpers, the TTS system, the `SynthDriver` itself, and several pure-Python parsers extracted from the synth driver. It runs on Linux CI — none of it touches a real NVDA install.
+Three trees, because the process-wide fakes they need are mutually exclusive:
+
+| Tree | Fakes | Real | Runs on |
+| --- | --- | --- | --- |
+| `tests/` | NVDA, `wx`, `grpc` | add-on logic | Linux + Windows |
+| `tests_contract/` | nothing — avoids NVDA entirely | `grpc`, `sonata-grpc.exe` | Windows |
+| `tests_gui/` | NVDA | `wxPython` | Windows |
+
+`tests/conftest.py` installs a stub `wx` into `sys.modules` for the whole process, so a test needing real wx cannot live there — hence `tests_gui/`. Same reason `tests_contract/` is separate: it needs the real `grpc` that `tests/` mocks. `pytest.ini`'s `testpaths = tests` keeps both Windows-only trees out of a bare `pytest`, and their test modules self-skip on other platforms, so a Linux `pytest` is always green.
+
+You cannot run `tests_gui/` on Linux at all — wxPython publishes no Linux wheels on PyPI for any release, so `pip install`ing it there is a doomed source build. The tree self-skips instead (see below), and verification happens on the `windows-latest` CI leg.
 
 ### How the NVDA stubs work
 
-`tests/conftest.py` fakes just enough of NVDA's internal API surface (`config`, `languageHandler`, `synthDriverHandler`, `speech.commands`, `nvwave`, `wx`, `gui`, ...) to import and drive add-on code that would otherwise only run inside a real NVDA process. Two helpers do the heavy lifting:
+`tests/nvda_stubs.py` fakes just enough of NVDA's internal API surface (`config`, `languageHandler`, `synthDriverHandler`, `speech.commands`, `nvwave`, `gui`, ...) to import and drive add-on code that would otherwise only run inside a real NVDA process. `install(*, stub_wx: bool = True)` is what `tests/conftest.py` calls; `tests_gui/conftest.py` calls `install(stub_wx=False)` to keep real wxPython. Two helpers do the work:
 
-- `_stub_module(name, **attrs)` — registers a bare `types.ModuleType` in `sys.modules` with the given attributes, for NVDA modules the add-on only touches at the surface (e.g. `config.conf[...]`, `wx.ID_ANY`).
+- `_stub_module(name, **attrs)` — registers a bare `types.ModuleType` in `sys.modules`, for NVDA modules the add-on only touches at the surface (e.g. `config.conf[...]`).
 - `load_module_from_path(module_name, path, package=...)` — executes a real add-on `.py` file as a module under the stubs, so its actual logic runs and is covered, instead of being faked.
 
-`synthDriverHandler.SynthDriver` additionally carries a small `_AutoPropertyMeta` metaclass that mimics NVDA's `baseObject.AutoPropertyObject`: it turns `_get_x`/`_set_x` method pairs into a real `x` property, which is what lets tests do `driver.rate = 50` and have it actually call `_set_rate`.
+The stubbed `synthDriverHandler.SynthDriver` also carries `_AutoPropertyMeta`, a metaclass local to `install()` that mimics NVDA's `baseObject.AutoPropertyObject`, turning `_get_x`/`_set_x` pairs into a real `x` property. That is what lets tests do `driver.rate = 50` and have it call `_set_rate` — it's behaviour of the `SynthDriver` stub, not a helper a contributor can import and reuse elsewhere.
 
-Intra-package submodules with hard platform dependencies (`grpc_client`, the real gRPC engine process; `aio`, background event-loop threads) stay fully stubbed rather than executed — tests assert against the calls the driver makes into them, not their real behavior.
+Intra-package submodules with hard platform dependencies (`grpc_client`, `aio`) stay fully stubbed in `tests/` rather than executed — tests assert against the calls the driver makes into them.
+
+**Never stub a base class with a `MagicMock`.** Subclassing a `MagicMock()` instance does not raise: it silently produces a `MagicMock` and discards the class body, so every method under test becomes a no-op that still passes. Stub NVDA base classes as plain empty classes, the way `synthDriverHandler.SynthDriver` and `globalPluginHandler.GlobalPlugin` are.
 
 ### Adding tests for a new module
 
-1. If the module only needs modules already stubbed in `conftest.py`, load it with `load_module_from_path` at the top of your test file (see `tests/test_synth_driver.py` for the pattern of loading `synthDrivers/dengjen_neural_voices/__init__.py` itself).
-2. If it needs an NVDA API not yet stubbed, add a minimal `_stub_module(...)` call in `conftest.py` — only the attributes actually touched, not a full re-implementation.
-3. Prefer driving real logic (real `.py` file executed under stubs) over re-testing a mock; the goal is coverage of add-on code, not of the test doubles.
+1. **Pure logic, no wx?** Put it in `tests/`. If the module only needs modules already stubbed, load it with `load_module_from_path` at the top of your test file (see `tests/test_synth_driver.py` for the pattern of loading `synthDrivers/dengjen_neural_voices/__init__.py` itself).
+2. **Needs an NVDA API not yet stubbed?** Add a minimal `_stub_module(...)` call in `tests/nvda_stubs.py` — only the attributes actually touched.
+3. **Needs real wx widgets?** Put it in `tests_gui/`, guard the module with `pytest.skip(..., allow_module_level=True)` on non-Windows (see any file under `tests_gui/` for the exact guard), and use the `nvda_gui` fixture for a real parent window.
+4. Prefer driving real logic (a real `.py` file executed under stubs) over re-testing a mock; the goal is coverage of add-on code, not of the doubles.
+
+#### `tests_gui/` gotchas
+
+Each of these cost a CI round or a review finding to nail down — read before writing a new `tests_gui/` test:
+
+- **wx swallows exceptions raised inside event handlers.** It prints the traceback to stderr and moves on; nothing propagates to the test, so `pytest.raises` around a `ProcessEvent` call can never see an exception a handler throws. Assert an observable effect instead (see `test_list_view.py`'s mutation-guard tests, which assert via a different code path, not via `ProcessEvent`).
+- **`IsEnabled()` is ancestor-aware**: it returns `False` if *any* ancestor is disabled, and several panels are disabled at construction. `IsThisEnabled()` reports only the widget's own flag. Pick the one your assertion actually means (`test_voice_manager_dialog.py` has examples of both, and of the bug you get from using the wrong one).
+- **Never re-`Bind` a handler you're trying to verify, and never monkeypatch it.** `Bind` captures the bound method at construction time, so patching the instance attribute afterwards only proves `Bind` + `ProcessEvent` work — that's wxPython's job, not yours to re-test. Fire a real event at the construction-time binding and observe a collaborator the real handler calls (a mocked `gui.*` call, a mocked downloader class, a control's own state).
+- **`gui.messageBox` returns `wx.YES` / `wx.NO` / `wx.OK` / `wx.CANCEL`, not `wx.ID_*`.** The `wx.ID_*` constants come from `wx.MessageDialog.ShowModal()`, a different API. The add-on compares `retval == wx.YES`, so a mock returning `wx.ID_YES` looks right but silently skips every confirm-then-act branch.
+- **Never call `ShowModal()`.** With no running event loop it blocks until the CI job times out. Construct the dialog, assert against it, `Destroy()` it.
+
+Coverage note: `tests_contract/` and `tests_gui/` are pass/fail gates and contribute nothing to `coverage.xml`, so the modules only they reach stay in `sonar.coverage.exclusions` in `sonar-project.properties`.
 
 ## Refreshing the bundled binaries
 

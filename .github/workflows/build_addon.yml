@@ -84,6 +84,18 @@ jobs:
         if: runner.os == 'Windows'
         run: pytest tests_contract/ -v
 
+      # Separate invocation for the same reason as the contract tests above:
+      # tests_gui/ imports the real wxPython that tests/conftest.py replaces
+      # with a module stub, and a stub cannot be a base class for the
+      # wx.ListCtrl / SizedDialog subclasses in components.py. wxPython ships
+      # no Linux wheels on PyPI, so this is the Windows leg only; the test
+      # modules self-skip elsewhere.
+      - name: Run GUI smoke tests
+        if: runner.os == 'Windows'
+        run: |
+          pip install --only-binary :all: -r requirements-test-gui.txt
+          pytest tests_gui/ -v
+
   # Stable check name for branch protection: matrix jobs report as
   # "test_matrix (<os>)", so the bare name would never be published.
   test:
