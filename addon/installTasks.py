@@ -10,6 +10,7 @@ import shutil
 import sys
 import tempfile
 
+import globalVars
 from logHandler import log
 
 
@@ -18,6 +19,24 @@ _PIPER_SYNTH_DIR = os.path.join(_DIR, "synthDrivers", "dengjen_neural_voices")
 LIB_DIR = os.path.join(_PIPER_SYNTH_DIR, "lib")
 BIN_DIR = os.path.join(_PIPER_SYNTH_DIR, "bin")
 del _DIR, _PIPER_SYNTH_DIR
+
+OLD_ADDON_NAME = "sonata_neural_voices"
+OLD_VOICES_DIR_NAME = "sonata"
+VOICES_DIR_NAME = "dengjen"
+
+
+def migrate_voices_directory(config_path=None):
+	"""Move downloaded voices from the pre-4.0.0 location. Same volume, so this
+	is a rename rather than a copy however many GB of models are present."""
+	if config_path is None:
+		config_path = globalVars.appArgs.configPath
+	old_dir = os.path.join(config_path, OLD_VOICES_DIR_NAME)
+	new_dir = os.path.join(config_path, VOICES_DIR_NAME)
+	if os.path.exists(new_dir) or not os.path.isdir(old_dir):
+		return False
+	os.rename(old_dir, new_dir)
+	log.info(f"Migrated voices from {old_dir} to {new_dir}")
+	return True
 
 
 def onUninstall():
