@@ -19,7 +19,7 @@ _STRESS_ITERATIONS = 40
 
 _TESTS_DIR = os.path.dirname(__file__)
 _PKG_DIR = os.path.join(
-    _TESTS_DIR, "..", "addon", "synthDrivers", "sonata_neural_voices"
+    _TESTS_DIR, "..", "addon", "synthDrivers", "dengjen_neural_voices"
 )
 _AIO_PATH = os.path.join(_PKG_DIR, "aio.py")
 _GRPC_CLIENT_PATH = os.path.join(_PKG_DIR, "grpc_client", "__init__.py")
@@ -62,7 +62,7 @@ def _never_awaited_warnings(caught):
 
 def _load_real_aio():
     spec = importlib.util.spec_from_file_location(
-        "sonata_neural_voices.aio_real", _AIO_PATH
+        "dengjen_neural_voices.aio_real", _AIO_PATH
     )
     mod = importlib.util.module_from_spec(spec)
     spec.loader.exec_module(mod)

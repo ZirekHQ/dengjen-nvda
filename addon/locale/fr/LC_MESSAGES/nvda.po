@@ -5,7 +5,7 @@
 #
 msgid ""
 msgstr ""
-"Project-Id-Version: 'sonata_neural_voices' '3.0-beta.2'\n"
+"Project-Id-Version: 'dengjen_neural_voices' '3.0-beta.2'\n"
 "Report-Msgid-Bugs-To: 'nvda-translations@groups.io'\n"
 "POT-Creation-Date: 2024-05-16 20:58+0200\n"
 "PO-Revision-Date: 2024-05-17 11:24+0200\n"
@@ -286,7 +286,7 @@ msgstr "Aperçu"
 
 #. Translators: Label for a setting in synth settings ring.
 #: addon\globalPlugins\sonata_tts_global_plugin\voice_manager.py:258
-#: addon\synthDrivers\sonata_neural_voices\__init__.py:126
+#: addon\synthDrivers\dengjen_neural_voices\__init__.py:126
 msgid "Speaker"
 msgstr "Intervenant"
 
@@ -344,19 +344,19 @@ msgid "&Close"
 msgstr "&Fermer"
 
 #. Translators: Label for a setting in voice settings dialog.
-#: addon\synthDrivers\sonata_neural_voices\__init__.py:123
+#: addon\synthDrivers\dengjen_neural_voices\__init__.py:123
 msgid "&Speaker"
 msgstr "&Intervenant"
 
-#: addon\synthDrivers\sonata_neural_voices\__init__.py:168
+#: addon\synthDrivers\dengjen_neural_voices\__init__.py:168
 msgid "&Noise scale"
 msgstr "&Échelle de bruit"
 
-#: addon\synthDrivers\sonata_neural_voices\__init__.py:169
+#: addon\synthDrivers\dengjen_neural_voices\__init__.py:169
 msgid "&Length scale"
 msgstr "Échelle de &durée"
 
-#: addon\synthDrivers\sonata_neural_voices\__init__.py:170
+#: addon\synthDrivers\dengjen_neural_voices\__init__.py:170
 msgid "Noise &w"
 msgstr "Ha&uteur de bruit"
 

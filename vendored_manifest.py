@@ -4,7 +4,7 @@ import os
 import re
 
 MANIFEST_PATH = os.path.join(
-    "addon", "synthDrivers", "sonata_neural_voices", "lib", "VENDORED.txt"
+    "addon", "synthDrivers", "dengjen_neural_voices", "lib", "VENDORED.txt"
 )
 
 

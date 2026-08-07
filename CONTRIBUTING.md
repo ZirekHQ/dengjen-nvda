@@ -60,7 +60,7 @@ Intra-package submodules with hard platform dependencies (`grpc_client`, the rea
 
 ### Adding tests for a new module
 
-1. If the module only needs modules already stubbed in `conftest.py`, load it with `load_module_from_path` at the top of your test file (see `tests/test_synth_driver.py` for the pattern of loading `synthDrivers/sonata_neural_voices/__init__.py` itself).
+1. If the module only needs modules already stubbed in `conftest.py`, load it with `load_module_from_path` at the top of your test file (see `tests/test_synth_driver.py` for the pattern of loading `synthDrivers/dengjen_neural_voices/__init__.py` itself).
 2. If it needs an NVDA API not yet stubbed, add a minimal `_stub_module(...)` call in `conftest.py` — only the attributes actually touched, not a full re-implementation.
 3. Prefer driving real logic (real `.py` file executed under stubs) over re-testing a mock; the goal is coverage of add-on code, not of the test doubles.
 
@@ -74,7 +74,7 @@ python update_miniaudio.py   # audio decoding
 python update_cffi.py        # C FFI runtime
 ```
 
-Each script fetches the matching `cp313-win_amd64` wheel from PyPI and swaps the contents under `addon/synthDrivers/sonata_neural_voices/lib/`.
+Each script fetches the matching `cp313-win_amd64` wheel from PyPI and swaps the contents under `addon/synthDrivers/dengjen_neural_voices/lib/`.
 
 ## Submitting a PR
 

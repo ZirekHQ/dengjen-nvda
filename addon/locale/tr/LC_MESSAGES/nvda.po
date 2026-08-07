@@ -1,11 +1,11 @@
-# Translation of the 'sonata_neural_voices' NVDA add-on into Turkish.
+# Translation of the 'dengjen_neural_voices' NVDA add-on into Turkish.
 # Copyright (C) 2024 Musharraf Omer, 2026 Ali Ustek and contributors.
-# This file is distributed under the same license as the 'sonata_neural_voices' package.
+# This file is distributed under the same license as the 'dengjen_neural_voices' package.
 # Initial draft; corrections from native speakers are welcome.
 #
 msgid ""
 msgstr ""
-"Project-Id-Version: 'sonata_neural_voices' '3.2.0'\n"
+"Project-Id-Version: 'dengjen_neural_voices' '3.2.0'\n"
 "Report-Msgid-Bugs-To: 'nvda-translations@groups.io'\n"
 "POT-Creation-Date: 2026-07-31 00:00+0000\n"
 "PO-Revision-Date: 2026-07-31 00:00+0000\n"
@@ -313,7 +313,7 @@ msgstr "Önizleme"
 
 #. Translators: Label for a setting in synth settings ring.
 #: addon\globalPlugins\sonata_tts_global_plugin\voice_manager.py:260
-#: addon\synthDrivers\sonata_neural_voices\__init__.py:126
+#: addon\synthDrivers\dengjen_neural_voices\__init__.py:126
 msgid "Speaker"
 msgstr "Konuşmacı"
 
@@ -391,19 +391,19 @@ msgid "&Close"
 msgstr "&Kapat"
 
 #. Translators: Label for a setting in voice settings dialog.
-#: addon\synthDrivers\sonata_neural_voices\__init__.py:123
+#: addon\synthDrivers\dengjen_neural_voices\__init__.py:123
 msgid "&Speaker"
 msgstr "&Konuşmacı"
 
-#: addon\synthDrivers\sonata_neural_voices\__init__.py:166
+#: addon\synthDrivers\dengjen_neural_voices\__init__.py:166
 msgid "&Noise scale"
 msgstr "&Gürültü ölçeği"
 
-#: addon\synthDrivers\sonata_neural_voices\__init__.py:167
+#: addon\synthDrivers\dengjen_neural_voices\__init__.py:167
 msgid "&Length scale"
 msgstr "&Uzunluk ölçeği"
 
-#: addon\synthDrivers\sonata_neural_voices\__init__.py:168
+#: addon\synthDrivers\dengjen_neural_voices\__init__.py:168
 msgid "Noise &w"
 msgstr "Gürültü &w"
 

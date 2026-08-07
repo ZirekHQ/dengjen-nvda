@@ -12,12 +12,12 @@ import pytest
 from tests.conftest import SYNTH_PKG_DIR, load_module_from_path
 
 _config = load_module_from_path(
-    "sonata_neural_voices._config_under_test",
+    "dengjen_neural_voices._config_under_test",
     os.path.join(SYNTH_PKG_DIR, "_config.py"),
-    package="sonata_neural_voices",
+    package="dengjen_neural_voices",
 )
 
-SECTION = "sonata_neural_voices"
+SECTION = "dengjen_neural_voices"
 
 
 @pytest.fixture

@@ -3,9 +3,9 @@
 Tests for the SynthDriver itself: construction, speech sequence handling,
 flush/cancel ordering, the settings NVDA reads and writes through driver
 properties, and _set_voice's failure handling
-(addon/synthDrivers/sonata_neural_voices/__init__.py).
+(addon/synthDrivers/dengjen_neural_voices/__init__.py).
 
-conftest.py registers `sonata_neural_voices` as a package without running
+conftest.py registers `dengjen_neural_voices` as a package without running
 its __init__.py, so until now nothing imported or drove the SynthDriver
 class (see issue #65 -- this is where user-reported regressions have
 historically lived). This module executes the real __init__.py under the
@@ -32,14 +32,14 @@ from logHandler import log
 
 from tests.conftest import SYNTH_PKG_DIR, load_module_from_path
 
-import sonata_neural_voices.tts_system as tts_system
-from sonata_neural_voices.const import FALLBACK_SPEAKER_NAME
+import dengjen_neural_voices.tts_system as tts_system
+from dengjen_neural_voices.const import FALLBACK_SPEAKER_NAME
 from speech.commands import BreakCommand, IndexCommand, LangChangeCommand
 
 driver_module = load_module_from_path(
-    "sonata_neural_voices",
+    "dengjen_neural_voices",
     os.path.join(SYNTH_PKG_DIR, "__init__.py"),
-    package="sonata_neural_voices",
+    package="dengjen_neural_voices",
 )
 
 SynthDriver = driver_module.SynthDriver
@@ -49,7 +49,7 @@ IndexReachedTask = driver_module.IndexReachedTask
 DoneSpeakingTask = driver_module.DoneSpeakingTask
 
 VOICE_KEY = "en_US-test-medium"
-SECTION = "sonata_neural_voices"
+SECTION = "dengjen_neural_voices"
 
 
 def _index_command(index):
@@ -246,9 +246,9 @@ class TestSettings:
 
 
 _failure_driver_module = load_module_from_path(
-    "sonata_neural_voices._init_under_test",
+    "dengjen_neural_voices._init_under_test",
     os.path.join(SYNTH_PKG_DIR, "__init__.py"),
-    package="sonata_neural_voices",
+    package="dengjen_neural_voices",
 )
 _FailureSynthDriver = _failure_driver_module.SynthDriver
 

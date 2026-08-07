@@ -22,9 +22,9 @@ _DIR = os.path.abspath(os.path.dirname(__file__))
 _ADDON_ROOT = os.path.abspath(os.path.join(_DIR, os.pardir, os.pardir))
 _TTS_MODULE_DIR = os.path.join(_ADDON_ROOT, "synthDrivers")
 sys.path.insert(0, _TTS_MODULE_DIR)
-from sonata_neural_voices import helpers
-from sonata_neural_voices import aio
-from sonata_neural_voices.tts_system import (
+from dengjen_neural_voices import helpers
+from dengjen_neural_voices import aio
+from dengjen_neural_voices.tts_system import (
     SonataTextToSpeechSystem,
     SONATA_VOICES_DIR,
 )

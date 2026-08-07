@@ -13,8 +13,8 @@ from concurrent.futures import TimeoutError as FuturesTimeoutError
 from pathlib import Path
 from unittest.mock import MagicMock
 
-from sonata_neural_voices import grpc_client
-from sonata_neural_voices.tts_system import (
+from dengjen_neural_voices import grpc_client
+from dengjen_neural_voices.tts_system import (
     SonataVoice,
     SonataTextToSpeechSystem,
     SpeechOptions,
@@ -23,7 +23,7 @@ from sonata_neural_voices.tts_system import (
     SpeakerNotFoundError,
     Scales,
 )
-from sonata_neural_voices.const import (
+from dengjen_neural_voices.const import (
     DEFAULT_RATE,
     DEFAULT_VOLUME,
     DEFAULT_PITCH,

@@ -3,7 +3,7 @@
 Tests for aio.py — the thread pool and asyncio event loop the synth driver
 runs all of its gRPC and audio work on.
 
-Loaded under a private module name so the `sonata_neural_voices.aio` stub that
+Loaded under a private module name so the `dengjen_neural_voices.aio` stub that
 conftest installs for tts_system stays in place.
 """
 
@@ -17,9 +17,9 @@ import pytest
 from tests.conftest import SYNTH_PKG_DIR, load_module_from_path
 
 aio = load_module_from_path(
-    "sonata_neural_voices._aio_under_test",
+    "dengjen_neural_voices._aio_under_test",
     os.path.join(SYNTH_PKG_DIR, "aio.py"),
-    package="sonata_neural_voices",
+    package="dengjen_neural_voices",
 )
 
 

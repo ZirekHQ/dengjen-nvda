@@ -10,7 +10,7 @@ run, so the two never collide in the same process. Run this tree with
 `pytest tests_contract/` explicitly.
 
 No NVDA stubbing here. The generated protobuf/grpc client
-(synthDrivers/sonata_neural_voices/grpc_client/grpc_protos/) has no NVDA
+(synthDrivers/dengjen_neural_voices/grpc_client/grpc_protos/) has no NVDA
 dependencies, so tests talk to it directly instead of going through
 grpc_client/__init__.py — that module pulls in globalVars, logHandler, and
 Windows subprocess flags meant for NVDA's own background process lifecycle,
@@ -28,7 +28,7 @@ import sys
 
 _TESTS_CONTRACT_DIR = os.path.dirname(__file__)
 REPO_ROOT = os.path.abspath(os.path.join(_TESTS_CONTRACT_DIR, ".."))
-_SYNTH_PKG_DIR = os.path.join(REPO_ROOT, "addon", "synthDrivers", "sonata_neural_voices")
+_SYNTH_PKG_DIR = os.path.join(REPO_ROOT, "addon", "synthDrivers", "dengjen_neural_voices")
 
 LIB_DIRECTORY = os.path.join(_SYNTH_PKG_DIR, "lib")
 BIN_DIRECTORY = os.path.join(_SYNTH_PKG_DIR, "bin")

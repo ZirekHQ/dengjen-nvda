@@ -14,7 +14,7 @@ from logHandler import log
 
 
 _DIR = os.path.abspath(os.path.dirname(__file__))
-_PIPER_SYNTH_DIR = os.path.join(_DIR, "synthDrivers", "sonata_neural_voices")
+_PIPER_SYNTH_DIR = os.path.join(_DIR, "synthDrivers", "dengjen_neural_voices")
 LIB_DIR = os.path.join(_PIPER_SYNTH_DIR, "lib")
 BIN_DIR = os.path.join(_PIPER_SYNTH_DIR, "bin")
 del _DIR, _PIPER_SYNTH_DIR

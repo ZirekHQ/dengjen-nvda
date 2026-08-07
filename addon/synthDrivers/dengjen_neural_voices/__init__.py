@@ -175,7 +175,7 @@ class SynthDriver(synthDriverHandler.SynthDriver):
     supportedNotifications = {synthIndexReached, synthDoneSpeaking}
 
     description = "Sonata Neural Voices"
-    name = "sonata_neural_voices"
+    name = "dengjen_neural_voices"
     cachePropertiesByDefault = False
 
     @classmethod
@@ -221,7 +221,7 @@ class SynthDriver(synthDriverHandler.SynthDriver):
             return
         self.voices = SonataTextToSpeechSystem.load_piper_voices_from_nvda_config_dir()
         try:
-            voice_key = config.conf["speech"]["sonata_neural_voices"]["voice"]
+            voice_key = config.conf["speech"]["dengjen_neural_voices"]["voice"]
             configured_voice = next(
                 filter(lambda v: v.key.startswith(voice_key), self.voices)
             )

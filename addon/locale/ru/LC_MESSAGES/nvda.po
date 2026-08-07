@@ -5,7 +5,7 @@
 #
 msgid ""
 msgstr ""
-"Project-Id-Version: 'sonata_neural_voices' '3.0-beta.2'\n"
+"Project-Id-Version: 'dengjen_neural_voices' '3.0-beta.2'\n"
 "Report-Msgid-Bugs-To: 'nvda-translations@groups.io'\n"
 "POT-Creation-Date: 2024-05-16 20:58+0200\n"
 "PO-Revision-Date: 2024-07-18 15:30+0500\n"
@@ -283,7 +283,7 @@ msgstr "Образец"
 
 #. Translators: Label for a setting in synth settings ring.
 #: addon\globalPlugins\sonata_tts_global_plugin\voice_manager.py:258
-#: addon\synthDrivers\sonata_neural_voices\__init__.py:126
+#: addon\synthDrivers\dengjen_neural_voices\__init__.py:126
 msgid "Speaker"
 msgstr "Диктор"
 
@@ -345,22 +345,22 @@ msgid "&Close"
 msgstr "&Закрыть"
 
 #. Translators: Label for a setting in voice settings dialog.
-#: addon\synthDrivers\sonata_neural_voices\__init__.py:123
+#: addon\synthDrivers\dengjen_neural_voices\__init__.py:123
 msgid "&Speaker"
 msgstr "&Диктор"
 
-#: addon\synthDrivers\sonata_neural_voices\__init__.py:168
+#: addon\synthDrivers\dengjen_neural_voices\__init__.py:168
 msgid "&Noise scale"
 msgstr "&Уровень шума"
 
 # Draft translation added by the fork maintainer; review welcome.
 # Was "Уровень паузы между словами" (level of pause between words), which described
 # the wrong parameter: length_scale scales the duration of every speech sound.
-#: addon\synthDrivers\sonata_neural_voices\__init__.py:169
+#: addon\synthDrivers\dengjen_neural_voices\__init__.py:169
 msgid "&Length scale"
 msgstr "&Масштаб длительности"
 
-#: addon\synthDrivers\sonata_neural_voices\__init__.py:170
+#: addon\synthDrivers\dengjen_neural_voices\__init__.py:170
 msgid "Noise &w"
 msgstr "&Высота шума"
 

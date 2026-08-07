@@ -133,7 +133,7 @@ class InstalledSonataVoicesPanel(SizedPanel):
         voice_id = "-".join(selected.key.split("-")[:-1])
         synth = synthDriverHandler.getSynth()
         if (
-            (synth.name == "sonata_neural_voices")
+            (synth.name == "dengjen_neural_voices")
             and (synth.voice == voice_id)
         ):
             gui.messageBox(
