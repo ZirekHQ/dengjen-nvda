@@ -36,11 +36,9 @@ class DialogListCtrl(wx.ListCtrl, listmix.ListCtrlAutoWidthMixin):
         id,
         pos=wx.DefaultPosition,
         size=wx.DefaultSize,
-        style=wx.BORDER_SUNKEN
-        | wx.LC_SINGLE_SEL
-        | wx.LC_REPORT
-        | wx.LC_EDIT_LABELS
-        | wx.LC_VRULES,
+        # No LC_EDIT_LABELS: the only subclass is ImmutableObjectListView, and
+        # in-place label editing rewrites a row behind self._objects' back.
+        style=wx.BORDER_SUNKEN | wx.LC_SINGLE_SEL | wx.LC_REPORT | wx.LC_VRULES,
     ):
         wx.ListCtrl.__init__(self, parent, id, pos, size, style)
         listmix.ListCtrlAutoWidthMixin.__init__(self)
@@ -279,3 +277,7 @@ class ImmutableObjectListView(DialogListCtrl):
     def ClearAll(self):
         self.prevent_mutations()
         return super().ClearAll()
+
+    def EditLabel(self, item, *args, **kwargs):
+        self.prevent_mutations()
+        return super().EditLabel(item, *args, **kwargs)

@@ -138,6 +138,16 @@ class TestImmutableObjectListView:
         with pytest.raises(RuntimeError, match="List is immutable"):
             list_view.DeleteAllItems()
 
+    def test_labels_cannot_be_edited_in_place(self, list_view):
+        # LC_EDIT_LABELS let a click on an already-selected row rewrite its text
+        # without going through any of the guarded row mutators, leaving the
+        # displayed name out of step with the object get_selected returns (#97).
+        assert not list_view.GetWindowStyleFlag() & wx.LC_EDIT_LABELS
+        list_view.set_objects([_Row("amy", "medium")])
+        with pytest.raises(RuntimeError, match="List is immutable"):
+            list_view.EditLabel(0)
+        assert list_view.GetItemText(0, 0) == "amy"
+
     def test_set_focused_item_past_the_end_is_a_no_op(self, list_view):
         list_view.set_objects([_Row("amy", "medium")], set_focus=False)
         assert list_view.GetFocusedItem() == wx.NOT_FOUND
