@@ -379,6 +379,7 @@ def install(*, stub_wx: bool = True) -> None:
 
     _load_real_module("dengjen_neural_voices.const", "const.py")
     _load_real_module("dengjen_neural_voices.helpers", "helpers.py")
+    _load_real_module("dengjen_neural_voices.voice_migration", "voice_migration.py")
     _load_real_module("dengjen_neural_voices.tts_system", "tts_system.py")
 
 
@@ -403,5 +404,6 @@ def install(*, stub_wx: bool = True) -> None:
         _gui_plugin_pkg.DengjenTextToSpeechSystem = sys.modules["dengjen_neural_voices.tts_system"].DengjenTextToSpeechSystem
         _gui_plugin_pkg.DENGJEN_VOICES_DIR = sys.modules["dengjen_neural_voices.tts_system"].DENGJEN_VOICES_DIR
         _gui_plugin_pkg.helpers = sys.modules["dengjen_neural_voices.helpers"]
+        _gui_plugin_pkg.voice_migration = sys.modules["dengjen_neural_voices.voice_migration"]
         _gui_plugin_pkg.aio = _aio
         sys.modules["dengjen_tts_global_plugin"] = _gui_plugin_pkg

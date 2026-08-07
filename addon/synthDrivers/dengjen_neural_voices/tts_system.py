@@ -26,6 +26,7 @@ from .const import (
     DENGJEN_VOICES_DIR,
 )
 from .helpers import import_bundled_library, LIB_DIRECTORY
+from .voice_migration import migrate_voices_directory
 
 
 class VoiceNotFoundError(LookupError):
@@ -392,6 +393,7 @@ class DengjenTextToSpeechSystem:
 
     @classmethod
     def load_piper_voices_from_nvda_config_dir(cls):
+        migrate_voices_directory()
         Path(DENGJEN_VOICES_DIR).mkdir(parents=True, exist_ok=True)
         return sorted(
             cls.load_voices_from_directory(DENGJEN_VOICES_DIR),

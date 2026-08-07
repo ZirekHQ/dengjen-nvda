@@ -56,6 +56,7 @@ The `Installed voices` list shows each installed voice with its variant, quality
 - `Voice model card...` displays the `MODEL_CARD` file shipped with the voice, which records where its training data came from and how it is licensed. Not every voice includes one.
 - `Remove voice...` deletes the selected voice after asking you to confirm. It stays disabled unless you have at least two voices installed, and it will not remove the voice that is currently in use.
 - `Install from local file` installs a voice from a `.tar.gz` or `.tgz` archive you already have.
+- `Import voices from Sonata` copies voices you downloaded with the older Sonata Neural Voices add-on. It only appears while that add-on's voices are still present and have not been imported yet. The originals are left in place, so Sonata keeps working.
 
 After installing from a local archive or removing a voice, the add-on reloads the synthesizer for you, so the change applies immediately. After a download the new voice shows up in the voice manager right away; if NVDA's own voice list has not picked it up, restart NVDA.
 
