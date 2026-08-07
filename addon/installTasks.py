@@ -10,9 +10,14 @@ import shutil
 import sys
 import tempfile
 
+import addonHandler
 import config
 import globalVars
+import gui
+import wx
 from logHandler import log
+
+addonHandler.initTranslation()
 
 
 _DIR = os.path.abspath(os.path.dirname(__file__))
@@ -59,6 +64,34 @@ def migrate_speech_config(conf=None):
     speech[CONFIG_SECTION] = _as_plain_dict(speech[OLD_ADDON_NAME])
     log.info(f"Migrated speech settings from {OLD_ADDON_NAME} to {CONFIG_SECTION}")
     return True
+
+
+def is_old_addon_installed(addons=None):
+    if addons is None:
+        addons = addonHandler.getAvailableAddons()
+    return any(
+        getattr(addon, "name", None) == OLD_ADDON_NAME
+        and not getattr(addon, "isPendingRemove", False)
+        for addon in addons
+    )
+
+
+def warn_if_old_addon_installed(addons=None):
+    if not is_old_addon_installed(addons):
+        return
+    wx.CallAfter(
+        gui.messageBox,
+        # Translators: shown after installing when the pre-rename add-on is still present
+        _(
+            "The Sonata Neural Voices add-on is still installed. Dengjen Neural Voices "
+            "has taken over its downloaded voices, so Sonata can no longer find them. "
+            "Remove the Sonata Neural Voices add-on to avoid two synthesizers appearing "
+            "in your speech settings."
+        ),
+        # Translators: title of the message shown when the pre-rename add-on is still present
+        _("Old add-on still installed"),
+        wx.OK | wx.ICON_WARNING,
+    )
 
 
 def onUninstall():

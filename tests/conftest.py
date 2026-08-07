@@ -231,14 +231,18 @@ _stub_module(
 def _init_translation():
     builtins._ = lambda message: message
 
-_stub_module("addonHandler", initTranslation=_init_translation)
+_stub_module(
+    "addonHandler",
+    initTranslation=_init_translation,
+    getAvailableAddons=lambda: [],
+)
 
 # wx / gui
 # CallAfter runs synchronously (no real event loop under test) so callers can
 # assert on its effects immediately instead of needing to pump wx's queue.
 _stub_module(
     "wx",
-    ID_ANY=0, YES=1, NO=2, YES_NO=3, ICON_WARNING=4, ICON_ERROR=5, ICON_INFORMATION=6,
+    ID_ANY=0, YES=1, NO=2, YES_NO=3, OK=7, ICON_WARNING=4, ICON_ERROR=5, ICON_INFORMATION=6,
     EVT_MENU=MagicMock(),
     CallAfter=MagicMock(side_effect=lambda func, *a, **kw: func(*a, **kw)),
     ProgressDialog=MagicMock(return_value=MagicMock()),

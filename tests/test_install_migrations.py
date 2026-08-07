@@ -42,6 +42,11 @@ class TestMigrateVoicesDirectory:
 class _FakeSection(dict):
     """Stands in for NVDA's ConfigObj section, which has isSet()."""
 
+    def __missing__(self, key):
+        val = _FakeSection()
+        self[key] = val
+        return val
+
     def isSet(self, key):
         return key in self
 
@@ -97,3 +102,48 @@ class TestMigrateSpeechConfig:
         conf = _speech_conf()
         assert install_tasks.migrate_speech_config(conf) is False
         assert "dengjen_neural_voices" not in conf["speech"]
+
+
+class _FakeAddon:
+    def __init__(self, name, pending_remove=False):
+        self.name = name
+        self.isPendingRemove = pending_remove
+
+
+class TestIsOldAddonInstalled:
+    def test_detects_the_old_addon(self):
+        assert install_tasks.is_old_addon_installed(
+            [_FakeAddon("sonata_neural_voices")]
+        ) is True
+
+    def test_ignores_the_new_addon(self):
+        assert install_tasks.is_old_addon_installed(
+            [_FakeAddon("dengjen_neural_voices")]
+        ) is False
+
+    def test_ignores_an_addon_already_pending_removal(self):
+        assert install_tasks.is_old_addon_installed(
+            [_FakeAddon("sonata_neural_voices", pending_remove=True)]
+        ) is False
+
+    def test_handles_an_empty_addon_list(self):
+        assert install_tasks.is_old_addon_installed([]) is False
+
+
+class TestWarnIfOldAddonInstalled:
+    def test_warns_when_the_old_addon_is_present(self, monkeypatch):
+        shown = []
+        monkeypatch.setattr(
+            install_tasks.gui, "messageBox", lambda *a, **kw: shown.append((a, kw))
+        )
+        install_tasks.warn_if_old_addon_installed([_FakeAddon("sonata_neural_voices")])
+        assert len(shown) == 1
+        assert "Sonata" in shown[0][0][0]
+
+    def test_stays_quiet_when_it_is_absent(self, monkeypatch):
+        shown = []
+        monkeypatch.setattr(
+            install_tasks.gui, "messageBox", lambda *a, **kw: shown.append((a, kw))
+        )
+        install_tasks.warn_if_old_addon_installed([])
+        assert shown == []
