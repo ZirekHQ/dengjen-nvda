@@ -1,0 +1,9 @@
+# Real wxPython for the tests_gui/ smoke layer (Windows leg only).
+#
+# Pinned to NVDA master's own pin, so the wx under test is the wx the add-on
+# actually runs against -- see pyproject.toml in nvaccess/nvda.
+#
+# wxPython publishes NO Linux wheels on PyPI for any release, and CI installs
+# with --only-binary :all:, so installing this on the ubuntu leg cannot
+# succeed. The workflow step is guarded with `if: runner.os == 'Windows'`.
+wxPython==4.2.4
