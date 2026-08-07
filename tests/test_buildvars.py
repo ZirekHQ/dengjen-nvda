@@ -142,3 +142,20 @@ class TestAuthorFormat:
         assert match, f"Could not extract email from addon_author: {author!r}"
         email = match.group(1)
         assert "@" in email, f"Email '{email}' in addon_author does not contain '@'"
+
+
+class TestAddonIdentity:
+    """The rename is a store-listing condition — pin it so it can't drift back."""
+
+    def test_addon_name_is_the_distinct_id(self):
+        assert INFO["addon_name"] == "dengjen_neural_voices"
+
+    def test_summary_is_the_new_display_name(self):
+        assert INFO["addon_summary"] == "Dengjen Neural Voices"
+
+    def test_urls_point_at_the_renamed_repo(self):
+        assert INFO["addon_url"] == "https://github.com/austek/dengjen-nvda"
+        assert INFO["addon_sourceURL"] == "https://github.com/austek/dengjen-nvda"
+
+    def test_original_author_is_credited_first(self):
+        assert INFO["addon_author"].startswith("Musharraf Omer (original)")

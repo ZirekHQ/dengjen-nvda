@@ -18,26 +18,29 @@ addon_info = AddonInfo(
 	# Add-on summary/title, usually the user visible name of the add-on
 	# Translators: Summary/title for this add-on
 	# to be shown on installation and add-on information found in add-on store
-	addon_summary=_("Sonata Neural Voices"),
+	addon_summary=_("Dengjen Neural Voices"),
 	# Add-on description
 	# Translators: Long description to be shown for this add-on on add-on information from add-on store
 	addon_description=_(
 		"""Adds fast, local neural text-to-speech voices to NVDA. Provides a synthesizer driver for Piper voice models via the Sonata engine, together with a voice manager for downloading and installing voices."""
 	),
 	# version
-	addon_version="3.2.1",
+	addon_version="4.0.0",
 	# Brief changelog for this version
 	# Translators: what's new content for the add-on version to be shown in the add-on store
 	addon_changelog=_(
-		"Fixes NVDA falling silent after reloading configuration profiles (NVDA+Control+R double-tap). "
-		"The shared background event loop is no longer shut down when a synthesizer instance is terminated, and its startup and shutdown are now thread-safe."
+		"The add-on has been renamed to Dengjen Neural Voices at the request of the original author, "
+		"as a condition of listing in the NVDA Add-on Store. "
+		"After upgrading you must reselect the synthesizer in NVDA's speech settings; "
+		"your installed voices, rate, pitch and volume carry over automatically. "
+		"Remove the old Sonata Neural Voices add-on, which no longer has access to the downloaded voices."
 	),
 	# Author(s)
 	addon_author="Musharraf Omer (original) <ibnomer2011@hotmail.com>, Ali Ustek (maintainer) <13117393+austek@users.noreply.github.com>",
 	# URL for the add-on documentation support
-	addon_url="https://github.com/austek/sonata-nvda",
+	addon_url="https://github.com/austek/dengjen-nvda",
 	# URL for the add-on repository where the source code can be found
-	addon_sourceURL="https://github.com/austek/sonata-nvda",
+	addon_sourceURL="https://github.com/austek/dengjen-nvda",
 	# Documentation file name
 	addon_docFileName="readme.html",
 	# Minimum NVDA version supported (e.g. "2019.3.0", minor version is optional)
