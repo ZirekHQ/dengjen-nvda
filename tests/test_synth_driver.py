@@ -274,6 +274,13 @@ class _FakeTTSRaising:
 
     voice = None
 
+    def __init__(self):
+        # conftest's _AutoPropertyMeta wires noise_scale/length_scale/noise_w
+        # into real properties that reach through tts.speech_options.voice;
+        # a MagicMock happily fabricates that chain for values these tests
+        # never assert on.
+        self.speech_options = MagicMock()
+
     def __setattr__(self, name, value):
         if name == "voice":
             raise RuntimeError("Protobuf parsing failed")
@@ -285,6 +292,7 @@ class _FakeTTSAccepting:
 
     def __init__(self):
         self.voice = None
+        self.speech_options = MagicMock()
 
 
 def _make_driver(voice_map, available_voices, tts, initial_voice=None):
@@ -292,11 +300,11 @@ def _make_driver(voice_map, available_voices, tts, initial_voice=None):
     driver._standard_voice_map = voice_map
     driver.availableVoices = available_voices
     driver._voice_map = {}
+    driver.tts = tts
     driver.noise_scale = 50
     driver.length_scale = 50
     driver.noise_w = 50
     driver._SynthDriver__voice = initial_voice
-    driver.tts = tts
     return driver
 
 
