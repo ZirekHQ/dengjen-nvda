@@ -1,7 +1,7 @@
 blank_issues_enabled: false
 contact_links:
   - name: Installation help / general usage
-    url: https://github.com/austek/sonata-nvda/blob/main/readme.md
+    url: https://github.com/austek/dengjen-nvda/blob/main/readme.md
     about: Start here for how to install the add-on and download voices.
   - name: NVDA add-ons community list
     url: https://nvda-addons.groups.io/g/nvda-addons

@@ -1,4 +1,4 @@
-# Contributing to Sonata Neural Voices (maintenance fork)
+# Contributing to Dengjen Neural Voices (maintenance fork)
 
 This is a maintenance fork of [mush42/sonata-nvda](https://github.com/mush42/sonata-nvda). The upstream author can no longer maintain the project ([announcement](https://nvda-addons.groups.io/g/nvda-addons/message/27636)); this fork carries compatibility fixes and minor improvements so the add-on keeps working on current NVDA releases.
 
@@ -6,7 +6,7 @@ Contributions are welcome.
 
 ## Reporting a bug
 
-Use the **Bug report** template at <https://github.com/austek/sonata-nvda/issues/new/choose>. The template asks for NVDA version, add-on version, OS, voice tested, steps to reproduce, and an NVDA log slice — please fill in as much as you can. Bugs filed without that info almost always end up labelled `needs-reproducer` until they have it.
+Use the **Bug report** template at <https://github.com/austek/dengjen-nvda/issues/new/choose>. The template asks for NVDA version, add-on version, OS, voice tested, steps to reproduce, and an NVDA log slice — please fill in as much as you can. Bugs filed without that info almost always end up labelled `needs-reproducer` until they have it.
 
 For installation questions or general usage help, check the [readme](readme.md) first and then ask on the [NVDA add-ons community list](https://nvda-addons.groups.io/g/nvda-addons).
 

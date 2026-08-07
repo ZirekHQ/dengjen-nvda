@@ -1,10 +1,15 @@
-# Dengên neuronî yên Sonata ji bo NVDA
+# Dengên neuronî yên Dengjen ji bo NVDA
 
 > **Danezana lênêrîna vê çapê (fork)**
 >
 > Nivîskarê resen, Musharraf Omer ([@mush42](https://github.com/mush42)), [di lîsteya pêvekên NVDA de ragihand](https://nvda-addons.groups.io/g/nvda-addons/message/27636) ku nakokiyên peymanên bazirganî nahêlin ku ew lênêrîna vê pêveka çavkaniya vekirî bidomîne. Ev çap projeyê didomîne da ku pêvek li ser guhertoyên heyî yên NVDA-yê bixebite, û nûkirinên lihevhatinê digel serrastkirinên rêveberê dengan û ajokarê sentezkerê dihewîne. Hemû keda xebata resen a Musharraf Omer e.
 >
-> Dibe ku ev werger li paş [benioku ya îngilîzî](https://github.com/austek/sonata-nvda/blob/main/readme.md) bimîne.
+> Dibe ku ev werger li paş [benioku ya îngilîzî](https://github.com/austek/dengjen-nvda/blob/main/readme.md) bimîne.
+>
+> Navê vê pêvekê di guhertoya v4.0.0 de, li gorî daxwaza nivîskarê resen,
+> wekî mercekî ji bo cih girtina di firotgeha pêvekên NVDA-yê de, ji Sonata
+> Neural Voices hate guhertin. Heman pêvek e, heman lênêr e, heman lîsansa
+> GPL v2 ye.
 
 Ev pêvek dengên neuronî yên nivîs-bo-axaftinê li NVDA-yê zêde dike. Ew ajokarekî sentezker ji bo modelên dengî yên [Piper](https://github.com/rhasspy/piper) pêşkêş dike, ku bi tevahî li ser komputera te dixebitin, û digel wê rêveberekî dengan ji bo daxistin û sazkirina dengan. Ji bo daxistina dengan girêdana înternetê pêwîst e, lê ji bo axaftina bi wan na.
 
@@ -20,7 +25,7 @@ Piper pergaleke bilez û herêmî ya neuronî ya nivîs-bo-axaftinê ye ku deng�
 
 ## Daxistina pêvekê
 
-Tu dikarî pakêta pêvekê di beşa assets a [rûpela berdanê](https://github.com/austek/sonata-nvda/releases/latest) de bibînî.
+Tu dikarî pakêta pêvekê di beşa assets a [rûpela berdanê](https://github.com/austek/dengjen-nvda/releases/latest) de bibînî.
 
 ## Zêdekirina dengan
 
@@ -36,7 +41,7 @@ Tu dikarî dengan ji arşîvên herêmî jî saz bikî. Piştî ku te pelê deng
 
 # Bikaranîna rêveberê dengan
 
-Rêveberê dengan ji pêşeka sereke ya NVDA-yê, di `Rêveberê dengên Sonata...` de veke. Du rûpel hene: `Daxistin` û `Sazkirî`.
+Rêveberê dengan ji pêşeka sereke ya NVDA-yê, di `Rêveberê dengên Dengjen...` de veke. Du rûpel hene: `Daxistin` û `Sazkirî`.
 
 ## Rûpela Daxistin
 
@@ -59,7 +64,7 @@ Piştî sazkirinê ji arşîveke herêmî an rakirina dengekî, pêvek sentezker
 
 # Mîhengên dengî
 
-Gava ku `Sonata Neural Voices` wek sentezker hatiye hilbijartin, mîhengên jêrîn di mîhengên axaftinê yên NVDA-yê de xuya dibin (`pêşeka NVDA` > `Bijarte` > `Mîheng` > `Axaftin`).
+Gava ku `Dengjen Neural Voices` wek sentezker hatiye hilbijartin, mîhengên jêrîn di mîhengên axaftinê yên NVDA-yê de xuya dibin (`pêşeka NVDA` > `Bijarte` > `Mîheng` > `Axaftin`).
 
 `Deng` dengên te yên sazkirî bi teşeya `nav (ziman) - kalîte` rêz dike.
 
@@ -89,7 +94,7 @@ Bi bextewarî, pêşxistkarê `Piper` û hin pêşxistkarên ji civata kor û k�
 
 # Çareserkirina pirsgirêkan
 
-**Sonata di lîsteya sentezkerên NVDA-yê de tune, an bar nabe.** Du sedemên hevpar ev in: pakêta Visual C++ a ku li jor di beşa Pêdiviyên pergalê de hatiye rave kirin kêm e, an jî tu deng sazkirî nîne — ajokar bi zanetî red dike ku bar bibe gava ku bi kêmî ve dengekî nabîne. Rêveberê dengan ji pêşeka sereke ya NVDA-yê veke, dengekî saz bike, û NVDA ji nû ve dest pê bike.
+**Dengjen di lîsteya sentezkerên NVDA-yê de tune, an bar nabe.** Du sedemên hevpar ev in: pakêta Visual C++ a ku li jor di beşa Pêdiviyên pergalê de hatiye rave kirin kêm e, an jî tu deng sazkirî nîne — ajokar bi zanetî red dike ku bar bibe gava ku bi kêmî ve dengekî nabîne. Rêveberê dengan ji pêşeka sereke ya NVDA-yê veke, dengekî saz bike, û NVDA ji nû ve dest pê bike.
 
 **Dengê ku min niha daxist di lîsteya dengan a NVDA-yê de nayê pêşkêşkirin.** NVDA ji nû ve dest pê bike. Daxistin lîsteya rêveberê dengan bi xwe nû dike, lê dibe ku NVDA hîn koma dengan a ku li destpêkê bar kiribû bi kar bîne.
 
@@ -103,7 +108,7 @@ Bi bextewarî, pêşxistkarê `Piper` û hin pêşxistkarên ji civata kor û k�
 
 Ji bo her tiştê din, tomara NVDA-yê bi gelemperî dibêje çi çewt çûye: `pêşeka NVDA` > `Amûr` > `Tomarê bibîne`.
 
-Ji kerema xwe çewtiyan û daxwazên taybetmendiyan li [şopînerê pirsgirêkan ê vê çapê](https://github.com/austek/sonata-nvda/issues) ragihîne, û tomarê digel guhertoya NVDA-ya xwe û dengê ku bi kar dianî pê ve bike.
+Ji kerema xwe çewtiyan û daxwazên taybetmendiyan li [şopînerê pirsgirêkan ê vê çapê](https://github.com/austek/dengjen-nvda/issues) ragihîne, û tomarê digel guhertoya NVDA-ya xwe û dengê ku bi kar dianî pê ve bike.
 
 # Lîsans
 
