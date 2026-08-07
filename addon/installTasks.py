@@ -10,6 +10,7 @@ import shutil
 import sys
 import tempfile
 
+import config
 import globalVars
 from logHandler import log
 
@@ -23,20 +24,41 @@ del _DIR, _PIPER_SYNTH_DIR
 OLD_ADDON_NAME = "sonata_neural_voices"
 OLD_VOICES_DIR_NAME = "sonata"
 VOICES_DIR_NAME = "dengjen"
+CONFIG_SECTION = "dengjen_neural_voices"
 
 
 def migrate_voices_directory(config_path=None):
-	"""Move downloaded voices from the pre-4.0.0 location. Same volume, so this
-	is a rename rather than a copy however many GB of models are present."""
-	if config_path is None:
-		config_path = globalVars.appArgs.configPath
-	old_dir = os.path.join(config_path, OLD_VOICES_DIR_NAME)
-	new_dir = os.path.join(config_path, VOICES_DIR_NAME)
-	if os.path.exists(new_dir) or not os.path.isdir(old_dir):
-		return False
-	os.rename(old_dir, new_dir)
-	log.info(f"Migrated voices from {old_dir} to {new_dir}")
-	return True
+    """Move downloaded voices from the pre-4.0.0 location. Same volume, so this
+    is a rename rather than a copy however many GB of models are present."""
+    if config_path is None:
+        config_path = globalVars.appArgs.configPath
+    old_dir = os.path.join(config_path, OLD_VOICES_DIR_NAME)
+    new_dir = os.path.join(config_path, VOICES_DIR_NAME)
+    if os.path.exists(new_dir) or not os.path.isdir(old_dir):
+        return False
+    os.rename(old_dir, new_dir)
+    log.info(f"Migrated voices from {old_dir} to {new_dir}")
+    return True
+
+
+def _as_plain_dict(section):
+    return {
+        key: _as_plain_dict(value) if hasattr(value, "keys") else value
+        for key, value in section.items()
+    }
+
+
+def migrate_speech_config(conf=None):
+    """Carry rate, pitch, volume and per-language voice choices across to the
+    renamed config section. The old section is left in place."""
+    if conf is None:
+        conf = config.conf
+    speech = conf["speech"]
+    if not speech.isSet(OLD_ADDON_NAME) or speech.isSet(CONFIG_SECTION):
+        return False
+    speech[CONFIG_SECTION] = _as_plain_dict(speech[OLD_ADDON_NAME])
+    log.info(f"Migrated speech settings from {OLD_ADDON_NAME} to {CONFIG_SECTION}")
+    return True
 
 
 def onUninstall():

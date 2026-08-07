@@ -37,3 +37,63 @@ class TestMigrateVoicesDirectory:
         (tmp_path / "sonata").write_text("not a directory")
         assert install_tasks.migrate_voices_directory(str(tmp_path)) is False
         assert not (tmp_path / "dengjen").exists()
+
+
+class _FakeSection(dict):
+    """Stands in for NVDA's ConfigObj section, which has isSet()."""
+
+    def isSet(self, key):
+        return key in self
+
+
+def _speech_conf(**sections):
+    speech = _FakeSection()
+    speech.update(sections)
+    return {"speech": speech}
+
+
+class TestMigrateSpeechConfig:
+    def test_copies_the_old_section_when_the_new_one_is_absent(self):
+        conf = _speech_conf(
+            sonata_neural_voices={
+                "rate": 55,
+                "voices": {"en_US-amy-medium": {"speaker": "amy"}},
+            }
+        )
+        assert install_tasks.migrate_speech_config(conf) is True
+        assert conf["speech"]["dengjen_neural_voices"] == {
+            "rate": 55,
+            "voices": {"en_US-amy-medium": {"speaker": "amy"}},
+        }
+
+    def test_copies_rather_than_aliases_nested_sections(self):
+        conf = _speech_conf(
+            sonata_neural_voices={"voices": {"en_US-amy-medium": {"speaker": "amy"}}}
+        )
+        install_tasks.migrate_speech_config(conf)
+        conf["speech"]["dengjen_neural_voices"]["voices"]["en_US-amy-medium"][
+            "speaker"
+        ] = "changed"
+        assert (
+            conf["speech"]["sonata_neural_voices"]["voices"]["en_US-amy-medium"][
+                "speaker"
+            ]
+            == "amy"
+        )
+
+    def test_leaves_the_old_section_in_place(self):
+        conf = _speech_conf(sonata_neural_voices={"rate": 55})
+        install_tasks.migrate_speech_config(conf)
+        assert conf["speech"]["sonata_neural_voices"] == {"rate": 55}
+
+    def test_leaves_an_existing_new_section_alone(self):
+        conf = _speech_conf(
+            sonata_neural_voices={"rate": 55}, dengjen_neural_voices={"rate": 80}
+        )
+        assert install_tasks.migrate_speech_config(conf) is False
+        assert conf["speech"]["dengjen_neural_voices"] == {"rate": 80}
+
+    def test_is_a_noop_when_there_is_no_old_section(self):
+        conf = _speech_conf()
+        assert install_tasks.migrate_speech_config(conf) is False
+        assert "dengjen_neural_voices" not in conf["speech"]
