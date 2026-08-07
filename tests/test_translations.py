@@ -26,7 +26,8 @@ _LOCALES = [path.split(os.sep)[-3] for path in _CATALOGUES]
 def _po_string(token):
     # Escapes are left as they are: this file only ever inspects `&`, and po
     # never escapes that.
-    assert token.startswith('"') and token.endswith('"'), token
+    assert token.startswith('"'), token
+    assert token.endswith('"'), token
     return token[1:-1]
 
 
