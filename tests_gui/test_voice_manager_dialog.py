@@ -262,6 +262,20 @@ class TestOnlinePanelControls:
         _fire_button(panel, refresh_btn)
         assert calls == [{"force_online": True}]
 
+    def test_the_wait_toast_it_raises_can_be_dismissed(
+        self, panel, voice_manager, monkeypatch
+    ):
+        # SnakDialog.onClose reads a falsy dismiss_callback result as "veto the
+        # close", and Close() on this panel returns exactly that: wxWindowBase
+        # only reports success when something handled the close event, and a
+        # notebook page has no EVT_CLOSE handler (#101).
+        captured = {}
+        monkeypatch.setattr(
+            voice_manager, "AsyncSnakDialog", lambda **kwargs: captured.update(kwargs)
+        )
+        panel.populate_list(force_online=True)
+        assert captured["dismiss_callback"]() is True
+
     def test_preview_button_reaches_on_preview(
         self, panel, voice_manager, monkeypatch, sync_executor, online_voices
     ):

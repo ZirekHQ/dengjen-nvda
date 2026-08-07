@@ -352,7 +352,11 @@ class OnlineDengjenVoicesPanel(SizedPanel):
             parent=self,
             # Translators: message in a dialog
             message=_("Retrieving voices list. Please wait..."),
-            dismiss_callback=lambda: self.Close()
+            # True, not self.Close(): a notebook page has no EVT_CLOSE handler, so
+            # Close() returns False, which SnakDialog.onClose reads as a veto and
+            # the toast refuses to go away (#101). Dismissing only stops the wait
+            # -- the lookup keeps running and still fills the list when it lands.
+            dismiss_callback=lambda: True,
         )
 
     def _voice_list_retrieved_callback(self, future):

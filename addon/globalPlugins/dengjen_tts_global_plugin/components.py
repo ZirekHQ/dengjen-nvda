@@ -105,10 +105,13 @@ class SnakDialog(SimpleDialog):
         ai = wx.ActivityIndicator(parent)
         ai.SetSizerProp("halign", "center")
         self.staticMessage = wx.StaticText(parent, -1, self.message)
-        self.staticMessage.SetCanFocus(True)
         self.staticMessage.SetFocusFromKbd()
         self.Bind(wx.EVT_CLOSE, self.onClose, self)
-        self.staticMessage.Bind(wx.EVT_KEY_UP, self.onKeyUp, self.staticMessage)
+        # On the dialog, and EVT_CHAR_HOOK rather than EVT_KEY_UP: the top-level
+        # window sees a char hook before the focused child, whereas key events do
+        # not propagate at all -- and wxStaticText hard-codes AcceptsFocus() to
+        # false, so the message can never hold focus to receive one (#101).
+        self.Bind(wx.EVT_CHAR_HOOK, self.onCharHook)
         ai.Start()
 
     @contextlib.contextmanager
@@ -131,10 +134,11 @@ class SnakDialog(SimpleDialog):
         else:
             self.Destroy()
 
-    def onKeyUp(self, event):
-        event.Skip()
+    def onCharHook(self, event):
         if event.GetKeyCode() == wx.WXK_ESCAPE:
             self.Close()
+            return
+        event.Skip()
 
     def getButtons(self, parent):
         return
