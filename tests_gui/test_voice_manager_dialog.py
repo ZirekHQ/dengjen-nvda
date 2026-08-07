@@ -21,6 +21,7 @@ out. Dialogs are constructed, asserted against, and destroyed.
 """
 
 import dataclasses
+import re
 import sys
 from types import SimpleNamespace
 from unittest.mock import MagicMock
@@ -308,6 +309,42 @@ class TestOnlinePanelControls:
         assert downloader_cls.return_value.download.called
 
 
+class TestKeyboardAccess:
+    """Nothing else in this tree touches the keyboard: ProcessEvent dispatches
+    straight at the binding, so it fires a handler whether or not a user could
+    ever have reached the control (#97)."""
+
+    @pytest.mark.parametrize("page", [0, 1])
+    def test_access_keys_do_not_collide_on_a_page(self, dialog, page):
+        # Only one notebook page is ever visible, so a letter reused across the
+        # two pages is fine; a letter reused within one, alongside the dialog's
+        # own Close button, means Alt+that letter is ambiguous.
+        hidden = _access_keys(dialog.notebookCtrl.GetPage(1 - page))
+        visible = _access_keys(dialog)
+        for key in hidden:
+            visible.remove(key)
+        # positive control: a broken _access_key would make every page "unique".
+        assert len(visible) >= 3
+        assert len(visible) == len(set(visible)), sorted(visible)
+
+    @pytest.mark.parametrize("page", [0, 1])
+    def test_the_voices_list_is_reachable_by_tab(self, dialog, page):
+        # The list is the primary keyboard target on both pages -- every button
+        # acts on whatever it has selected.
+        panel = dialog.notebookCtrl.GetPage(page)
+        assert _reachable_by_tab(panel.voices_list) is True
+
+    def test_the_close_button_is_reachable_by_tab(self, dialog):
+        assert _reachable_by_tab(dialog.FindWindowById(wx.ID_CANCEL)) is True
+
+    def test_a_disabled_button_is_not_reachable_by_tab(self, dialog):
+        # Sensitivity anchor for the two above: _reachable_by_tab has to be
+        # capable of returning False for those True results to mean anything.
+        panel = dialog.notebookCtrl.GetPage(1)
+        assert panel.buttons_panel.IsEnabled() is False
+        assert _reachable_by_tab(panel.download_std_btn) is False
+
+
 class TestNotebookPageChanged:
     def test_switching_to_the_download_tab_reaches_its_populate_list(
         self, dialog, voice_manager, monkeypatch, sync_executor, online_voices
@@ -331,6 +368,32 @@ class TestNotebookPageChanged:
         dialog.notebookCtrl.SetSelection(1)
         assert calls == [{"force_online": False}]
         assert online_panel.language_choice.GetCount() == 2
+
+
+def _reachable_by_tab(window):
+    # Two calls, not one: AcceptsFocusFromKeyboard() is `!m_disableFocusFromKbd
+    # && AcceptsFocus()` and says nothing about enabled or shown state -- that
+    # is CanBeFocused()'s job, and the two are only combined in
+    # CanAcceptFocusFromKeyboard(), which wxPython does not expose.
+    return window.AcceptsFocusFromKeyboard() and window.IsEnabled()
+
+
+def _buttons(window):
+    for child in window.GetChildren():
+        if isinstance(child, wx.Button):  # CommandLinkButton subclasses it
+            yield child
+        else:
+            yield from _buttons(child)
+
+
+def _access_key(button):
+    # && is a literal ampersand, not a mnemonic marker.
+    match = re.search(r"&(\w)", button.GetLabel().replace("&&", ""))
+    return match.group(1).lower() if match else None
+
+
+def _access_keys(window):
+    return [key for key in map(_access_key, _buttons(window)) if key]
 
 
 def _fire_button(window, button):
