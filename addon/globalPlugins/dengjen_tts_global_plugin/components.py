@@ -8,6 +8,7 @@ from __future__ import annotations
 import dataclasses
 import contextlib
 import typing
+from concurrent.futures import Future
 
 import wx
 import wx.lib.mixins.listctrl as listmix
@@ -18,6 +19,7 @@ import gui
 
 
 ObjectCollection = typing.Iterable[typing.Any]
+DoneCallback = typing.Callable[[Future], None]
 
 
 def make_sized_static_box(parent, title):
