@@ -29,74 +29,6 @@ def fresh_log(monkeypatch):
     return fake_log
 
 
-class TestMigrateVoicesDirectory:
-    def test_moves_the_old_directory_when_the_new_one_is_absent(self, tmp_path):
-        (tmp_path / "sonata" / "voices" / "piper").mkdir(parents=True)
-        assert install_tasks.migrate_voices_directory(str(tmp_path)) is True
-        assert (tmp_path / "dengjen" / "voices" / "piper").is_dir()
-        assert not (tmp_path / "sonata").exists()
-
-    def test_leaves_both_alone_when_the_new_directory_already_exists(self, tmp_path):
-        (tmp_path / "sonata" / "voices").mkdir(parents=True)
-        (tmp_path / "dengjen" / "voices").mkdir(parents=True)
-        assert install_tasks.migrate_voices_directory(str(tmp_path)) is False
-        assert (tmp_path / "sonata" / "voices").is_dir()
-
-    def test_is_a_noop_when_there_is_nothing_to_migrate(self, tmp_path):
-        assert install_tasks.migrate_voices_directory(str(tmp_path)) is False
-        assert not (tmp_path / "dengjen").exists()
-
-    def test_ignores_a_file_named_like_the_old_directory(self, tmp_path):
-        (tmp_path / "sonata").write_text("not a directory")
-        assert install_tasks.migrate_voices_directory(str(tmp_path)) is False
-        assert not (tmp_path / "dengjen").exists()
-
-    def test_logs_why_it_skipped_when_the_new_directory_already_exists(
-        self, tmp_path, fresh_log
-    ):
-        (tmp_path / "sonata" / "voices").mkdir(parents=True)
-        (tmp_path / "dengjen" / "voices").mkdir(parents=True)
-        install_tasks.migrate_voices_directory(str(tmp_path))
-        assert fresh_log.info.call_count == 1
-        assert str(tmp_path / "dengjen") in fresh_log.info.call_args[0][0]
-
-    def test_logs_why_it_skipped_when_there_is_nothing_to_migrate(
-        self, tmp_path, fresh_log
-    ):
-        install_tasks.migrate_voices_directory(str(tmp_path))
-        assert fresh_log.info.call_count == 1
-        assert str(tmp_path / "sonata") in fresh_log.info.call_args[0][0]
-
-    def test_warns_the_user_and_logs_when_the_move_raises(
-        self, tmp_path, fresh_log, monkeypatch
-    ):
-        (tmp_path / "sonata" / "voices").mkdir(parents=True)
-
-        def _boom(src, dst):
-            raise PermissionError("file in use")
-
-        monkeypatch.setattr(install_tasks.os, "rename", _boom)
-        shown = []
-        monkeypatch.setattr(
-            install_tasks.gui, "messageBox", lambda *a, **kw: shown.append((a, kw))
-        )
-        assert install_tasks.migrate_voices_directory(str(tmp_path)) is False
-        assert fresh_log.exception.call_count == 1
-        assert len(shown) == 1
-        message_text = shown[0][0][0]
-        assert str(tmp_path / "sonata") in message_text
-
-    def test_does_not_raise_when_the_move_fails(self, tmp_path, monkeypatch):
-        (tmp_path / "sonata" / "voices").mkdir(parents=True)
-
-        def _boom(src, dst):
-            raise PermissionError("file in use")
-
-        monkeypatch.setattr(install_tasks.os, "rename", _boom)
-        monkeypatch.setattr(install_tasks.gui, "messageBox", lambda *a, **kw: None)
-        install_tasks.migrate_voices_directory(str(tmp_path))
-
-
 class _FakeSection(dict):
     """Stands in for NVDA's ConfigObj section, which has isSet()."""
 
@@ -341,13 +273,10 @@ class TestOnInstall:
             install_tasks, "warn_if_old_addon_installed", lambda: ran.append("warn")
         )
         monkeypatch.setattr(
-            install_tasks, "migrate_voices_directory", lambda: ran.append("voices")
-        )
-        monkeypatch.setattr(
             install_tasks, "migrate_speech_config", lambda: ran.append("config")
         )
         install_tasks.onInstall()
-        assert ran == ["warn", "voices", "config"]
+        assert ran == ["warn", "config"]
 
     def test_a_failing_step_does_not_abort_the_install(self, monkeypatch):
         ran = []
@@ -357,17 +286,13 @@ class TestOnInstall:
 
         monkeypatch.setattr(install_tasks, "warn_if_old_addon_installed", _boom)
         monkeypatch.setattr(
-            install_tasks, "migrate_voices_directory", lambda: ran.append("voices")
-        )
-        monkeypatch.setattr(
             install_tasks, "migrate_speech_config", lambda: ran.append("config")
         )
         install_tasks.onInstall()
-        assert ran == ["voices", "config"]
+        assert ran == ["config"]
 
     def test_saves_config_when_the_speech_migration_succeeds(self, monkeypatch):
         monkeypatch.setattr(install_tasks, "warn_if_old_addon_installed", lambda: None)
-        monkeypatch.setattr(install_tasks, "migrate_voices_directory", lambda: False)
         monkeypatch.setattr(install_tasks, "migrate_speech_config", lambda: True)
         fake_conf = MagicMock()
         monkeypatch.setattr(install_tasks.config, "conf", fake_conf)
@@ -378,7 +303,6 @@ class TestOnInstall:
         self, monkeypatch
     ):
         monkeypatch.setattr(install_tasks, "warn_if_old_addon_installed", lambda: None)
-        monkeypatch.setattr(install_tasks, "migrate_voices_directory", lambda: False)
         monkeypatch.setattr(install_tasks, "migrate_speech_config", lambda: False)
         fake_conf = MagicMock()
         monkeypatch.setattr(install_tasks.config, "conf", fake_conf)
@@ -389,7 +313,6 @@ class TestOnInstall:
         self, monkeypatch, fresh_log
     ):
         monkeypatch.setattr(install_tasks, "warn_if_old_addon_installed", lambda: None)
-        monkeypatch.setattr(install_tasks, "migrate_voices_directory", lambda: False)
         monkeypatch.setattr(install_tasks, "migrate_speech_config", lambda: True)
         fake_conf = MagicMock()
         fake_conf.save.side_effect = OSError("disk full")

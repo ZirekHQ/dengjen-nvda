@@ -21,6 +21,7 @@ import synthDriverHandler
 from logHandler import log
 
 from . import DengjenTextToSpeechSystem, DENGJEN_VOICES_DIR
+from . import voice_migration
 from . import voice_download
 from . import aio
 from . import helpers
@@ -73,15 +74,30 @@ class InstalledDengjenVoicesPanel(SizedPanel):
                 "The archive should have a (.tar.gz) file extension."
             )
         )
+        self.import_voices_button = CommandLinkButton(
+            self,
+            -1,
+            # Translators: the main label of the button for importing pre-rename voices
+            _("Import voices from Sonata"),
+            # Translators: the note for the button for importing pre-rename voices
+            _(
+                "Copy voices you downloaded with the Sonata Neural Voices add-on.\n"
+                "The originals are left in place, so Sonata keeps working."
+            )
+        )
+        self.import_voices_button.Hide()
         self.Bind(wx.EVT_BUTTON, self.on_model_card, self.model_card_button)
         self.Bind(wx.EVT_BUTTON, self.on_remove_voice, self.remove_voice_button)
         self.Bind(wx.EVT_BUTTON, self._on_install_voice_from_tar, add_voice_button)
+        self.Bind(wx.EVT_BUTTON, self._on_import_voices, self.import_voices_button)
 
     def update_voices_list(self, set_focus=False, invalidate_synth_voices_cache=False):
         voices = list(DengjenTextToSpeechSystem.load_piper_voices_from_nvda_config_dir())
         state = logic.installed_list_state(
             voices, synthDriverHandler.getSynth().name
         )
+        self.import_voices_button.Show(bool(voice_migration.importable_voice_keys()))
+        self.Layout()
         self.buttons_panel.Enable(state.buttons_enabled)
         self.voices_list.set_objects(voices, set_focus=set_focus)
         if state.is_dengjen_synth:
@@ -176,6 +192,52 @@ class InstalledDengjenVoicesPanel(SizedPanel):
                     style=wx.ICON_INFORMATION
                 )
                 self.update_voices_list(set_focus=True, invalidate_synth_voices_cache=True)
+
+    def _on_import_voices(self, event):
+        voice_keys = voice_migration.importable_voice_keys()
+        if not voice_keys:
+            self.update_voices_list()
+            return
+        retval = gui.messageBox(
+            # Translators: message in a message box; {voices} is a list of voice names
+            _(
+                "Copy the following voices from the Sonata Neural Voices add-on?\n"
+                "{voices}\n\n"
+                "The originals are left in place, so Sonata keeps working. This "
+                "needs as much free disk space as the voices take up."
+            ).format(voices="\n".join(voice_keys)),
+            # Translators: title of a message box
+            _("Import voices from Sonata?"),
+            style=wx.YES_NO | wx.ICON_QUESTION,
+        )
+        if retval != wx.YES:
+            return
+        try:
+            copied = voice_migration.copy_voices_from_old_dir()
+        except OSError as exc:
+            log.exception("Failed to import voices from the Sonata add-on")
+            gui.messageBox(
+                # Translators: message telling the user that importing voices has failed
+                _(
+                    "Failed to import voices.\n\n{detail}\n\n"
+                    "See NVDA's log for more details."
+                ).format(detail=str(exc) or type(exc).__name__),
+                # Translators: title of a message box
+                _("Import failed"),
+                style=wx.ICON_ERROR,
+                parent=gui.mainFrame,
+            )
+        else:
+            gui.messageBox(
+                # Translators: message telling the user which voices were imported
+                _("The following voices were imported:\n{voices}").format(
+                    voices="\n".join(copied)
+                ),
+                # Translators: title of a message box
+                _("Voices imported"),
+                style=wx.ICON_INFORMATION,
+            )
+        self.update_voices_list(set_focus=True, invalidate_synth_voices_cache=True)
 
     def _on_install_voice_from_tar(self, event):
         open_file_dialog = wx.FileDialog(

@@ -24,6 +24,7 @@ _TTS_MODULE_DIR = os.path.join(_ADDON_ROOT, "synthDrivers")
 sys.path.insert(0, _TTS_MODULE_DIR)
 from dengjen_neural_voices import helpers
 from dengjen_neural_voices import aio
+from dengjen_neural_voices import voice_migration
 from dengjen_neural_voices.tts_system import (
     DengjenTextToSpeechSystem,
     DENGJEN_VOICES_DIR,
