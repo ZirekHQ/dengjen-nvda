@@ -14,9 +14,64 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
+  # tests_contract/ (real sonata-grpc.exe) and tests_gui/ (real wxPython) only
+  # run on Windows, so the modules they exercise are invisible to the ubuntu
+  # coverage run below. This job measures them and hands the raw data over as
+  # an artifact for the scan job to combine (#89).
+  windows_coverage:
+    name: Windows coverage
+    runs-on: windows-latest
+    permissions:
+      contents: read
+    # Matches the scan job's guard: nothing consumes this artifact on fork PRs.
+    if: github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository
+
+    steps:
+      - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5.1.0
+        with:
+          persist-credentials: false
+
+      - name: Set up Python
+        uses: actions/setup-python@ece7cb06caefa5fff74198d8649806c4678c61a1 # v6.3.0
+        with:
+          python-version: "3.13"
+
+      - name: Install test dependencies
+        run: |
+          python -m pip install --upgrade --only-binary :all: -r requirements-bootstrap.txt
+          pip install --only-binary :all: -r requirements-test.txt
+          pip install --only-binary :all: -r requirements-test-gui.txt
+
+      # Three invocations for the reasons build_addon.yml spells out: each tree
+      # needs a different set of real-vs-stubbed modules, so they cannot share a
+      # process. Each writes its own COVERAGE_FILE because a bare `pytest --cov`
+      # erases whatever data files it finds first.
+      - name: Run tests with coverage
+        env:
+          COVERAGE_FILE: .coverage.windows.tests
+        run: pytest --cov
+
+      - name: Run gRPC contract tests with coverage
+        env:
+          COVERAGE_FILE: .coverage.windows.contract
+        run: pytest tests_contract/ --cov -v
+
+      - name: Run GUI smoke tests with coverage
+        env:
+          COVERAGE_FILE: .coverage.windows.gui
+        run: pytest tests_gui/ --cov -v
+
+      - uses: actions/upload-artifact@330a01c490aca151604b8cf639adc76d48f6c5d4 # v5.0.0
+        with:
+          name: windows-coverage-data
+          path: .coverage.windows.*
+          include-hidden-files: true # coverage data files start with a dot
+          retention-days: 1
+
   sonar:
     name: Sonar
     runs-on: ubuntu-latest
+    needs: ["windows_coverage"]
     permissions:
       contents: read
     # Fork PRs are never given repository secrets, so SONAR_TOKEN would be empty
@@ -42,7 +97,22 @@ jobs:
           pip install --only-binary :all: -r requirements-test.txt
 
       - name: Run tests with coverage
-        run: pytest --cov --cov-report=xml
+        run: pytest --cov
+
+      # After the run above, never before: `pytest --cov` deletes any
+      # .coverage.* data files already sitting in the workspace.
+      - name: Download the Windows legs' coverage
+        uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4.3.0
+        with:
+          name: windows-coverage-data
+
+      # relative_files in .coveragerc is what makes this work across OSes:
+      # combine remaps the Windows data's `addon\...` paths onto `addon/...`.
+      # Fails loudly with "No data to combine" if the artifact never arrived.
+      - name: Merge into one coverage report
+        run: |
+          python -m coverage combine --append
+          python -m coverage xml
 
       - name: SonarQube scan
         if: env.SONAR_TOKEN != ''

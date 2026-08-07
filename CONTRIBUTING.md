@@ -89,7 +89,7 @@ Each of these cost a CI round or a review finding to nail down — read before w
 - **`gui.messageBox` returns `wx.YES` / `wx.NO` / `wx.OK` / `wx.CANCEL`, not `wx.ID_*`.** The `wx.ID_*` constants come from `wx.MessageDialog.ShowModal()`, a different API. The add-on compares `retval == wx.YES`, so a mock returning `wx.ID_YES` looks right but silently skips every confirm-then-act branch.
 - **Never call `ShowModal()`.** With no running event loop it blocks until the CI job times out. Construct the dialog, assert against it, `Destroy()` it.
 
-Coverage note: `tests_contract/` and `tests_gui/` are pass/fail gates and contribute nothing to `coverage.xml`, so the modules only they reach stay in `sonar.coverage.exclusions` in `sonar-project.properties`.
+Coverage note: all three trees feed one `coverage.xml`. `sonar.yml` runs a `windows_coverage` job that measures `tests/`, `tests_contract/` and `tests_gui/` — each into its own `COVERAGE_FILE`, because a bare `pytest --cov` erases the data files it finds — and the scan job `coverage combine`s them with its own ubuntu run. `relative_files` in `.coveragerc` is what lets that work across OSes: combine remaps the Windows data's `addon\...` paths onto `addon/...`. Only `grpc_client/**` stays in `sonar.coverage.exclusions`, because no tree executes it (`tests_contract/` talks to the generated stubs directly).
 
 ## Refreshing the bundled binaries
 
