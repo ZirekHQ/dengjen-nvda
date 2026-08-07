@@ -247,6 +247,7 @@ _stub_module("gui", messageBox=MagicMock(), mainFrame=MagicMock(), runScriptModa
 _stub_module("gui.settingsDialogs", NVDASettingsDialog=MagicMock(), SpeechSettingsPanel=MagicMock())
 _stub_module("core", postNvdaStartup=MagicMock(), restart=MagicMock())
 _stub_module("globalPluginHandler", GlobalPlugin=MagicMock())
+_stub_module("ui", message=MagicMock())
 
 
 # ---------------------------------------------------------------------------
