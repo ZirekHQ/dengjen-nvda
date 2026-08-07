@@ -8,8 +8,6 @@ they subclass real wx types -- and are covered by tests_gui/ on Windows.
 
 import os
 
-import pytest
-
 from tests.conftest import GLOBAL_PLUGIN_PKG_DIR, load_module_from_path
 
 import addonHandler
@@ -249,8 +247,8 @@ class TestDownloadButtonState:
     def test_multi_speaker_voice_lists_its_speakers_in_map_order(self):
         voice = _online(
             "en_US-libritts-medium", "libritts", _language("en_US", "English"),
-            num_speakers=3, speaker_id_map={"p1": 0, "p2": 1, "p3": 2},
+            num_speakers=3, speaker_id_map={"p3": 0, "p1": 1, "p2": 2},
         )
         state = logic.download_button_state(voice)
         assert state.speaker_enabled is True
-        assert state.speakers == ("p1", "p2", "p3")
+        assert state.speakers == ("p3", "p1", "p2")

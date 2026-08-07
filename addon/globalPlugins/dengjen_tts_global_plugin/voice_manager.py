@@ -134,7 +134,9 @@ class InstalledDengjenVoicesPanel(SizedPanel):
             self.voices_list.set_focused_item(0)
             return
         synth = synthDriverHandler.getSynth()
-        if logic.is_active_voice(synth.name, synth.voice, selected.key):
+        if logic.is_active_voice(
+            synth_name=synth.name, synth_voice=synth.voice, voice_key=selected.key
+        ):
             gui.messageBox(
                 # Translators: message in a message box
                 _("You cannot remove the currently active voice!"),
@@ -330,7 +332,7 @@ class OnlineDengjenVoicesPanel(SizedPanel):
         self.download_std_btn.Enable(state.std_enabled)
         self.download_rt_btn.Enable(state.rt_enabled)
         self.speaker_choice.Enable(state.speaker_enabled)
-        if state.speakers:
+        if state.speaker_enabled:
             self.speaker_choice.SetItems(list(state.speakers))
             self.speaker_choice.SetSelection(0)
 
