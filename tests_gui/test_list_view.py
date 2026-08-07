@@ -95,10 +95,16 @@ class TestImmutableObjectListView:
         list_view.set_objects([])
         assert list_view.get_selected() is None
 
-    def test_direct_insertion_is_rejected(self, list_view):
-        list_view.set_objects([_Row("amy", "medium")])
+    def test_mutation_guard_raises_outside_set_objects(self, list_view):
+        # Not asserted via InsertItem: wx swallows exceptions raised inside
+        # event handlers, so onInsertItem's RuntimeError reaches stderr but
+        # never propagates to the caller -- pytest.raises would see nothing.
         with pytest.raises(RuntimeError, match="List is immutable"):
-            list_view.InsertItem(0, "smuggled")
+            list_view.prevent_mutations()
+
+    def test_set_objects_does_not_trip_the_mutation_guard(self, list_view):
+        list_view.set_objects([_Row("amy", "medium")])
+        assert list_view.ItemCount == 1
 
     def test_set_focused_item_past_the_end_is_a_no_op(self, list_view):
         list_view.set_objects([_Row("amy", "medium")])
