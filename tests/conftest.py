@@ -46,7 +46,7 @@ _TESTS_DIR = os.path.dirname(__file__)
 _SYNTH_DIR = os.path.join(_TESTS_DIR, "..", "addon", "synthDrivers")
 _SYNTH_PKG_DIR = os.path.join(_SYNTH_DIR, "dengjen_neural_voices")
 _GLOBAL_PLUGIN_DIR = os.path.join(_TESTS_DIR, "..", "addon", "globalPlugins")
-_GLOBAL_PLUGIN_PKG_DIR = os.path.join(_GLOBAL_PLUGIN_DIR, "sonata_tts_global_plugin")
+_GLOBAL_PLUGIN_PKG_DIR = os.path.join(_GLOBAL_PLUGIN_DIR, "dengjen_tts_global_plugin")
 
 REPO_ROOT = os.path.abspath(os.path.join(_TESTS_DIR, ".."))
 SYNTH_PKG_DIR = os.path.abspath(_SYNTH_PKG_DIR)
@@ -324,7 +324,7 @@ _load_real_module("dengjen_neural_voices.tts_system", "tts_system.py")
 
 
 # ---------------------------------------------------------------------------
-# 6. Register `sonata_tts_global_plugin` as a package WITHOUT running its
+# 6. Register `dengjen_tts_global_plugin` as a package WITHOUT running its
 #    __init__.py. That file pulls in voice_manager.py/components.py, which
 #    subclass real wx widgets (wx.ListCtrl, the vendored sized_controls.py
 #    SizedDialog) — a MagicMock `wx` can't stand in as a base class for those,
@@ -334,11 +334,11 @@ _load_real_module("dengjen_neural_voices.tts_system", "tts_system.py")
 #    helpers, SONATA_VOICES_DIR`.
 # ---------------------------------------------------------------------------
 
-_gui_plugin_pkg = types.ModuleType("sonata_tts_global_plugin")
+_gui_plugin_pkg = types.ModuleType("dengjen_tts_global_plugin")
 _gui_plugin_pkg.__path__ = [_GLOBAL_PLUGIN_PKG_DIR]
-_gui_plugin_pkg.__package__ = "sonata_tts_global_plugin"
+_gui_plugin_pkg.__package__ = "dengjen_tts_global_plugin"
 _gui_plugin_pkg.SonataTextToSpeechSystem = sys.modules["dengjen_neural_voices.tts_system"].SonataTextToSpeechSystem
 _gui_plugin_pkg.SONATA_VOICES_DIR = sys.modules["dengjen_neural_voices.tts_system"].SONATA_VOICES_DIR
 _gui_plugin_pkg.helpers = sys.modules["dengjen_neural_voices.helpers"]
 _gui_plugin_pkg.aio = _aio
-sys.modules["sonata_tts_global_plugin"] = _gui_plugin_pkg
+sys.modules["dengjen_tts_global_plugin"] = _gui_plugin_pkg

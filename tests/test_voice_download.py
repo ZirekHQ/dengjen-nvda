@@ -9,7 +9,7 @@ Deliberately out of scope: voice_manager.py, components.py, and the
 GlobalPlugin itself (see issue #65) — they subclass real wx widgets
 (wx.ListCtrl, the vendored sized_controls.SizedDialog) that a MagicMock `wx`
 can't stand in for as a base class. conftest.py registers
-`sonata_tts_global_plugin` as a package stub exposing only the names its
+`dengjen_tts_global_plugin` as a package stub exposing only the names its
 __init__.py re-exports, without running that file (which would pull in the
 GUI modules). Network access is never exercised: `request` (mureq, the
 vendored HTTP client) is monkeypatched per-test with canned responses.
@@ -36,9 +36,9 @@ import addonHandler
 addonHandler.initTranslation()
 
 voice_download = load_module_from_path(
-    "sonata_tts_global_plugin._voice_download_under_test",
+    "dengjen_tts_global_plugin._voice_download_under_test",
     os.path.join(GLOBAL_PLUGIN_PKG_DIR, "voice_download.py"),
-    package="sonata_tts_global_plugin",
+    package="dengjen_tts_global_plugin",
 )
 
 PiperVoice = voice_download.PiperVoice

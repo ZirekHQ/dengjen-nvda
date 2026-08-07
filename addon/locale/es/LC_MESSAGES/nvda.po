@@ -19,18 +19,18 @@ msgstr ""
 "X-Poedit-Bookmarks: -1,16,-1,-1,-1,-1,-1,-1,-1,-1\n"
 
 #. Translators: label of a menu item
-#: addon\globalPlugins\sonata_tts_global_plugin\__init__.py:47
+#: addon\globalPlugins\dengjen_tts_global_plugin\__init__.py:47
 msgid "Sonata &voice manager..."
 msgstr "Administrador de voces &Sonata..."
 
 #. Translators: Sonata's voice manager menu item help
-#: addon\globalPlugins\sonata_tts_global_plugin\__init__.py:49
+#: addon\globalPlugins\dengjen_tts_global_plugin\__init__.py:49
 msgid "Open the voice manager to preview, install or download sonata voices"
 msgstr ""
 "Abrir el administrador de voces para probar, instalar o descargar voces "
 "sonata"
 
-#: addon\globalPlugins\sonata_tts_global_plugin\__init__.py:65
+#: addon\globalPlugins\dengjen_tts_global_plugin\__init__.py:65
 msgid ""
 "No Sonata voice was found.\n"
 "You can preview and download voices from the voice manager.\n"
@@ -44,33 +44,33 @@ msgstr ""
 #. Add-on summary, usually the user visible name of the addon.
 #. Translators: Summary for this add-on
 #. to be shown on installation and add-on information found in Add-ons Manager.
-#: addon\globalPlugins\sonata_tts_global_plugin\__init__.py:70 buildVars.py:23
+#: addon\globalPlugins\dengjen_tts_global_plugin\__init__.py:70 buildVars.py:23
 msgid "Sonata Neural Voices"
 msgstr "Voces Neuronales Sonata"
 
 #. Translators: the label of the OK button in a dialog
-#: addon\globalPlugins\sonata_tts_global_plugin\components.py:86
+#: addon\globalPlugins\dengjen_tts_global_plugin\components.py:86
 msgid "OK"
 msgstr "Aceptar"
 
 #. Translators: the label of the cancel button in a dialog
-#: addon\globalPlugins\sonata_tts_global_plugin\components.py:89
+#: addon\globalPlugins\dengjen_tts_global_plugin\components.py:89
 msgid "Cancel"
 msgstr "Cancelar"
 
 #. Translators: message of a progress dialog
-#: addon\globalPlugins\sonata_tts_global_plugin\voice_download.py:192
-#: addon\globalPlugins\sonata_tts_global_plugin\voice_download.py:329
+#: addon\globalPlugins\dengjen_tts_global_plugin\voice_download.py:192
+#: addon\globalPlugins\dengjen_tts_global_plugin\voice_download.py:329
 msgid "Downloaded: {progress}%"
 msgstr "Descargado: {progress}%"
 
 #. Translators: message shown in the voice download progress dialog
-#: addon\globalPlugins\sonata_tts_global_plugin\voice_download.py:201
-#: addon\globalPlugins\sonata_tts_global_plugin\voice_download.py:338
+#: addon\globalPlugins\dengjen_tts_global_plugin\voice_download.py:201
+#: addon\globalPlugins\dengjen_tts_global_plugin\voice_download.py:338
 msgid "Installing voice"
 msgstr "Instalando voz"
 
-#: addon\globalPlugins\sonata_tts_global_plugin\voice_download.py:230
+#: addon\globalPlugins\dengjen_tts_global_plugin\voice_download.py:230
 msgid ""
 "Successfully downloaded voice  {voice}.\n"
 "To use this voice, you need to restart NVDA.\n"
@@ -81,12 +81,12 @@ msgstr ""
 "¿Quieres reiniciar NVDA ahora?"
 
 #. Translators: title of a message box
-#: addon\globalPlugins\sonata_tts_global_plugin\voice_download.py:237
-#: addon\globalPlugins\sonata_tts_global_plugin\voice_download.py:361
+#: addon\globalPlugins\dengjen_tts_global_plugin\voice_download.py:237
+#: addon\globalPlugins\dengjen_tts_global_plugin\voice_download.py:361
 msgid "Voice downloaded"
 msgstr "Voz descargada"
 
-#: addon\globalPlugins\sonata_tts_global_plugin\voice_download.py:246
+#: addon\globalPlugins\dengjen_tts_global_plugin\voice_download.py:246
 msgid ""
 "Cannot download voice {voice}.\n"
 "Please check your connection and try again."
@@ -94,29 +94,29 @@ msgstr ""
 "La voz {voice} no se ha podido descargar.\n"
 "Por favor, verifica tu conexión e inténtalo de nuevo."
 
-#: addon\globalPlugins\sonata_tts_global_plugin\voice_download.py:248
-#: addon\globalPlugins\sonata_tts_global_plugin\voice_download.py:372
+#: addon\globalPlugins\dengjen_tts_global_plugin\voice_download.py:248
+#: addon\globalPlugins\dengjen_tts_global_plugin\voice_download.py:372
 msgid "Download failed"
 msgstr "Descarga fallida"
 
 #. Translators: title of a progress dialog
-#: addon\globalPlugins\sonata_tts_global_plugin\voice_download.py:258
+#: addon\globalPlugins\dengjen_tts_global_plugin\voice_download.py:258
 msgid "Downloading voice {voice}"
 msgstr "Descargando la voz {voice}"
 
 #. Translators: message of a progress dialog
-#: addon\globalPlugins\sonata_tts_global_plugin\voice_download.py:262
-#: addon\globalPlugins\sonata_tts_global_plugin\voice_download.py:386
+#: addon\globalPlugins\dengjen_tts_global_plugin\voice_download.py:262
+#: addon\globalPlugins\dengjen_tts_global_plugin\voice_download.py:386
 msgid "Retrieving download information..."
 msgstr "Recopilando información de la descarga..."
 
 #. Translators: message shown in progress dialog
-#: addon\globalPlugins\sonata_tts_global_plugin\voice_download.py:274
-#: addon\globalPlugins\sonata_tts_global_plugin\voice_download.py:397
+#: addon\globalPlugins\dengjen_tts_global_plugin\voice_download.py:274
+#: addon\globalPlugins\dengjen_tts_global_plugin\voice_download.py:397
 msgid "Downloading file: {file}"
 msgstr "Descargando archivo: {file}"
 
-#: addon\globalPlugins\sonata_tts_global_plugin\voice_download.py:354
+#: addon\globalPlugins\dengjen_tts_global_plugin\voice_download.py:354
 msgid ""
 "Successfully downloaded fast variant of the voice  {voice}.\n"
 "To use this voice, you need to restart NVDA.\n"
@@ -126,7 +126,7 @@ msgstr ""
 "Para usar esta voz, necesitas reiniciar NVDA.\n"
 "¿Quieres reiniciar NVDA ahora?"
 
-#: addon\globalPlugins\sonata_tts_global_plugin\voice_download.py:370
+#: addon\globalPlugins\dengjen_tts_global_plugin\voice_download.py:370
 msgid ""
 "Cannot download fast variant of the voice {voice}.\n"
 "Please check your connection and try again."
@@ -135,52 +135,52 @@ msgstr ""
 "Por favor, verifica tu conexión e inténtalo de nuevo."
 
 #. Translators: title of a progress dialog
-#: addon\globalPlugins\sonata_tts_global_plugin\voice_download.py:382
+#: addon\globalPlugins\dengjen_tts_global_plugin\voice_download.py:382
 msgid "Downloading fast variant of the voice {voice}"
 msgstr "Descargando variante rápida de la voz {voice}"
 
 #. Add controls
 #. Translators: label for a list of installed voices
-#: addon\globalPlugins\sonata_tts_global_plugin\voice_manager.py:42
+#: addon\globalPlugins\dengjen_tts_global_plugin\voice_manager.py:42
 msgid "Installed voices"
 msgstr "Voces instaladas"
 
 #. Translators: list view column title
-#: addon\globalPlugins\sonata_tts_global_plugin\voice_manager.py:48
-#: addon\globalPlugins\sonata_tts_global_plugin\voice_manager.py:243
+#: addon\globalPlugins\dengjen_tts_global_plugin\voice_manager.py:48
+#: addon\globalPlugins\dengjen_tts_global_plugin\voice_manager.py:243
 msgid "Name"
 msgstr "Nombre"
 
 #. Translators: list view column title
-#: addon\globalPlugins\sonata_tts_global_plugin\voice_manager.py:51
-#: addon\globalPlugins\sonata_tts_global_plugin\voice_manager.py:245
+#: addon\globalPlugins\dengjen_tts_global_plugin\voice_manager.py:51
+#: addon\globalPlugins\dengjen_tts_global_plugin\voice_manager.py:245
 msgid "Quality"
 msgstr "Calidad"
 
 #. Translators: list view column title
 #. Build controls
 #. Translators: label of a choice
-#: addon\globalPlugins\sonata_tts_global_plugin\voice_manager.py:54
-#: addon\globalPlugins\sonata_tts_global_plugin\voice_manager.py:238
+#: addon\globalPlugins\dengjen_tts_global_plugin\voice_manager.py:54
+#: addon\globalPlugins\dengjen_tts_global_plugin\voice_manager.py:238
 msgid "Language"
 msgstr "Idioma"
 
 #. Translators: label for a button for showing voice model card
-#: addon\globalPlugins\sonata_tts_global_plugin\voice_manager.py:60
+#: addon\globalPlugins\dengjen_tts_global_plugin\voice_manager.py:60
 msgid "&Voice model card..."
 msgstr "&Tarjeta de modelo de la voz..."
 
 #. Translators: label for a button for removing a voice
-#: addon\globalPlugins\sonata_tts_global_plugin\voice_manager.py:62
+#: addon\globalPlugins\dengjen_tts_global_plugin\voice_manager.py:62
 msgid "&Remove voice..."
 msgstr "&Eliminar voz..."
 
 #. Translators: the main label of the install button
-#: addon\globalPlugins\sonata_tts_global_plugin\voice_manager.py:67
+#: addon\globalPlugins\dengjen_tts_global_plugin\voice_manager.py:67
 msgid "Install from local file"
 msgstr "Instalar desde un archivo local"
 
-#: addon\globalPlugins\sonata_tts_global_plugin\voice_manager.py:70
+#: addon\globalPlugins\dengjen_tts_global_plugin\voice_manager.py:70
 msgid ""
 "Install a voice from a local archive.\n"
 "The archive contains the voice model and configuration.\n"
@@ -192,33 +192,33 @@ msgstr ""
 
 #. ! Intentionally untranslatable
 #. Translators: title of a message box showing voice model card
-#: addon\globalPlugins\sonata_tts_global_plugin\voice_manager.py:121
+#: addon\globalPlugins\dengjen_tts_global_plugin\voice_manager.py:121
 msgid "Model card"
 msgstr "Targeta de modelo"
 
 #. Translators: content of a message box
-#: addon\globalPlugins\sonata_tts_global_plugin\voice_manager.py:127
+#: addon\globalPlugins\dengjen_tts_global_plugin\voice_manager.py:127
 msgid "Model card information is unavailable for this voice"
 msgstr ""
 "La información de la tarjeta de modelo no está disponible para esta voz"
 
 #. Translators: title of a message box
-#: addon\globalPlugins\sonata_tts_global_plugin\voice_manager.py:129
+#: addon\globalPlugins\dengjen_tts_global_plugin\voice_manager.py:129
 msgid "Not found"
 msgstr "No encontrado"
 
 #. Translators: message in a message box
-#: addon\globalPlugins\sonata_tts_global_plugin\voice_manager.py:146
+#: addon\globalPlugins\dengjen_tts_global_plugin\voice_manager.py:146
 msgid "You cannot remove the currently active voice!"
 msgstr "¡No puedes eliminar la voz actualmente en ejecución!"
 
 #. Translators: title of a message box
-#: addon\globalPlugins\sonata_tts_global_plugin\voice_manager.py:148
-#: addon\globalPlugins\sonata_tts_global_plugin\voice_manager.py:301
+#: addon\globalPlugins\dengjen_tts_global_plugin\voice_manager.py:148
+#: addon\globalPlugins\dengjen_tts_global_plugin\voice_manager.py:301
 msgid "Error"
 msgstr "Error"
 
-#: addon\globalPlugins\sonata_tts_global_plugin\voice_manager.py:155
+#: addon\globalPlugins\dengjen_tts_global_plugin\voice_manager.py:155
 msgid ""
 "Do you want to remove this voice?\n"
 "Voice: {name}"
@@ -227,12 +227,12 @@ msgstr ""
 "voz: {name}"
 
 #. Translators: title of a message box
-#: addon\globalPlugins\sonata_tts_global_plugin\voice_manager.py:159
+#: addon\globalPlugins\dengjen_tts_global_plugin\voice_manager.py:159
 msgid "Remove voice?"
 msgstr "¿Eliminar voz?"
 
 #. Translators: message in a message box
-#: addon\globalPlugins\sonata_tts_global_plugin\voice_manager.py:169
+#: addon\globalPlugins\dengjen_tts_global_plugin\voice_manager.py:169
 msgid ""
 "Failed to remove voice.\n"
 "See NVDA's log for more details."
@@ -241,78 +241,78 @@ msgstr ""
 "Por favor, verifica el registro de NVDA para más detalles."
 
 #. Translators: title of a message box
-#: addon\globalPlugins\sonata_tts_global_plugin\voice_manager.py:171
+#: addon\globalPlugins\dengjen_tts_global_plugin\voice_manager.py:171
 msgid "Failed"
 msgstr "Fallido"
 
 #. Translators: message in a message box
-#: addon\globalPlugins\sonata_tts_global_plugin\voice_manager.py:177
+#: addon\globalPlugins\dengjen_tts_global_plugin\voice_manager.py:177
 msgid "Voice removed successfully."
 msgstr "La voz se ha eliminado con éxito."
 
 #. Translators: title of a message box
-#: addon\globalPlugins\sonata_tts_global_plugin\voice_manager.py:179
+#: addon\globalPlugins\dengjen_tts_global_plugin\voice_manager.py:179
 msgid "Done"
 msgstr "Echo"
 
 #. Translators: title for a dialog for opening a file
-#: addon\globalPlugins\sonata_tts_global_plugin\voice_manager.py:188
+#: addon\globalPlugins\dengjen_tts_global_plugin\voice_manager.py:188
 msgid "Choose voice archive file "
 msgstr "Selecciona el archivo de voz "
 
-#: addon\globalPlugins\sonata_tts_global_plugin\voice_manager.py:215
+#: addon\globalPlugins\dengjen_tts_global_plugin\voice_manager.py:215
 msgid "Voice installation failed"
 msgstr "Instalación de voz fallida"
 
-#: addon\globalPlugins\sonata_tts_global_plugin\voice_manager.py:222
+#: addon\globalPlugins\dengjen_tts_global_plugin\voice_manager.py:222
 msgid "Voice {voice} has been installed successfully."
 msgstr "La voz {voice} ha sido instalada con éxito."
 
-#: addon\globalPlugins\sonata_tts_global_plugin\voice_manager.py:224
+#: addon\globalPlugins\dengjen_tts_global_plugin\voice_manager.py:224
 msgid "Voice installed successfully"
 msgstr "Voz instalada satisfactoriamente"
 
-#: addon\globalPlugins\sonata_tts_global_plugin\voice_manager.py:240
+#: addon\globalPlugins\dengjen_tts_global_plugin\voice_manager.py:240
 msgid "Available voices"
 msgstr "Voces disponibles"
 
 #. Translators: header of a group of controls for previewing the voice
-#: addon\globalPlugins\sonata_tts_global_plugin\voice_manager.py:256
+#: addon\globalPlugins\dengjen_tts_global_plugin\voice_manager.py:256
 msgid "Preview"
 msgstr "Probar"
 
 #. Translators: Label for a setting in synth settings ring.
-#: addon\globalPlugins\sonata_tts_global_plugin\voice_manager.py:258
+#: addon\globalPlugins\dengjen_tts_global_plugin\voice_manager.py:258
 #: addon\synthDrivers\dengjen_neural_voices\__init__.py:126
 msgid "Speaker"
 msgstr "Hablante"
 
 #. Translators: label of a button
-#: addon\globalPlugins\sonata_tts_global_plugin\voice_manager.py:261
+#: addon\globalPlugins\dengjen_tts_global_plugin\voice_manager.py:261
 msgid "&Preview"
 msgstr "&Probar"
 
 #. Translators: label of a button to download the standard variant of the voice
-#: addon\globalPlugins\sonata_tts_global_plugin\voice_manager.py:265
+#: addon\globalPlugins\dengjen_tts_global_plugin\voice_manager.py:265
 msgid "&Download standard variant"
 msgstr "&Descarga variante estándar"
 
 #. Translators: label of a button to download the fast variant of voice
-#: addon\globalPlugins\sonata_tts_global_plugin\voice_manager.py:267
+#: addon\globalPlugins\dengjen_tts_global_plugin\voice_manager.py:267
 msgid "Download &fast variant"
 msgstr "Descarga &variante rápida"
 
 #. Translators: label of a button to refresh the voices list
-#: addon\globalPlugins\sonata_tts_global_plugin\voice_manager.py:269
+#: addon\globalPlugins\dengjen_tts_global_plugin\voice_manager.py:269
 msgid "&Refresh voices list"
 msgstr "&Refrescar lista de voces"
 
 #. Translators: message in a dialog
-#: addon\globalPlugins\sonata_tts_global_plugin\voice_manager.py:289
+#: addon\globalPlugins\dengjen_tts_global_plugin\voice_manager.py:289
 msgid "Retrieving voices list. Please wait..."
 msgstr "Recopilando lista de voces. Por favor espera..."
 
-#: addon\globalPlugins\sonata_tts_global_plugin\voice_manager.py:300
+#: addon\globalPlugins\dengjen_tts_global_plugin\voice_manager.py:300
 msgid ""
 "Could not retrieve voice list.\n"
 "Please check your connection and try again."
@@ -321,22 +321,22 @@ msgstr ""
 "Por favor, verifica tu conexión e inténtalo nuevamente."
 
 #. Translators: title of voice manager dialog
-#: addon\globalPlugins\sonata_tts_global_plugin\voice_manager.py:411
+#: addon\globalPlugins\dengjen_tts_global_plugin\voice_manager.py:411
 msgid "Sonata voice manager"
 msgstr "Administrador de voces Sonata"
 
 #. Translators: label of a tab in a tab control
-#: addon\globalPlugins\sonata_tts_global_plugin\voice_manager.py:422
+#: addon\globalPlugins\dengjen_tts_global_plugin\voice_manager.py:422
 msgid "Installed"
 msgstr "Instalado"
 
 #. Translators: label of a tab in a tab control
-#: addon\globalPlugins\sonata_tts_global_plugin\voice_manager.py:427
+#: addon\globalPlugins\dengjen_tts_global_plugin\voice_manager.py:427
 msgid "Download"
 msgstr "Descargar"
 
 #. Translators: the label of the close button in a dialog
-#: addon\globalPlugins\sonata_tts_global_plugin\voice_manager.py:443
+#: addon\globalPlugins\dengjen_tts_global_plugin\voice_manager.py:443
 msgid "&Close"
 msgstr "&Cerrar"
 
@@ -375,19 +375,19 @@ msgstr ""
 
 # Draft translation added by the fork maintainer; review welcome.
 #. Translators: file dialog filter for tar archives
-#: addon\globalPlugins\sonata_tts_global_plugin\voice_manager.py:187
+#: addon\globalPlugins\dengjen_tts_global_plugin\voice_manager.py:187
 msgid "Tar archives (*.tar.gz, *.tgz)"
 msgstr "Archivos tar (*.tar.gz, *.tgz)"
 
 # Draft translation added by the fork maintainer; review welcome.
 #. Translators: file dialog filter for all files
-#: addon\globalPlugins\sonata_tts_global_plugin\voice_manager.py:189
+#: addon\globalPlugins\dengjen_tts_global_plugin\voice_manager.py:189
 msgid "All files"
 msgstr "Todos los archivos"
 
 # Draft translation added by the fork maintainer; review welcome.
 #. Translators: message telling the user that installing the voice has failed
-#: addon\globalPlugins\sonata_tts_global_plugin\voice_manager.py:212
+#: addon\globalPlugins\dengjen_tts_global_plugin\voice_manager.py:212
 msgid ""
 "Failed to install voice from archive.\n"
 "\n"
@@ -405,13 +405,13 @@ msgstr ""
 # Accelerator moved to P: D collided with "&Descarga variante estándar" on the same
 # tab, and P matches the "&Probar" state of this same button.
 #. Translators: label of the preview button while audio is playing
-#: addon\globalPlugins\sonata_tts_global_plugin\voice_manager.py:361
+#: addon\globalPlugins\dengjen_tts_global_plugin\voice_manager.py:361
 msgid "&Stop preview"
 msgstr "Detener &prueba"
 
 # Draft translation added by the fork maintainer; review welcome.
 #. Translators: error shown when voice preview fails to play
-#: addon\globalPlugins\sonata_tts_global_plugin\voice_manager.py:378
+#: addon\globalPlugins\dengjen_tts_global_plugin\voice_manager.py:378
 msgid ""
 "Could not play voice preview.\n"
 "Check your connection and try again."
@@ -421,7 +421,7 @@ msgstr ""
 
 # Draft translation added by the fork maintainer; review welcome.
 #. Translators: title of an error message box
-#: addon\globalPlugins\sonata_tts_global_plugin\voice_manager.py:380
+#: addon\globalPlugins\dengjen_tts_global_plugin\voice_manager.py:380
 msgid "Preview failed"
 msgstr "Prueba fallida"
 
