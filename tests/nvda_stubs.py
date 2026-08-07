@@ -88,15 +88,23 @@ def _load_real_module(module_name: str, filename: str) -> types.ModuleType:
     )
 
 
-_INSTALLED = False
+_INSTALLED_STUB_WX = None
 
 
 def install(*, stub_wx: bool = True) -> None:
-    """Install the stubs. Idempotent; the first call wins."""
-    global _INSTALLED
-    if _INSTALLED:
+    """Install the stubs. Idempotent for a repeat call with the same
+    stub_wx mode; a conflicting mode means two test trees collided in one
+    process, so raise instead of silently keeping whichever wx installed first.
+    """
+    global _INSTALLED_STUB_WX
+    if _INSTALLED_STUB_WX is not None:
+        if _INSTALLED_STUB_WX != stub_wx:
+            raise RuntimeError(
+                f"nvda_stubs.install(stub_wx={stub_wx}) conflicts with an "
+                f"earlier install(stub_wx={_INSTALLED_STUB_WX}) in this process"
+            )
         return
-    _INSTALLED = True
+    _INSTALLED_STUB_WX = stub_wx
 
     # -----------------------------------------------------------------------
     # 1. Stub grpc, SCons, and all submodules

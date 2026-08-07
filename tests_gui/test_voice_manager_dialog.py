@@ -20,6 +20,7 @@ Never call ShowModal(): with no event loop it blocks until the CI job times
 out. Dialogs are constructed, asserted against, and destroyed.
 """
 
+import dataclasses
 import sys
 from types import SimpleNamespace
 from unittest.mock import MagicMock
@@ -200,22 +201,65 @@ class TestOnlinePanelControls:
         panel.set_voices(online_voices)
         assert panel.language_choice.GetCount() == 2
 
+    @pytest.mark.parametrize(
+        "standard_variant_installed, expected_std_enabled",
+        [(False, True), (True, False)],
+    )
     def test_voice_selection_enables_the_matching_download_buttons(
-        self, panel, online_voices
+        self,
+        panel,
+        online_voices,
+        standard_variant_installed,
+        expected_std_enabled,
     ):
+        voice = dataclasses.replace(
+            online_voices[0], standard_variant_installed=standard_variant_installed
+        )
         panel.set_voices(online_voices)
-        panel.voices_list.set_objects([online_voices[0]])
+        panel.voices_list.set_objects([voice])
         panel.voices_list.set_focused_item(0)
-        panel.on_voice_selected(None)
+        _fire_list_item_selected(panel, panel.voices_list, 0)
         # IsEnabled() reports the *effective* state, which is False here
         # regardless of on_voice_selected's own Enable() call: both buttons'
         # ancestor buttons_panel starts disabled and nothing in this test
         # re-enables it. IsThisEnabled() reports the widget's own flag --
         # exactly what on_voice_selected controls -- so it is the assertion
         # that can actually catch a wiring/logic regression here.
-        assert panel.download_std_btn.IsThisEnabled() is True
-        # the fixture's first voice has no RT variant
+        assert panel.download_std_btn.IsThisEnabled() is expected_std_enabled
+        # the fixture voice has no RT variant
         assert panel.download_rt_btn.IsThisEnabled() is False
+
+    def test_language_selection_populates_voices_and_enables_buttons(
+        self, panel, online_voices
+    ):
+        panel.set_voices(online_voices)
+        event = wx.CommandEvent(wx.EVT_CHOICE.typeId, panel.language_choice.GetId())
+        event.SetEventObject(panel.language_choice)
+        event.SetInt(0)  # "English" sorts first; lang_to_voices[en] has 1 voice
+        panel.ProcessEvent(event)
+        assert panel.voices_list.ItemCount == 1
+        assert panel.buttons_panel.IsEnabled() is True
+
+    def test_refresh_button_forces_an_online_lookup(
+        self, panel, voice_manager, monkeypatch, sync_executor
+    ):
+        calls = []
+
+        def fake_get_available_voices(**kwargs):
+            calls.append(kwargs)
+            return []
+
+        monkeypatch.setattr(
+            voice_manager.voice_download, "get_available_voices", fake_get_available_voices
+        )
+        monkeypatch.setattr(
+            voice_manager.voice_download, "THREAD_POOL_EXECUTOR", sync_executor
+        )
+        # refresh_list_btn is a local in OnlineDengjenVoicesPanel.__init__, so
+        # it has no attribute on the panel -- find it by type instead.
+        refresh_btn = _find_child_of_type(panel, wx.Button)
+        _fire_button(panel, refresh_btn)
+        assert calls == [{"force_online": True}]
 
     def test_preview_button_reaches_on_preview(
         self, panel, voice_manager, monkeypatch, sync_executor, online_voices
@@ -292,6 +336,13 @@ class TestNotebookPageChanged:
 def _fire_button(window, button):
     event = wx.CommandEvent(wx.EVT_BUTTON.typeId, button.GetId())
     event.SetEventObject(button)
+    window.ProcessEvent(event)
+
+
+def _fire_list_item_selected(window, list_ctrl, index):
+    event = wx.ListEvent(wx.EVT_LIST_ITEM_SELECTED.typeId, list_ctrl.GetId())
+    event.SetEventObject(list_ctrl)
+    event.SetIndex(index)
     window.ProcessEvent(event)
 
 

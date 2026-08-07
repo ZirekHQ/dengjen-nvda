@@ -127,6 +127,11 @@ class TestImmutableObjectListView:
             list_view.prevent_mutations()
 
     def test_set_focused_item_past_the_end_is_a_no_op(self, list_view):
-        list_view.set_objects([_Row("amy", "medium")])
+        list_view.set_objects([_Row("amy", "medium")], set_focus=False)
+        assert list_view.GetFocusedItem() == wx.NOT_FOUND
         list_view.set_focused_item(99)
+        assert list_view.GetFocusedItem() == wx.NOT_FOUND
+        # positive control: without it, a set_focused_item that did nothing
+        # at all would also pass the assertions above.
+        list_view.set_focused_item(0)
         assert list_view.GetFocusedItem() == 0

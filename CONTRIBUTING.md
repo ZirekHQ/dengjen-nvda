@@ -52,7 +52,7 @@ Three trees, because the process-wide fakes they need are mutually exclusive:
 | Tree | Fakes | Real | Runs on |
 | --- | --- | --- | --- |
 | `tests/` | NVDA, `wx`, `grpc` | add-on logic | Linux + Windows |
-| `tests_contract/` | NVDA | `grpc`, `sonata-grpc.exe` | Windows |
+| `tests_contract/` | nothing — avoids NVDA entirely | `grpc`, `sonata-grpc.exe` | Windows |
 | `tests_gui/` | NVDA | `wxPython` | Windows |
 
 `tests/conftest.py` installs a stub `wx` into `sys.modules` for the whole process, so a test needing real wx cannot live there — hence `tests_gui/`. Same reason `tests_contract/` is separate: it needs the real `grpc` that `tests/` mocks. `pytest.ini`'s `testpaths = tests` keeps both Windows-only trees out of a bare `pytest`, and their test modules self-skip on other platforms, so a Linux `pytest` is always green.
@@ -61,11 +61,12 @@ You cannot run `tests_gui/` on Linux at all — wxPython publishes no Linux whee
 
 ### How the NVDA stubs work
 
-`tests/nvda_stubs.py` fakes just enough of NVDA's internal API surface (`config`, `languageHandler`, `synthDriverHandler`, `speech.commands`, `nvwave`, `gui`, ...) to import and drive add-on code that would otherwise only run inside a real NVDA process. `install(*, stub_wx: bool = True)` is what `tests/conftest.py` calls; `tests_gui/conftest.py` calls `install(stub_wx=False)` to keep real wxPython. Three helpers do the work:
+`tests/nvda_stubs.py` fakes just enough of NVDA's internal API surface (`config`, `languageHandler`, `synthDriverHandler`, `speech.commands`, `nvwave`, `gui`, ...) to import and drive add-on code that would otherwise only run inside a real NVDA process. `install(*, stub_wx: bool = True)` is what `tests/conftest.py` calls; `tests_gui/conftest.py` calls `install(stub_wx=False)` to keep real wxPython. Two helpers do the work:
 
 - `_stub_module(name, **attrs)` — registers a bare `types.ModuleType` in `sys.modules`, for NVDA modules the add-on only touches at the surface (e.g. `config.conf[...]`).
 - `load_module_from_path(module_name, path, package=...)` — executes a real add-on `.py` file as a module under the stubs, so its actual logic runs and is covered, instead of being faked.
-- `_AutoPropertyMeta` — mimics NVDA's `baseObject.AutoPropertyObject`, turning `_get_x`/`_set_x` pairs into a real `x` property. That is what lets tests do `driver.rate = 50` and have it call `_set_rate`.
+
+The stubbed `synthDriverHandler.SynthDriver` also carries `_AutoPropertyMeta`, a metaclass local to `install()` that mimics NVDA's `baseObject.AutoPropertyObject`, turning `_get_x`/`_set_x` pairs into a real `x` property. That is what lets tests do `driver.rate = 50` and have it call `_set_rate` — it's behaviour of the `SynthDriver` stub, not a helper a contributor can import and reuse elsewhere.
 
 Intra-package submodules with hard platform dependencies (`grpc_client`, `aio`) stay fully stubbed in `tests/` rather than executed — tests assert against the calls the driver makes into them.
 
