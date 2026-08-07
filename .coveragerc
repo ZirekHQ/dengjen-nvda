@@ -7,6 +7,8 @@ source = .
 omit =
     .venv/*
     tests/*
+    tests_contract/*
+    tests_gui/*
     site_scons/*
     update_*.py
     addon/synthDrivers/dengjen_neural_voices/lib/*
