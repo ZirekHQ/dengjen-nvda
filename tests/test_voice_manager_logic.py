@@ -160,3 +160,97 @@ class TestGroupVoicesByLanguage:
         languages, lang_to_voices = logic.group_voices_by_language([])
         assert languages == []
         assert lang_to_voices == {}
+
+
+class TestInstalledListState:
+    def test_buttons_disabled_when_no_voices_installed(self):
+        state = logic.installed_list_state([], "dengjen_neural_voices")
+        assert state.buttons_enabled is False
+
+    def test_buttons_enabled_when_a_voice_is_installed(self):
+        state = logic.installed_list_state(
+            [_installed("en_US-amy-medium")], "dengjen_neural_voices"
+        )
+        assert state.buttons_enabled is True
+
+    def test_remove_needs_at_least_two_voices(self):
+        one = logic.installed_list_state(
+            [_installed("en_US-amy-medium")], "dengjen_neural_voices"
+        )
+        two = logic.installed_list_state(
+            [_installed("en_US-amy-medium"), _installed("en_US-ryan-medium")],
+            "dengjen_neural_voices",
+        )
+        assert one.remove_enabled is False
+        assert two.remove_enabled is True
+
+    def test_dengjen_synth_matched_case_insensitively_by_substring(self):
+        # update_voices_list uses `"dengjen" in name.lower()`, deliberately
+        # looser than on_remove_voice's exact match. Both are preserved.
+        assert logic.installed_list_state([], "Dengjen_Neural_Voices").is_dengjen_synth
+        assert logic.installed_list_state([], "dengjen").is_dengjen_synth
+
+    def test_other_synths_are_not_dengjen(self):
+        assert not logic.installed_list_state([], "espeak").is_dengjen_synth
+
+    def test_remove_enabled_is_independent_of_the_active_synth(self):
+        # The caller only reads remove_enabled when is_dengjen_synth is true,
+        # so this flag must not be pre-ANDed with it.
+        state = logic.installed_list_state(
+            [_installed("en_US-amy-medium"), _installed("en_US-ryan-medium")],
+            "espeak",
+        )
+        assert state.remove_enabled is True
+        assert state.is_dengjen_synth is False
+
+
+class TestDownloadButtonState:
+    def test_standard_download_offered_when_not_installed(self):
+        voice = _online("en_US-amy-medium", "amy", _language("en_US", "English"))
+        assert logic.download_button_state(voice).std_enabled is True
+
+    def test_standard_download_withheld_when_already_installed(self):
+        voice = _online(
+            "en_US-amy-medium", "amy", _language("en_US", "English"),
+            standard_variant_installed=True,
+        )
+        assert logic.download_button_state(voice).std_enabled is False
+
+    def test_fast_download_withheld_when_voice_has_no_rt_variant(self):
+        voice = _online(
+            "en_US-amy-medium", "amy", _language("en_US", "English"),
+            has_rt_variant=False,
+        )
+        assert logic.download_button_state(voice).rt_enabled is False
+
+    def test_fast_download_offered_when_rt_exists_and_is_not_installed(self):
+        voice = _online(
+            "en_US-amy-medium", "amy", _language("en_US", "English"),
+            has_rt_variant=True,
+        )
+        assert logic.download_button_state(voice).rt_enabled is True
+
+    def test_fast_download_withheld_when_rt_already_installed(self):
+        voice = _online(
+            "en_US-amy-medium", "amy", _language("en_US", "English"),
+            has_rt_variant=True, fast_variant_installed=True,
+        )
+        assert logic.download_button_state(voice).rt_enabled is False
+
+    def test_single_speaker_voice_offers_no_speaker_choice(self):
+        voice = _online(
+            "en_US-amy-medium", "amy", _language("en_US", "English"),
+            num_speakers=1, speaker_id_map={"amy": 0},
+        )
+        state = logic.download_button_state(voice)
+        assert state.speaker_enabled is False
+        assert state.speakers == ()
+
+    def test_multi_speaker_voice_lists_its_speakers_in_map_order(self):
+        voice = _online(
+            "en_US-libritts-medium", "libritts", _language("en_US", "English"),
+            num_speakers=3, speaker_id_map={"p1": 0, "p2": 1, "p3": 2},
+        )
+        state = logic.download_button_state(voice)
+        assert state.speaker_enabled is True
+        assert state.speakers == ("p1", "p2", "p3")

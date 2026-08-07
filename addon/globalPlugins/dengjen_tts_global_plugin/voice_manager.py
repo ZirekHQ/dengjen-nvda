@@ -79,11 +79,13 @@ class InstalledDengjenVoicesPanel(SizedPanel):
 
     def update_voices_list(self, set_focus=False, invalidate_synth_voices_cache=False):
         voices = list(DengjenTextToSpeechSystem.load_piper_voices_from_nvda_config_dir())
-        enable = bool(voices)
-        self.buttons_panel.Enable(enable)
+        state = logic.installed_list_state(
+            voices, synthDriverHandler.getSynth().name
+        )
+        self.buttons_panel.Enable(state.buttons_enabled)
         self.voices_list.set_objects(voices, set_focus=set_focus)
-        if "dengjen" in synthDriverHandler.getSynth().name.lower():
-            self.remove_voice_button.Enable(len(voices) >= 2)
+        if state.is_dengjen_synth:
+            self.remove_voice_button.Enable(state.remove_enabled)
             if invalidate_synth_voices_cache:
                 synth = synthDriverHandler.getSynth()
                 synth.terminate()
@@ -324,17 +326,13 @@ class OnlineDengjenVoicesPanel(SizedPanel):
         selected_voice = self.voices_list.get_selected()
         if selected_voice is None:
             return
-        self.download_std_btn.Enable(not selected_voice.standard_variant_installed)
-        self.download_rt_btn.Enable(
-            selected_voice.has_rt_variant and not selected_voice.fast_variant_installed
-        )
-        if selected_voice.num_speakers > 1:
-            self.speaker_choice.Enable(True)
-            speakers = list(selected_voice.speaker_id_map.keys())
-            self.speaker_choice.SetItems(speakers)
+        state = logic.download_button_state(selected_voice)
+        self.download_std_btn.Enable(state.std_enabled)
+        self.download_rt_btn.Enable(state.rt_enabled)
+        self.speaker_choice.Enable(state.speaker_enabled)
+        if state.speakers:
+            self.speaker_choice.SetItems(list(state.speakers))
             self.speaker_choice.SetSelection(0)
-        else:
-            self.speaker_choice.Enable(False)
 
     def on_preview(self, event):
         # While a preview is playing, the same button acts as Stop. This keeps
