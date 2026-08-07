@@ -104,6 +104,112 @@ class TestMigrateSpeechConfig:
         assert "dengjen_neural_voices" not in conf["speech"]
 
 
+class _FakeAggregatedSection:
+    """Stands in for NVDA's config.AggregatedSection.
+
+    The real object provides items(), copy() and dict() but — unlike a plain
+    dict or the dict-subclassing _FakeSection above — it has no keys(). Any
+    migration code that guards its recursion with hasattr(value, "keys")
+    silently treats a nested section as a leaf value here, exactly as it
+    would against the real NVDA object.
+    """
+
+    def __init__(self, data=None):
+        self._data = {}
+        for key, value in (data or {}).items():
+            self[key] = value
+
+    def __setitem__(self, key, value):
+        if isinstance(value, dict) and not isinstance(value, _FakeAggregatedSection):
+            value = _FakeAggregatedSection(value)
+        self._data[key] = value
+
+    def __getitem__(self, key):
+        if key not in self._data:
+            self._data[key] = _FakeAggregatedSection()
+        return self._data[key]
+
+    def __contains__(self, key):
+        return key in self._data
+
+    def items(self):
+        return self._data.items()
+
+    def isSet(self, key):
+        return key in self._data
+
+    def as_plain_dict(self):
+        return {
+            key: value.as_plain_dict() if isinstance(value, _FakeAggregatedSection) else value
+            for key, value in self._data.items()
+        }
+
+    def __eq__(self, other):
+        if isinstance(other, _FakeAggregatedSection):
+            other = other.as_plain_dict()
+        if not isinstance(other, dict):
+            return NotImplemented
+        return self.as_plain_dict() == other
+
+
+def _aggregated_speech_conf(**sections):
+    speech = _FakeAggregatedSection()
+    for name, value in sections.items():
+        speech[name] = value
+    return {"speech": speech}
+
+
+class TestMigrateSpeechConfigAgainstAggregatedSection:
+    """Same behaviour as TestMigrateSpeechConfig, but against a double whose
+    method surface matches the real config.AggregatedSection (no keys()),
+    not the dict-subclassing _FakeSection the rest of this file uses."""
+
+    def test_copies_the_old_section_when_the_new_one_is_absent(self):
+        conf = _aggregated_speech_conf(
+            sonata_neural_voices={
+                "rate": 55,
+                "voices": {"en_US-amy-medium": {"speaker": "amy"}},
+            }
+        )
+        assert install_tasks.migrate_speech_config(conf) is True
+        assert conf["speech"]["dengjen_neural_voices"] == {
+            "rate": 55,
+            "voices": {"en_US-amy-medium": {"speaker": "amy"}},
+        }
+
+    def test_copies_rather_than_aliases_nested_sections(self):
+        conf = _aggregated_speech_conf(
+            sonata_neural_voices={"voices": {"en_US-amy-medium": {"speaker": "amy"}}}
+        )
+        install_tasks.migrate_speech_config(conf)
+        conf["speech"]["dengjen_neural_voices"]["voices"]["en_US-amy-medium"][
+            "speaker"
+        ] = "changed"
+        assert (
+            conf["speech"]["sonata_neural_voices"]["voices"]["en_US-amy-medium"][
+                "speaker"
+            ]
+            == "amy"
+        )
+
+    def test_leaves_the_old_section_in_place(self):
+        conf = _aggregated_speech_conf(sonata_neural_voices={"rate": 55})
+        install_tasks.migrate_speech_config(conf)
+        assert conf["speech"]["sonata_neural_voices"] == {"rate": 55}
+
+    def test_leaves_an_existing_new_section_alone(self):
+        conf = _aggregated_speech_conf(
+            sonata_neural_voices={"rate": 55}, dengjen_neural_voices={"rate": 80}
+        )
+        assert install_tasks.migrate_speech_config(conf) is False
+        assert conf["speech"]["dengjen_neural_voices"] == {"rate": 80}
+
+    def test_is_a_noop_when_there_is_no_old_section(self):
+        conf = _aggregated_speech_conf()
+        assert install_tasks.migrate_speech_config(conf) is False
+        assert "dengjen_neural_voices" not in conf["speech"]
+
+
 class _FakeAddon:
     def __init__(self, name, pending_remove=False):
         self.name = name

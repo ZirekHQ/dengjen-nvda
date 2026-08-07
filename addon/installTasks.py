@@ -48,7 +48,7 @@ def migrate_voices_directory(config_path=None):
 
 def _as_plain_dict(section):
     return {
-        key: _as_plain_dict(value) if hasattr(value, "keys") else value
+        key: _as_plain_dict(value) if hasattr(value, "items") else value
         for key, value in section.items()
     }
 
