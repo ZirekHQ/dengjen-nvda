@@ -7,6 +7,9 @@ behaviour still needs an end-user check on the built artifact.
 """
 
 import os
+from unittest.mock import MagicMock
+
+import pytest
 
 from tests.conftest import REPO_ROOT, load_module_from_path
 
@@ -14,6 +17,16 @@ install_tasks = load_module_from_path(
     "_install_migrations_under_test",
     os.path.join(REPO_ROOT, "addon", "installTasks.py"),
 )
+
+
+@pytest.fixture
+def fresh_log(monkeypatch):
+    """A MagicMock scoped to a single test — logHandler.log is a session-wide
+    stub shared with every other test module, so asserting on its call list
+    without isolating it would pick up calls made elsewhere."""
+    fake_log = MagicMock()
+    monkeypatch.setattr(install_tasks, "log", fake_log)
+    return fake_log
 
 
 class TestMigrateVoicesDirectory:
@@ -37,6 +50,51 @@ class TestMigrateVoicesDirectory:
         (tmp_path / "sonata").write_text("not a directory")
         assert install_tasks.migrate_voices_directory(str(tmp_path)) is False
         assert not (tmp_path / "dengjen").exists()
+
+    def test_logs_why_it_skipped_when_the_new_directory_already_exists(
+        self, tmp_path, fresh_log
+    ):
+        (tmp_path / "sonata" / "voices").mkdir(parents=True)
+        (tmp_path / "dengjen" / "voices").mkdir(parents=True)
+        install_tasks.migrate_voices_directory(str(tmp_path))
+        assert fresh_log.info.call_count == 1
+        assert str(tmp_path / "dengjen") in fresh_log.info.call_args[0][0]
+
+    def test_logs_why_it_skipped_when_there_is_nothing_to_migrate(
+        self, tmp_path, fresh_log
+    ):
+        install_tasks.migrate_voices_directory(str(tmp_path))
+        assert fresh_log.info.call_count == 1
+        assert str(tmp_path / "sonata") in fresh_log.info.call_args[0][0]
+
+    def test_warns_the_user_and_logs_when_the_move_raises(
+        self, tmp_path, fresh_log, monkeypatch
+    ):
+        (tmp_path / "sonata" / "voices").mkdir(parents=True)
+
+        def _boom(src, dst):
+            raise PermissionError("file in use")
+
+        monkeypatch.setattr(install_tasks.os, "rename", _boom)
+        shown = []
+        monkeypatch.setattr(
+            install_tasks.gui, "messageBox", lambda *a, **kw: shown.append((a, kw))
+        )
+        assert install_tasks.migrate_voices_directory(str(tmp_path)) is False
+        assert fresh_log.exception.call_count == 1
+        assert len(shown) == 1
+        message_text = shown[0][0][0]
+        assert str(tmp_path / "sonata") in message_text
+
+    def test_does_not_raise_when_the_move_fails(self, tmp_path, monkeypatch):
+        (tmp_path / "sonata" / "voices").mkdir(parents=True)
+
+        def _boom(src, dst):
+            raise PermissionError("file in use")
+
+        monkeypatch.setattr(install_tasks.os, "rename", _boom)
+        monkeypatch.setattr(install_tasks.gui, "messageBox", lambda *a, **kw: None)
+        install_tasks.migrate_voices_directory(str(tmp_path))
 
 
 class _FakeSection(dict):
@@ -100,6 +158,112 @@ class TestMigrateSpeechConfig:
 
     def test_is_a_noop_when_there_is_no_old_section(self):
         conf = _speech_conf()
+        assert install_tasks.migrate_speech_config(conf) is False
+        assert "dengjen_neural_voices" not in conf["speech"]
+
+
+class _FakeAggregatedSection:
+    """Stands in for NVDA's config.AggregatedSection.
+
+    The real object provides items(), copy() and dict() but — unlike a plain
+    dict or the dict-subclassing _FakeSection above — it has no keys(). Any
+    migration code that guards its recursion with hasattr(value, "keys")
+    silently treats a nested section as a leaf value here, exactly as it
+    would against the real NVDA object.
+    """
+
+    def __init__(self, data=None):
+        self._data = {}
+        for key, value in (data or {}).items():
+            self[key] = value
+
+    def __setitem__(self, key, value):
+        if isinstance(value, dict) and not isinstance(value, _FakeAggregatedSection):
+            value = _FakeAggregatedSection(value)
+        self._data[key] = value
+
+    def __getitem__(self, key):
+        if key not in self._data:
+            self._data[key] = _FakeAggregatedSection()
+        return self._data[key]
+
+    def __contains__(self, key):
+        return key in self._data
+
+    def items(self):
+        return self._data.items()
+
+    def isSet(self, key):
+        return key in self._data
+
+    def as_plain_dict(self):
+        return {
+            key: value.as_plain_dict() if isinstance(value, _FakeAggregatedSection) else value
+            for key, value in self._data.items()
+        }
+
+    def __eq__(self, other):
+        if isinstance(other, _FakeAggregatedSection):
+            other = other.as_plain_dict()
+        if not isinstance(other, dict):
+            return NotImplemented
+        return self.as_plain_dict() == other
+
+
+def _aggregated_speech_conf(**sections):
+    speech = _FakeAggregatedSection()
+    for name, value in sections.items():
+        speech[name] = value
+    return {"speech": speech}
+
+
+class TestMigrateSpeechConfigAgainstAggregatedSection:
+    """Same behaviour as TestMigrateSpeechConfig, but against a double whose
+    method surface matches the real config.AggregatedSection (no keys()),
+    not the dict-subclassing _FakeSection the rest of this file uses."""
+
+    def test_copies_the_old_section_when_the_new_one_is_absent(self):
+        conf = _aggregated_speech_conf(
+            sonata_neural_voices={
+                "rate": 55,
+                "voices": {"en_US-amy-medium": {"speaker": "amy"}},
+            }
+        )
+        assert install_tasks.migrate_speech_config(conf) is True
+        assert conf["speech"]["dengjen_neural_voices"] == {
+            "rate": 55,
+            "voices": {"en_US-amy-medium": {"speaker": "amy"}},
+        }
+
+    def test_copies_rather_than_aliases_nested_sections(self):
+        conf = _aggregated_speech_conf(
+            sonata_neural_voices={"voices": {"en_US-amy-medium": {"speaker": "amy"}}}
+        )
+        install_tasks.migrate_speech_config(conf)
+        conf["speech"]["dengjen_neural_voices"]["voices"]["en_US-amy-medium"][
+            "speaker"
+        ] = "changed"
+        assert (
+            conf["speech"]["sonata_neural_voices"]["voices"]["en_US-amy-medium"][
+                "speaker"
+            ]
+            == "amy"
+        )
+
+    def test_leaves_the_old_section_in_place(self):
+        conf = _aggregated_speech_conf(sonata_neural_voices={"rate": 55})
+        install_tasks.migrate_speech_config(conf)
+        assert conf["speech"]["sonata_neural_voices"] == {"rate": 55}
+
+    def test_leaves_an_existing_new_section_alone(self):
+        conf = _aggregated_speech_conf(
+            sonata_neural_voices={"rate": 55}, dengjen_neural_voices={"rate": 80}
+        )
+        assert install_tasks.migrate_speech_config(conf) is False
+        assert conf["speech"]["dengjen_neural_voices"] == {"rate": 80}
+
+    def test_is_a_noop_when_there_is_no_old_section(self):
+        conf = _aggregated_speech_conf()
         assert install_tasks.migrate_speech_config(conf) is False
         assert "dengjen_neural_voices" not in conf["speech"]
 
@@ -200,3 +364,35 @@ class TestOnInstall:
         )
         install_tasks.onInstall()
         assert ran == ["voices", "config"]
+
+    def test_saves_config_when_the_speech_migration_succeeds(self, monkeypatch):
+        monkeypatch.setattr(install_tasks, "warn_if_old_addon_installed", lambda: None)
+        monkeypatch.setattr(install_tasks, "migrate_voices_directory", lambda: False)
+        monkeypatch.setattr(install_tasks, "migrate_speech_config", lambda: True)
+        fake_conf = MagicMock()
+        monkeypatch.setattr(install_tasks.config, "conf", fake_conf)
+        install_tasks.onInstall()
+        fake_conf.save.assert_called_once()
+
+    def test_does_not_save_config_when_the_speech_migration_is_a_noop(
+        self, monkeypatch
+    ):
+        monkeypatch.setattr(install_tasks, "warn_if_old_addon_installed", lambda: None)
+        monkeypatch.setattr(install_tasks, "migrate_voices_directory", lambda: False)
+        monkeypatch.setattr(install_tasks, "migrate_speech_config", lambda: False)
+        fake_conf = MagicMock()
+        monkeypatch.setattr(install_tasks.config, "conf", fake_conf)
+        install_tasks.onInstall()
+        fake_conf.save.assert_not_called()
+
+    def test_a_failing_config_save_does_not_abort_the_install(
+        self, monkeypatch, fresh_log
+    ):
+        monkeypatch.setattr(install_tasks, "warn_if_old_addon_installed", lambda: None)
+        monkeypatch.setattr(install_tasks, "migrate_voices_directory", lambda: False)
+        monkeypatch.setattr(install_tasks, "migrate_speech_config", lambda: True)
+        fake_conf = MagicMock()
+        fake_conf.save.side_effect = OSError("disk full")
+        monkeypatch.setattr(install_tasks.config, "conf", fake_conf)
+        install_tasks.onInstall()
+        assert fresh_log.exception.call_count == 1

@@ -39,16 +39,25 @@ def migrate_voices_directory(config_path=None):
         config_path = globalVars.appArgs.configPath
     old_dir = os.path.join(config_path, OLD_VOICES_DIR_NAME)
     new_dir = os.path.join(config_path, VOICES_DIR_NAME)
-    if os.path.exists(new_dir) or not os.path.isdir(old_dir):
+    if os.path.exists(new_dir):
+        log.info(f"Skipping voices migration: {new_dir} already exists")
         return False
-    os.rename(old_dir, new_dir)
+    if not os.path.isdir(old_dir):
+        log.info(f"Skipping voices migration: {old_dir} not found")
+        return False
+    try:
+        os.rename(old_dir, new_dir)
+    except OSError:
+        log.exception(f"Could not migrate voices from {old_dir} to {new_dir}")
+        _warn_voices_migration_failed(old_dir)
+        return False
     log.info(f"Migrated voices from {old_dir} to {new_dir}")
     return True
 
 
 def _as_plain_dict(section):
     return {
-        key: _as_plain_dict(value) if hasattr(value, "keys") else value
+        key: _as_plain_dict(value) if hasattr(value, "items") else value
         for key, value in section.items()
     }
 
@@ -94,6 +103,23 @@ def warn_if_old_addon_installed(addons=None):
     )
 
 
+def _warn_voices_migration_failed(old_dir):
+    wx.CallAfter(
+        gui.messageBox,
+        # Translators: shown after installing when downloaded voices could not be moved automatically; {old_dir} is a folder path
+        _(
+            "Dengjen Neural Voices could not move your downloaded voices from "
+            "{old_dir} because those files are still in use, most likely by the "
+            "Sonata Neural Voices add-on. Close NVDA completely, remove the Sonata "
+            "Neural Voices add-on, then move that folder into the Dengjen Neural "
+            "Voices configuration folder yourself."
+        ).format(old_dir=old_dir),
+        # Translators: title of the message shown when migrating downloaded voices fails
+        _("Could not move existing voices"),
+        wx.OK | wx.ICON_WARNING,
+    )
+
+
 def onInstall():
     for step in (
         warn_if_old_addon_installed,
@@ -101,9 +127,15 @@ def onInstall():
         migrate_speech_config,
     ):
         try:
-            step()
+            result = step()
         except Exception:
             log.exception(f"Upgrade step {step.__name__} failed")
+            continue
+        if step is migrate_speech_config and result:
+            try:
+                config.conf.save()
+            except Exception:
+                log.exception("Could not save migrated speech configuration")
 
 
 def onUninstall():
