@@ -67,8 +67,10 @@ def espeak_synth(voice_manager, monkeypatch):
 
 @pytest.fixture
 def offline(voice_manager, monkeypatch, sync_executor):
-    """No network: the Download tab calls get_available_voices on
-    construction, via AsyncSnakDialog."""
+    """No network: patches the Download tab's get_available_voices call and
+    its executor. Only page 0 populates at dialog construction, so these
+    patches matter when a test switches to page 1 (see
+    TestNotebookPageChanged), not at construction time."""
     monkeypatch.setattr(
         voice_manager.voice_download, "get_available_voices", lambda **kw: []
     )
@@ -137,7 +139,11 @@ class TestInstalledPanelControls:
         panel.voices_list.set_focused_item(0)
         _fire_button(panel, panel.model_card_button)
         # No MODEL_CARD file at `location` -> the "not found" messageBox path.
+        # The title pins this to on_model_card specifically: on_remove_voice
+        # also calls messageBox, so `.called` alone would pass just as well
+        # if the button were mis-bound to it.
         assert gui.messageBox.called
+        assert gui.messageBox.call_args.args[1] == "Not found"
 
     def test_model_card_button_with_nothing_selected_focuses_first_item(
         self, panel, installed_voice
@@ -181,7 +187,11 @@ class TestOnlinePanelControls:
         assert panel.download_rt_btn is not None
 
     def test_speaker_choice_starts_disabled(self, panel):
-        assert panel.speaker_choice.IsEnabled() is False
+        # IsThisEnabled(), not IsEnabled(): speaker_choice's ancestor chain
+        # includes buttons_panel, which is *also* disabled at construction,
+        # so the ancestor-aware IsEnabled() would stay False even if
+        # speaker_choice's own Enable(False) call were deleted.
+        assert panel.speaker_choice.IsThisEnabled() is False
 
     def test_buttons_panel_starts_disabled(self, panel):
         assert panel.buttons_panel.IsEnabled() is False
@@ -211,13 +221,19 @@ class TestOnlinePanelControls:
         self, panel, voice_manager, monkeypatch, sync_executor, online_voices
     ):
         monkeypatch.setattr(voice_manager.aio, "THREADED_EXECUTOR", sync_executor)
-        monkeypatch.setattr(voice_manager, "play_remote_mp3", lambda url: None)
-        panel.voices_list.set_objects([online_voices[0]])
+        calls = []
+        monkeypatch.setattr(voice_manager, "play_remote_mp3", calls.append)
+        selected_voice = online_voices[0]
+        panel.voices_list.set_objects([selected_voice])
         panel.voices_list.set_focused_item(0)
         _fire_button(panel, panel.preview_btn)
+        # play_remote_mp3 is only reachable through on_preview's submit call,
+        # so this is the actual proof the EVT_BUTTON binding reached the real
+        # handler; pinning the URL argument also pins the speaker index.
+        assert calls == [selected_voice.get_preview_url(speaker_idx=0)]
         # sync_executor + inline CallAfter means the whole cycle has already
-        # run by the time ProcessEvent returns, so the label is back to
-        # Preview -- observable proof the real binding reached on_preview.
+        # run by the time ProcessEvent returns, so this just confirms the
+        # handler returned to idle -- it is not what proves the wiring.
         assert panel._preview_active is False
         assert "Preview" in panel.preview_btn.GetLabel()
 
@@ -246,6 +262,31 @@ class TestOnlinePanelControls:
         _fire_button(panel, panel.download_rt_btn)
         assert downloader_cls.called
         assert downloader_cls.return_value.download.called
+
+
+class TestNotebookPageChanged:
+    def test_switching_to_the_download_tab_reaches_its_populate_list(
+        self, dialog, voice_manager, monkeypatch, sync_executor, online_voices
+    ):
+        calls = []
+
+        def fake_get_available_voices(**kwargs):
+            calls.append(kwargs)
+            return online_voices
+
+        monkeypatch.setattr(
+            voice_manager.voice_download, "get_available_voices", fake_get_available_voices
+        )
+        monkeypatch.setattr(
+            voice_manager.voice_download, "THREAD_POOL_EXECUTOR", sync_executor
+        )
+        online_panel = dialog.notebookCtrl.GetPage(1)
+        # SetSelection() -- unlike ChangeSelection() -- generates the real
+        # page-changing/changed events, reaching the EVT_NOTEBOOK_PAGE_CHANGED
+        # binding without a running event loop.
+        dialog.notebookCtrl.SetSelection(1)
+        assert calls == [{"force_online": False}]
+        assert online_panel.language_choice.GetCount() == 2
 
 
 def _fire_button(window, button):

@@ -76,7 +76,9 @@ class TestMenuLifecycle:
         plugin.terminate()
 
     def test_it_registers_a_post_startup_check(self, plugin, plugin_module):
-        assert plugin_module.core.postNvdaStartup.register.called
+        plugin_module.core.postNvdaStartup.register.assert_called_with(
+            plugin._voice_checker
+        )
 
 
 class TestVoiceCheck:
@@ -111,10 +113,9 @@ class TestVoiceCheck:
         # construction needs synth/network fixtures (see
         # test_voice_manager_dialog.py's espeak_synth/offline) that are
         # irrelevant to what this test targets -- the __voice_manager_shown
-        # short-circuit -- and dragging them in would only add flakiness
-        # risk for no extra coverage. Monkeypatching on_manager instead would
-        # bypass the flag assignment that lives inside it, which is the
-        # thing under test, so the flag is set directly.
+        # short-circuit in _perform_voice_check -- and dragging them in would
+        # only add flakiness risk for no extra coverage. The flag is set
+        # directly here so the test isolates that short-circuit alone.
         setattr(plugin, "_GlobalPlugin__voice_manager_shown", True)
         plugin._perform_voice_check()
         assert not gui.messageBox.called

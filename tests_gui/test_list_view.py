@@ -2,7 +2,10 @@
 """
 Smoke tests for components.py against real wxPython: ImmutableObjectListView
 actually populates a wx.ListCtrl from ColumnDefns, get_selected maps the
-focused row back to the source object, and the immutability guard fires.
+focused row back to the source object, and the EVT_LIST_INSERT_ITEM /
+EVT_LIST_DELETE_ITEM bindings reach the immutability guard. wx swallows the
+RuntimeError those handlers raise, though, so the guard never actually blocks
+a mutation -- it only logs one to stderr.
 
 These assert wiring, not decisions -- the wx-free decisions live in
 voice_manager_logic.py and are covered on both CI legs by
@@ -102,9 +105,26 @@ class TestImmutableObjectListView:
         with pytest.raises(RuntimeError, match="List is immutable"):
             list_view.prevent_mutations()
 
-    def test_set_objects_does_not_trip_the_mutation_guard(self, list_view):
+    def test_insert_item_reaches_the_mutation_guard_through_the_binding(
+        self, list_view, monkeypatch
+    ):
+        calls = []
+        monkeypatch.setattr(list_view, "prevent_mutations", lambda: calls.append(1))
+        list_view.InsertItem(0, "smuggled")
+        assert calls  # the EVT_LIST_INSERT_ITEM binding reached the guard
+
+    def test_set_objects_leaves_the_mutation_guard_armed_afterwards(self, list_view):
+        # prevent_mutations() IS called by onInsertItem during set_objects's
+        # own Append calls -- it just doesn't raise, because __unsafe_modify
+        # holds the guard open for exactly that duration. So "does the guard
+        # fire during set_objects" isn't a real question; what set_objects
+        # must not do is leave the guard permanently disarmed afterwards.
+        with pytest.raises(RuntimeError, match="List is immutable"):
+            list_view.prevent_mutations()
         list_view.set_objects([_Row("amy", "medium")])
         assert list_view.ItemCount == 1
+        with pytest.raises(RuntimeError, match="List is immutable"):
+            list_view.prevent_mutations()
 
     def test_set_focused_item_past_the_end_is_a_no_op(self, list_view):
         list_view.set_objects([_Row("amy", "medium")])
