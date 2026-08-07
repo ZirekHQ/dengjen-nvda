@@ -48,6 +48,10 @@ class _PendingExecutor:
 def _fire_key_up(window, keycode):
     event = wx.KeyEvent(wx.EVT_KEY_UP.typeId)
     event.SetKeyCode(keycode)
+    # wx.KeyEvent's constructor takes no id, unlike wx.CommandEvent's, and the
+    # Bind carries a source filter -- leave the id at 0 and wx silently drops
+    # the event before it reaches the handler.
+    event.SetId(window.GetId())
     event.SetEventObject(window)
     window.ProcessEvent(event)
 
