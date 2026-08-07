@@ -29,6 +29,19 @@ def components(gui_plugin_package):
     return components
 
 
+class _PendingExecutor:
+    """Hands back a Future that is still pending, like a real thread pool
+    would. An already-settled one fires the done-callback -- and so destroys
+    the dialog -- partway through AsyncSnakDialog.__init__, which then trips
+    over its own CenterOnScreen call."""
+
+    def __init__(self):
+        self.future = Future()
+
+    def submit(self, func, *args, **kwargs):
+        return self.future
+
+
 def _as_function(obj):
     if isinstance(obj, property):
         obj = obj.fget
@@ -86,3 +99,26 @@ class TestAsyncSnakDialog:
         # result. voice_manager's callback calls .result() on what it gets.
         assert received == [future]
         assert received[0].result() == "voices"
+
+    def test_future_is_the_submitted_future_and_stays_wired(
+        self, components, nvda_gui
+    ):
+        executor = _PendingExecutor()
+        received = []
+        dialog = components.AsyncSnakDialog(
+            executor=executor,
+            func=lambda: "voices",
+            done_callback=received.append,
+            parent=nvda_gui,
+            message="Retrieving voices list. Please wait...",
+        )
+
+        # add_done_callback returns None, so assigning its result left this
+        # attribute permanently None (#94).
+        assert dialog.future is executor.future
+        assert not received
+
+        # Splitting that call must not cost the callback: settling the future
+        # still has to reach done_callback through the real constructor.
+        executor.future.set_result("voices")
+        assert received == [executor.future]
