@@ -13,6 +13,7 @@ The initTranslation check below is the other half of the same blind spot: a
 complete catalogue is worth nothing to a module that never binds `_` to it.
 """
 
+import ast
 import glob
 import os
 import re
@@ -153,6 +154,64 @@ def test_every_module_with_translatable_strings_binds_its_own_gettext(source_pat
         f"{os.path.relpath(source_path, _REPO_ROOT)} calls _() without binding it; "
         "add addonHandler.initTranslation()"
     )
+
+
+_PO_ESCAPES = {"n": "\n", "t": "\t", '"': '"', "\\": "\\"}
+
+
+def _unescape(text):
+    """po escapes -> the real string, so it can be compared to the source.
+
+    Unknown escapes raise rather than pass through: silently mangling one
+    would show up as a spurious drift failure with no clue why.
+    """
+    out, index = [], 0
+    while index < len(text):
+        char = text[index]
+        if char == "\\":
+            out.append(_PO_ESCAPES[text[index + 1]])
+            index += 2
+        else:
+            out.append(char)
+            index += 1
+    return "".join(out)
+
+
+def _source_msgids(path):
+    """Every `_("literal")` in `path`. Not `_(variable)` -- xgettext cannot see
+    those either, so they are a separate bug from the one checked here."""
+    with open(path, encoding="utf-8") as handle:
+        tree = ast.parse(handle.read())
+    return {
+        node.args[0].value
+        for node in ast.walk(tree)
+        if isinstance(node, ast.Call)
+        and isinstance(node.func, ast.Name)
+        and node.func.id == "_"
+        and node.args
+        and isinstance(node.args[0], ast.Constant)
+        and isinstance(node.args[0].value, str)
+    }
+
+
+_SOURCE_MSGIDS = set().union(*(_source_msgids(path) for path in _I18N_SOURCES))
+
+
+@pytest.mark.parametrize("catalogue", _CATALOGUES, ids=_LOCALES)
+def test_catalogues_carry_exactly_the_msgids_the_source_uses(catalogue):
+    """Regression test for #105.
+
+    `scons pot` regenerates the .pot but nothing merges it into the tracked
+    .po files, so strings added since a locale was last touched were never
+    offered to its translator and rendered in English. Eleven had built up,
+    plus a changelog entry still describing 3.x.
+    """
+    assert len(_SOURCE_MSGIDS) >= 50, "the source extractor found almost nothing"
+    catalogued = {_unescape(msgid) for msgid, _ in _po_entries(catalogue) if msgid}
+    missing = sorted(_SOURCE_MSGIDS - catalogued)
+    orphaned = sorted(catalogued - _SOURCE_MSGIDS)
+    assert not missing, f"strings no translator has been offered: {missing}"
+    assert not orphaned, f"catalogued strings the source no longer uses: {orphaned}"
 
 
 def test_the_gettext_call_pattern_finds_real_calls_only():
