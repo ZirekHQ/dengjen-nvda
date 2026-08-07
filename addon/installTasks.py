@@ -127,9 +127,15 @@ def onInstall():
         migrate_speech_config,
     ):
         try:
-            step()
+            result = step()
         except Exception:
             log.exception(f"Upgrade step {step.__name__} failed")
+            continue
+        if step is migrate_speech_config and result:
+            try:
+                config.conf.save()
+            except Exception:
+                log.exception("Could not save migrated speech configuration")
 
 
 def onUninstall():

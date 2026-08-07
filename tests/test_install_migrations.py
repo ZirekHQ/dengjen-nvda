@@ -364,3 +364,35 @@ class TestOnInstall:
         )
         install_tasks.onInstall()
         assert ran == ["voices", "config"]
+
+    def test_saves_config_when_the_speech_migration_succeeds(self, monkeypatch):
+        monkeypatch.setattr(install_tasks, "warn_if_old_addon_installed", lambda: None)
+        monkeypatch.setattr(install_tasks, "migrate_voices_directory", lambda: False)
+        monkeypatch.setattr(install_tasks, "migrate_speech_config", lambda: True)
+        fake_conf = MagicMock()
+        monkeypatch.setattr(install_tasks.config, "conf", fake_conf)
+        install_tasks.onInstall()
+        fake_conf.save.assert_called_once()
+
+    def test_does_not_save_config_when_the_speech_migration_is_a_noop(
+        self, monkeypatch
+    ):
+        monkeypatch.setattr(install_tasks, "warn_if_old_addon_installed", lambda: None)
+        monkeypatch.setattr(install_tasks, "migrate_voices_directory", lambda: False)
+        monkeypatch.setattr(install_tasks, "migrate_speech_config", lambda: False)
+        fake_conf = MagicMock()
+        monkeypatch.setattr(install_tasks.config, "conf", fake_conf)
+        install_tasks.onInstall()
+        fake_conf.save.assert_not_called()
+
+    def test_a_failing_config_save_does_not_abort_the_install(
+        self, monkeypatch, fresh_log
+    ):
+        monkeypatch.setattr(install_tasks, "warn_if_old_addon_installed", lambda: None)
+        monkeypatch.setattr(install_tasks, "migrate_voices_directory", lambda: False)
+        monkeypatch.setattr(install_tasks, "migrate_speech_config", lambda: True)
+        fake_conf = MagicMock()
+        fake_conf.save.side_effect = OSError("disk full")
+        monkeypatch.setattr(install_tasks.config, "conf", fake_conf)
+        install_tasks.onInstall()
+        assert fresh_log.exception.call_count == 1
