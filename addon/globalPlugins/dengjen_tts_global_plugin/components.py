@@ -204,26 +204,27 @@ class ImmutableObjectListView(DialogListCtrl):
         super().__init__(*args, **kwargs)
         self._objects = None
         self._columns = None
-        self.Bind(wx.EVT_LIST_DELETE_ITEM, self.onDeleteItem, self)
-        self.Bind(wx.EVT_LIST_DELETE_ALL_ITEMS, self.onDeleteAllItems, self)
-        self.Bind(wx.EVT_LIST_INSERT_ITEM, self.onInsertItem, self)
         self.__is_modifying = False
         self.set_columns(columns)
         self.set_objects(objects)
 
     @contextlib.contextmanager
     def __unsafe_modify(self):
+        was_modifying = self.__is_modifying
         self.__is_modifying = True
-        yield
-        self.__is_modifying = False
+        try:
+            yield
+        finally:
+            self.__is_modifying = was_modifying
 
     def set_columns(self, columns):
-        self.ClearAll()
-        self._columns = columns
-        for col in self._columns:
-            self.AppendColumn(col.title, format=col.alignment_flag, width=col.width)
-        for i in range(len(columns)):
-            self.SetColumnWidth(i, 100)
+        with self.__unsafe_modify():
+            self.ClearAll()
+            self._columns = columns
+            for col in self._columns:
+                self.AppendColumn(col.title, format=col.alignment_flag, width=col.width)
+            for i in range(len(columns)):
+                self.SetColumnWidth(i, 100)
 
     def set_objects(
         self, objects: ObjectCollection, focus_item: int = 0, set_focus=True
@@ -255,11 +256,25 @@ class ImmutableObjectListView(DialogListCtrl):
                 "List is immutable. Use 'ImmutableObjectListView.set_objects' instead"
             )
 
-    def onDeleteItem(self, event):
+    # Overriding the row mutators rather than handling EVT_LIST_INSERT_ITEM /
+    # EVT_LIST_DELETE_ITEM: those fire after the row is already gone, and wx
+    # discards whatever a handler raises (see #87).
+    def Append(self, entry):
         self.prevent_mutations()
+        return super().Append(entry)
 
-    def onDeleteAllItems(self, event):
-        ...
-
-    def onInsertItem(self, event):
+    def InsertItem(self, *args, **kwargs):
         self.prevent_mutations()
+        return super().InsertItem(*args, **kwargs)
+
+    def DeleteItem(self, item):
+        self.prevent_mutations()
+        return super().DeleteItem(item)
+
+    def DeleteAllItems(self):
+        self.prevent_mutations()
+        return super().DeleteAllItems()
+
+    def ClearAll(self):
+        self.prevent_mutations()
+        return super().ClearAll()
