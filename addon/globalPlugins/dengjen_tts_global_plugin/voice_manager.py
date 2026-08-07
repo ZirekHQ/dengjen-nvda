@@ -26,6 +26,7 @@ from . import aio
 from . import helpers
 from .components import AsyncSnakDialog, ColumnDefn, ImmutableObjectListView, SimpleDialog, make_sized_static_box
 from .sized_controls import SizedPanel
+from . import voice_manager_logic as logic
 
 
 with helpers.import_bundled_library():
@@ -97,7 +98,7 @@ class InstalledDengjenVoicesPanel(SizedPanel):
         self.__already_populated.clear()
 
     def _get_installed_voice_name(self, voice):
-        return f"{voice.name} ({voice.variant})"
+        return logic.installed_voice_display_name(voice)
 
     def on_model_card(self, event):
         selected = self.voices_list.get_selected()
@@ -108,7 +109,7 @@ class InstalledDengjenVoicesPanel(SizedPanel):
         if os.path.exists(model_card_file):
             with open(model_card_file, "r", encoding="utf-8") as file:
                 content = file.read()
-            content = content.replace("#", "").replace("*", "")
+            content = logic.sanitize_model_card(content)
             gui.messageBox(
                 content,
                 #! Intentionally untranslatable 
@@ -130,12 +131,8 @@ class InstalledDengjenVoicesPanel(SizedPanel):
         if selected is None:
             self.voices_list.set_focused_item(0)
             return
-        voice_id = "-".join(selected.key.split("-")[:-1])
         synth = synthDriverHandler.getSynth()
-        if (
-            (synth.name == "dengjen_neural_voices")
-            and (synth.voice == voice_id)
-        ):
+        if logic.is_active_voice(synth.name, synth.voice, selected.key):
             gui.messageBox(
                 # Translators: message in a message box
                 _("You cannot remove the currently active voice!"),
