@@ -7,6 +7,9 @@ behaviour still needs an end-user check on the built artifact.
 """
 
 import os
+from unittest.mock import MagicMock
+
+import pytest
 
 from tests.conftest import REPO_ROOT, load_module_from_path
 
@@ -14,6 +17,16 @@ install_tasks = load_module_from_path(
     "_install_migrations_under_test",
     os.path.join(REPO_ROOT, "addon", "installTasks.py"),
 )
+
+
+@pytest.fixture
+def fresh_log(monkeypatch):
+    """A MagicMock scoped to a single test — logHandler.log is a session-wide
+    stub shared with every other test module, so asserting on its call list
+    without isolating it would pick up calls made elsewhere."""
+    fake_log = MagicMock()
+    monkeypatch.setattr(install_tasks, "log", fake_log)
+    return fake_log
 
 
 class TestMigrateVoicesDirectory:
@@ -37,6 +50,51 @@ class TestMigrateVoicesDirectory:
         (tmp_path / "sonata").write_text("not a directory")
         assert install_tasks.migrate_voices_directory(str(tmp_path)) is False
         assert not (tmp_path / "dengjen").exists()
+
+    def test_logs_why_it_skipped_when_the_new_directory_already_exists(
+        self, tmp_path, fresh_log
+    ):
+        (tmp_path / "sonata" / "voices").mkdir(parents=True)
+        (tmp_path / "dengjen" / "voices").mkdir(parents=True)
+        install_tasks.migrate_voices_directory(str(tmp_path))
+        assert fresh_log.info.call_count == 1
+        assert str(tmp_path / "dengjen") in fresh_log.info.call_args[0][0]
+
+    def test_logs_why_it_skipped_when_there_is_nothing_to_migrate(
+        self, tmp_path, fresh_log
+    ):
+        install_tasks.migrate_voices_directory(str(tmp_path))
+        assert fresh_log.info.call_count == 1
+        assert str(tmp_path / "sonata") in fresh_log.info.call_args[0][0]
+
+    def test_warns_the_user_and_logs_when_the_move_raises(
+        self, tmp_path, fresh_log, monkeypatch
+    ):
+        (tmp_path / "sonata" / "voices").mkdir(parents=True)
+
+        def _boom(src, dst):
+            raise PermissionError("file in use")
+
+        monkeypatch.setattr(install_tasks.os, "rename", _boom)
+        shown = []
+        monkeypatch.setattr(
+            install_tasks.gui, "messageBox", lambda *a, **kw: shown.append((a, kw))
+        )
+        assert install_tasks.migrate_voices_directory(str(tmp_path)) is False
+        assert fresh_log.exception.call_count == 1
+        assert len(shown) == 1
+        message_text = shown[0][0][0]
+        assert str(tmp_path / "sonata") in message_text
+
+    def test_does_not_raise_when_the_move_fails(self, tmp_path, monkeypatch):
+        (tmp_path / "sonata" / "voices").mkdir(parents=True)
+
+        def _boom(src, dst):
+            raise PermissionError("file in use")
+
+        monkeypatch.setattr(install_tasks.os, "rename", _boom)
+        monkeypatch.setattr(install_tasks.gui, "messageBox", lambda *a, **kw: None)
+        install_tasks.migrate_voices_directory(str(tmp_path))
 
 
 class _FakeSection(dict):
