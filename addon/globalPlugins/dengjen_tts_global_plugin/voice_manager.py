@@ -81,7 +81,7 @@ class InstalledDengjenVoicesPanel(SizedPanel):
         enable = bool(voices)
         self.buttons_panel.Enable(enable)
         self.voices_list.set_objects(voices, set_focus=set_focus)
-        if "sonata" in synthDriverHandler.getSynth().name.lower():
+        if "dengjen" in synthDriverHandler.getSynth().name.lower():
             self.remove_voice_button.Enable(len(voices) >= 2)
             if invalidate_synth_voices_cache:
                 synth = synthDriverHandler.getSynth()

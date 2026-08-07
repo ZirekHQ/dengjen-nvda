@@ -24,7 +24,7 @@ import globalVars
 # Eventually, this should be moved to sonata-rs
 IGNORED_PUNCS = frozenset(",(){}[]`\"'")
 PIPER_VOICES_VERSION = "v1.0"
-DENGJEN_VOICES_BASE_DIR = os.path.join(globalVars.appArgs.configPath, "sonata")
+DENGJEN_VOICES_BASE_DIR = os.path.join(globalVars.appArgs.configPath, "dengjen")
 DENGJEN_VOICES_DIR = os.path.join(
     DENGJEN_VOICES_BASE_DIR, "voices", "piper"
 )
