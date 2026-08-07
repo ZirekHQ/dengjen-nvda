@@ -358,6 +358,11 @@ def install(*, stub_wx: bool = True) -> None:
     _aio.asyncio_cancel_task = MagicMock()
     _aio.asyncio_coroutine_to_concurrent_future = lambda f: f
     _aio.run_in_executor = MagicMock()
+    # Mirrors the real module: None until initialize() replaces it with a
+    # real ThreadPoolExecutor. A test that needs a working executor should
+    # inject one (e.g. monkeypatch it to a sync stand-in) rather than rely
+    # on this being usable as-is.
+    _aio.THREADED_EXECUTOR = None
 
 
     # -----------------------------------------------------------------------

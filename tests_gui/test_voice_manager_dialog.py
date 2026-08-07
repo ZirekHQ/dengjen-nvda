@@ -151,7 +151,7 @@ class TestInstalledPanelControls:
         self, panel, voice_manager, monkeypatch, installed_voice
     ):
         # HAZARD: on_remove_voice calls shutil.rmtree(selected.location) on
-        # YES, and nvda_gui's gui.messageBox mock always returns wx.ID_YES.
+        # YES, and nvda_gui's gui.messageBox mock always returns wx.YES.
         # Must stub rmtree before firing, regardless of how disposable
         # `location` looks.
         monkeypatch.setattr(voice_manager.shutil, "rmtree", MagicMock())
@@ -197,9 +197,15 @@ class TestOnlinePanelControls:
         panel.voices_list.set_objects([online_voices[0]])
         panel.voices_list.set_focused_item(0)
         panel.on_voice_selected(None)
-        assert panel.download_std_btn.IsEnabled() is True
+        # IsEnabled() reports the *effective* state, which is False here
+        # regardless of on_voice_selected's own Enable() call: both buttons'
+        # ancestor buttons_panel starts disabled and nothing in this test
+        # re-enables it. IsThisEnabled() reports the widget's own flag --
+        # exactly what on_voice_selected controls -- so it is the assertion
+        # that can actually catch a wiring/logic regression here.
+        assert panel.download_std_btn.IsThisEnabled() is True
         # the fixture's first voice has no RT variant
-        assert panel.download_rt_btn.IsEnabled() is False
+        assert panel.download_rt_btn.IsThisEnabled() is False
 
     def test_preview_button_reaches_on_preview(
         self, panel, voice_manager, monkeypatch, sync_executor, online_voices
