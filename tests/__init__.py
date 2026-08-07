@@ -1,1 +1,1 @@
-# Tests for sonata-nvda NVDA addon
+# Tests for dengjen-nvda NVDA addon

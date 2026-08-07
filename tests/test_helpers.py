@@ -6,7 +6,7 @@ Tests for helpers.py — port utilities with no NVDA dependency.
 import socket
 import pytest
 
-from sonata_neural_voices.helpers import is_free_port, find_free_port
+from dengjen_neural_voices.helpers import is_free_port, find_free_port
 
 
 class TestIsFreePport:

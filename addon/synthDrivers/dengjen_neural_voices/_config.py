@@ -21,28 +21,28 @@ voice = string(default=None)
 """
 
 
-class SonataConfigManager:
-    """Config manager for Sonata."""
+class DengjenConfigManager:
+    """Config manager for Dengjen."""
 
     def __init__(self):
-        if not config.conf["speech"].isSet("sonata_neural_voices"):
-            config.conf["speech"]["sonata_neural_voices"] = {}
+        if not config.conf["speech"].isSet("dengjen_neural_voices"):
+            config.conf["speech"]["dengjen_neural_voices"] = {}
         confspec = ConfigObj(StringIO(_configSpec), list_values=False, encoding="UTF-8")
-        config.conf["speech"]["sonata_neural_voices"].spec.update(confspec)
+        config.conf["speech"]["dengjen_neural_voices"].spec.update(confspec)
 
     def __contains__(self, key):
-        return key in config.conf["speech"]["sonata_neural_voices"]
+        return key in config.conf["speech"]["dengjen_neural_voices"]
 
     def __getitem__(self, key):
-        return config.conf["speech"]["sonata_neural_voices"][key]
+        return config.conf["speech"]["dengjen_neural_voices"][key]
 
     def __setitem__(self, key, value):
-        config.conf["speech"]["sonata_neural_voices"][key] = value
+        config.conf["speech"]["dengjen_neural_voices"][key] = value
 
     def setdefault(self, key, value):
-        if key not in config.conf["speech"]["sonata_neural_voices"]:
-            config.conf["speech"]["sonata_neural_voices"][key] = value
-        return config.conf["speech"]["sonata_neural_voices"][key]
+        if key not in config.conf["speech"]["dengjen_neural_voices"]:
+            config.conf["speech"]["dengjen_neural_voices"][key] = value
+        return config.conf["speech"]["dengjen_neural_voices"][key]
 
 
-SonataConfig = SonataConfigManager()
+DengjenConfig = DengjenConfigManager()

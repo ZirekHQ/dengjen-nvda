@@ -32,7 +32,7 @@ from synthDriverHandler import (
 
 from . import aio
 from . import grpc_client
-from ._config import SonataConfig
+from ._config import DengjenConfig
 from .helpers import update_displaied_params_on_voice_change
 from .aio import (
     CancelledError,
@@ -42,7 +42,7 @@ from .aio import (
     run_in_executor,
 )
 from .tts_system import (
-    SonataTextToSpeechSystem,
+    DengjenTextToSpeechSystem,
     SpeakerNotFoundError,
     SpeechOptions,
 )    
@@ -174,8 +174,8 @@ class SynthDriver(synthDriverHandler.SynthDriver):
     }
     supportedNotifications = {synthIndexReached, synthDoneSpeaking}
 
-    description = "Sonata Neural Voices"
-    name = "sonata_neural_voices"
+    description = "Dengjen Neural Voices"
+    name = "dengjen_neural_voices"
     cachePropertiesByDefault = False
 
     @classmethod
@@ -197,7 +197,7 @@ class SynthDriver(synthDriverHandler.SynthDriver):
             grpc_init_fut.result(timeout=grpc_client.STARTUP_TIMEOUT)
         except Exception:
             log.exception(
-                "Failed to initialize Sonata services. Synthesizer will not be available.",
+                "Failed to initialize Dengjen services. Synthesizer will not be available.",
                 exc_info=True,
             )
             return
@@ -207,28 +207,28 @@ class SynthDriver(synthDriverHandler.SynthDriver):
             )
         except Exception:
             log.exception(
-                "Failed to connect to sonata GRPC server. Synthesizer will not be available.",
+                "Failed to connect to Dengjen GRPC server. Synthesizer will not be available.",
                 exc_info=True,
             )
             return
-        log.info(f"Sonata GRPC server running on port {grpc_client.SONATA_GRPC_SERVER_PORT}")
-        log.info("Connected to Sonata GRPC server")
-        log.info(f"Sonata GRPC server version: {sonata_grpc_server_version}")
-        if not any(SonataTextToSpeechSystem.load_piper_voices_from_nvda_config_dir()):
+        log.info(f"Dengjen GRPC server running on port {grpc_client.SONATA_GRPC_SERVER_PORT}")
+        log.info("Connected to Dengjen GRPC server")
+        log.info(f"Dengjen GRPC server version: {sonata_grpc_server_version}")
+        if not any(DengjenTextToSpeechSystem.load_piper_voices_from_nvda_config_dir()):
             log.error(
-                "No installed voices were found for Sonata. Synthesizer will not be available."
+                "No installed voices were found for Dengjen. Synthesizer will not be available."
             )
             return
-        self.voices = SonataTextToSpeechSystem.load_piper_voices_from_nvda_config_dir()
+        self.voices = DengjenTextToSpeechSystem.load_piper_voices_from_nvda_config_dir()
         try:
-            voice_key = config.conf["speech"]["sonata_neural_voices"]["voice"]
+            voice_key = config.conf["speech"]["dengjen_neural_voices"]["voice"]
             configured_voice = next(
                 filter(lambda v: v.key.startswith(voice_key), self.voices)
             )
         except (KeyError, StopIteration):
             configured_voice = self.voices[0]
         init_speech_options = SpeechOptions(voice=configured_voice)
-        self.tts = SonataTextToSpeechSystem(
+        self.tts = DengjenTextToSpeechSystem(
             self.voices, speech_options=init_speech_options
         )
         self._player = self._get_or_create_player(
@@ -375,8 +375,8 @@ class SynthDriver(synthDriverHandler.SynthDriver):
         factor = 50
         if hasattr(self, "_noise_scale_factor"):
             factor = self._noise_scale_factor
-        elif self.voice in SonataConfig:
-            factor = SonataConfig[self.voice].get("noise_scale", 50)
+        elif self.voice in DengjenConfig:
+            factor = DengjenConfig[self.voice].get("noise_scale", 50)
             self._noise_scale_factor = factor
 
         return factor
@@ -396,8 +396,8 @@ class SynthDriver(synthDriverHandler.SynthDriver):
         factor = 50
         if hasattr(self, "_length_scale_factor"):
             factor = self._length_scale_factor
-        elif self.voice in SonataConfig:
-            factor = SonataConfig[self.voice].get("length_scale", 50)
+        elif self.voice in DengjenConfig:
+            factor = DengjenConfig[self.voice].get("length_scale", 50)
             self._length_scale_factor = factor
 
         return factor
@@ -419,8 +419,8 @@ class SynthDriver(synthDriverHandler.SynthDriver):
         factor = 50
         if hasattr(self, "_noise_w_factor"):
             factor = self._noise_w_factor
-        elif self.voice in SonataConfig:
-            factor = SonataConfig[self.voice].get("noise_w", 50)
+        elif self.voice in DengjenConfig:
+            factor = DengjenConfig[self.voice].get("noise_w", 50)
             self._noise_w_factor = factor
 
         return factor
@@ -448,7 +448,7 @@ class SynthDriver(synthDriverHandler.SynthDriver):
         except Exception:
             log.exception(f"Failed to load voice `{value}`")
             ui.message(
-                # Translators: reported when NVDA fails to switch to a Sonata
+                # Translators: reported when NVDA fails to switch to a Dengjen
                 # voice, e.g. because the voice's model file is corrupted or
                 # incomplete. The previous voice remains in use.
                 _("Failed to load voice {voice}. Keeping the previous voice.").format(
@@ -461,9 +461,9 @@ class SynthDriver(synthDriverHandler.SynthDriver):
             del self._availableVariants
         with suppress(AttributeError):
             del self._availableSpeakers
-        if value in SonataConfig:
-            variant = SonataConfig[value].get("variant", self.variant)
-            speaker = SonataConfig[value].get("speaker")
+        if value in DengjenConfig:
+            variant = DengjenConfig[value].get("variant", self.variant)
+            speaker = DengjenConfig[value].get("speaker")
         else:
             variant = self._standard_voice_map[value].variant
             speaker = None
@@ -505,12 +505,12 @@ class SynthDriver(synthDriverHandler.SynthDriver):
         prev_speaker = self.tts.speech_options.voice.speaker
         self.tts.voice = voice_key
         self.tts.speech_options.voice.speaker = prev_speaker
-        SonataConfig.setdefault(self.voice, {})["variant"] = value
+        DengjenConfig.setdefault(self.voice, {})["variant"] = value
         voice = self.tts.speech_options.voice
         self._player = self._get_or_create_player(voice.sample_rate)
 
     def _getAvailableVariants(self):
-        std_key, rt_key = SonataTextToSpeechSystem.get_voice_variants(self.__voice)
+        std_key, rt_key = DengjenTextToSpeechSystem.get_voice_variants(self.__voice)
         rv = OrderedDict()
         if std_key in self._voice_map:
             rv["standard"] = VoiceInfo("standard", "Standard", self.language)
@@ -519,7 +519,7 @@ class SynthDriver(synthDriverHandler.SynthDriver):
         return rv
 
     def _get_variant_independent_voice_id(self, voice_key):
-        return SonataTextToSpeechSystem.get_voice_variants(voice_key)[0]
+        return DengjenTextToSpeechSystem.get_voice_variants(voice_key)[0]
 
     def _get_valid_voices(self):
         all_voices = OrderedDict()
@@ -537,9 +537,9 @@ class SynthDriver(synthDriverHandler.SynthDriver):
     def _set_speaker(self, value):
         try:
             self.tts.speaker = value
-            SonataConfig.setdefault(self.voice, {})["speaker"] = value
+            DengjenConfig.setdefault(self.voice, {})["speaker"] = value
         except SpeakerNotFoundError:
-            SonataConfig.setdefault(self.voice, {})["speaker"] = self.tts.speaker
+            DengjenConfig.setdefault(self.voice, {})["speaker"] = self.tts.speaker
 
     def _get_availableSpeakers(self):
         return {spk: VoiceInfo(spk, spk, None) for spk in self.tts.get_speakers()}

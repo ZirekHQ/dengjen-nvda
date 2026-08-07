@@ -57,7 +57,7 @@ if backend_pyd_name is None:
     print("Could not find _cffi_backend .pyd in wheel.")
     exit(1)
 
-target_dir = os.path.join("addon", "synthDrivers", "sonata_neural_voices", "lib")
+target_dir = os.path.join("addon", "synthDrivers", "dengjen_neural_voices", "lib")
 
 print(f"Removing old 32-bit Python 3.11 _cffi_backend .pyd from {target_dir}...")
 for old in glob.glob(os.path.join(target_dir, "_cffi_backend*.pyd")):

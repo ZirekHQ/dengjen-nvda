@@ -46,19 +46,19 @@ def _show_vcruntime_warning():
         wx.CallAfter(
             gui.messageBox,
             (
-                "Sonata Neural Voices could not start because the "
+                "Dengjen Neural Voices could not start because the "
                 "Microsoft Visual C++ 2015-2022 Redistributable (x64) "
                 f"is not installed.\n\nDownload and install it from:\n{VC_REDIST_URL}\n\n"
                 "Then restart NVDA."
             ),
-            "Sonata: missing dependency",
+            "Dengjen: missing dependency",
             style=wx.ICON_ERROR,
             parent=gui.mainFrame,
         )
     except Exception:
         log.exception("Failed to show VC++ redistributable warning dialog", exc_info=True)
 
-from ..const import SONATA_VOICES_BASE_DIR
+from ..const import DENGJEN_VOICES_BASE_DIR
 from ..helpers import BIN_DIRECTORY, find_free_port, import_bundled_library
 
 
@@ -89,7 +89,7 @@ def start_grpc_server():
         return True
     if _vcruntime_missing():
         log.error(
-            "Sonata GRPC server cannot start: vcruntime140_1.dll not found. "
+            "Dengjen GRPC server cannot start: vcruntime140_1.dll not found. "
             "The Microsoft Visual C++ 2015-2022 Redistributable (x64) is required. "
             f"Download and install it from {VC_REDIST_URL} then restart NVDA."
         )
@@ -110,7 +110,7 @@ def start_grpc_server():
         | subprocess.REALTIME_PRIORITY_CLASS
     )
     try:
-        server_log_file = os.path.join(SONATA_VOICES_BASE_DIR, "logs", "sonata-grpc.log")
+        server_log_file = os.path.join(DENGJEN_VOICES_BASE_DIR, "logs", "sonata-grpc.log")
         Path(server_log_file).parent.mkdir(parents=True, exist_ok=True)
         server_stdout = open(server_log_file, "wb")
     except OSError:
@@ -127,7 +127,7 @@ def start_grpc_server():
         )
     except Exception:
         log.exception(
-            "Failed to start Sonata GRPC server. The synth will not be available.",
+            "Failed to start Dengjen GRPC server. The synth will not be available.",
             exc_info=True
         )
         return False

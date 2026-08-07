@@ -28,7 +28,7 @@ import gui
 from languageHandler import normalizeLanguage
 from logHandler import log
 
-from . import SonataTextToSpeechSystem, helpers, SONATA_VOICES_DIR
+from . import DengjenTextToSpeechSystem, helpers, DENGJEN_VOICES_DIR
 
 with helpers.import_bundled_library():
     import mureq as request
@@ -39,7 +39,7 @@ with helpers.import_bundled_library():
 PIPER_VOICE_LIST_URL = "https://huggingface.co/rhasspy/piper-voices/raw/v1.0.0/voices.json"
 PIPER_VOICE_DOWNLOAD_URL_PREFIX = "https://huggingface.co/rhasspy/piper-voices/resolve/v1.0.0"
 PIPER_SAMPLES_URL_PREFIX = "https://rhasspy.github.io/piper-samples/samples"
-PIPER_VOICES_JSON_LOCAL_CACHE = os.path.join(SONATA_VOICES_DIR, "piper-voices.json")
+PIPER_VOICES_JSON_LOCAL_CACHE = os.path.join(DENGJEN_VOICES_DIR, "piper-voices.json")
 RT_VOICE_LIST_URL = "https://huggingface.co/datasets/mush42/piper-rt/raw/main/voices.json"
 RT_VOICE_DOWNLOAD_URL_PREFIX = "https://huggingface.co/datasets/mush42/piper-rt/resolve/main"
 
@@ -179,7 +179,7 @@ class PiperVoice:
     def get_rt_variant_download_url(self):
         if not self.has_rt_variant:
             raise ValueError(f"Voice `{self.key}` has no RT variant")
-        ___, rt_voice_key = SonataTextToSpeechSystem.get_voice_variants(self.key)
+        ___, rt_voice_key = DengjenTextToSpeechSystem.get_voice_variants(self.key)
         return f"{RT_VOICE_DOWNLOAD_URL_PREFIX}/{rt_voice_key}.tar.gz"
 
 
@@ -250,7 +250,7 @@ class PiperVoiceDownloader:
                 has_error = True
                 log.error("File hashes do not match")
             else:
-                voice_dir = Path(SONATA_VOICES_DIR).joinpath(self.voice.key)
+                voice_dir = Path(DENGJEN_VOICES_DIR).joinpath(self.voice.key)
                 voice_dir.mkdir(parents=True, exist_ok=True)
                 for file, src, __ in result:
                     dst = os.path.join(voice_dir, file.name)
@@ -375,7 +375,7 @@ class PiperRTVoiceDownloader:
                 _("Installing voice")
             )
             try:
-                install_voice_from_tar_archive(result, SONATA_VOICES_DIR)
+                install_voice_from_tar_archive(result, DENGJEN_VOICES_DIR)
             except Exception:
                 log.exception("Failed to extract voice archive", exc_info=True)
                 has_error = True
@@ -545,11 +545,11 @@ def install_voice_from_tar_archive(tar_path, voices_dir):
 
 
 def _select_not_installed_voices(voices):
-    installed_voices = SonataTextToSpeechSystem.load_piper_voices_from_nvda_config_dir()
+    installed_voices = DengjenTextToSpeechSystem.load_piper_voices_from_nvda_config_dir()
     installed_voice_keys = {voice.key for voice in installed_voices}
     not_installed = []
     for (key, value) in voices.items():
-        std_key, rt_key = SonataTextToSpeechSystem.get_voice_variants(key)
+        std_key, rt_key = DengjenTextToSpeechSystem.get_voice_variants(key)
         value["standard_variant_installed"] = std_key in installed_voice_keys
         value["fast_variant_installed"] = rt_key in installed_voice_keys
         if value["standard_variant_installed"] and value["fast_variant_installed"]:

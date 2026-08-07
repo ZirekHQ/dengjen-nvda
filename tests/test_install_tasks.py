@@ -61,10 +61,10 @@ def samefile_by_path(monkeypatch):
 class TestModulePaths:
     def test_lib_and_bin_are_inside_the_synth_driver(self):
         assert install_tasks.LIB_DIR.endswith(
-            os.path.join("synthDrivers", "sonata_neural_voices", "lib")
+            os.path.join("synthDrivers", "dengjen_neural_voices", "lib")
         )
         assert install_tasks.BIN_DIR.endswith(
-            os.path.join("synthDrivers", "sonata_neural_voices", "bin")
+            os.path.join("synthDrivers", "dengjen_neural_voices", "bin")
         )
 
     def test_private_path_temporaries_are_cleaned_off_the_module(self):

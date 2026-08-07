@@ -1,10 +1,14 @@
-# Voces neuronales Sonata para NVDA
+# Voces neuronales Dengjen para NVDA
 
 > **Aviso sobre el mantenimiento de este fork**
 >
 > El autor original, Musharraf Omer ([@mush42](https://github.com/mush42)), [anunció en la lista de complementos de NVDA](https://nvda-addons.groups.io/g/nvda-addons/message/27636) que conflictos con contratos comerciales le impiden seguir manteniendo este complemento de código abierto. Este fork continúa el proyecto para mantener el complemento funcionando en las versiones actuales de NVDA, e incluye actualizaciones de compatibilidad junto con correcciones en el administrador de voces y en el controlador del sintetizador. Todo el crédito del trabajo original corresponde a Musharraf Omer.
 >
-> Esta traducción puede estar desactualizada respecto al [readme en inglés](https://github.com/austek/sonata-nvda/blob/main/readme.md).
+> Esta traducción puede estar desactualizada respecto al [readme en inglés](https://github.com/austek/dengjen-nvda/blob/main/readme.md).
+>
+> Renombrado de Sonata Neural Voices en la v4.0.0, a petición del autor
+> original, como condición para figurar en la Tienda de complementos de NVDA.
+> Mismo complemento, mismo mantenedor, misma licencia GPL v2.
 
 Este complemento añade a NVDA voces neuronales de texto a voz. Proporciona un controlador de sintetizador para los modelos de voz de [Piper](https://github.com/rhasspy/piper), que se ejecutan por completo en tu propio equipo, además de un administrador de voces para descargar e instalar voces. Se necesita conexión a internet para descargar voces, pero no para hablar con ellas.
 
@@ -20,7 +24,7 @@ Piper es un sistema de texto a voz rápido, local y neuronal que suena bien y es
 
 ## Descargando el complemento
 
-Puedes encontrar el paquete de complemento dentro de la sección assets de la [página de release](https://github.com/austek/sonata-nvda/releases/latest)
+Puedes encontrar el paquete de complemento dentro de la sección assets de la [página de release](https://github.com/austek/dengjen-nvda/releases/latest)
 
 ## Agregando voces
 
@@ -36,7 +40,7 @@ También puedes instalar voces desde archivos locales. Después de obtener el ar
 
 # Usando el administrador de voces
 
-Abre el administrador de voces desde el menú principal de NVDA, en `Administrador de voces Sonata...`. Tiene dos pestañas: `Descargar` e `Instalado`.
+Abre el administrador de voces desde el menú principal de NVDA, en `Administrador de voces Dengjen...`. Tiene dos pestañas: `Descargar` e `Instalado`.
 
 ## Pestaña Descargar
 
@@ -59,7 +63,7 @@ Después de instalar desde un archivo local o de eliminar una voz, el complement
 
 # Ajustes de voz
 
-Con `Sonata Neural Voices` seleccionado como sintetizador, los siguientes ajustes aparecen en los ajustes de voz de NVDA (`menú NVDA` > `Preferencias` > `Opciones` > `Voz`).
+Con `Dengjen Neural Voices` seleccionado como sintetizador, los siguientes ajustes aparecen en los ajustes de voz de NVDA (`menú NVDA` > `Preferencias` > `Opciones` > `Voz`).
 
 `Voz` enumera tus voces instaladas con el formato `nombre (idioma) - calidad`.
 
@@ -89,7 +93,7 @@ Con suerte, el desarrollador de `Piper` y algunos desarrolladores de la comunida
 
 # Solución de problemas
 
-**Sonata no aparece en la lista de sintetizadores de NVDA, o no se carga.** Las dos causas habituales son que falte el paquete de Visual C++ descrito arriba en Requisitos, y no tener ninguna voz instalada: el controlador se niega deliberadamente a cargarse cuando no encuentra al menos una voz. Abre el administrador de voces desde el menú principal de NVDA, instala una voz y reinicia NVDA.
+**Dengjen no aparece en la lista de sintetizadores de NVDA, o no se carga.** Las dos causas habituales son que falte el paquete de Visual C++ descrito arriba en Requisitos, y no tener ninguna voz instalada: el controlador se niega deliberadamente a cargarse cuando no encuentra al menos una voz. Abre el administrador de voces desde el menú principal de NVDA, instala una voz y reinicia NVDA.
 
 **Una voz que acabo de descargar no aparece en la lista de voces de NVDA.** Reinicia NVDA. Una descarga actualiza la lista del propio administrador de voces, pero NVDA puede seguir usando el conjunto de voces que cargó al iniciarse.
 
@@ -103,7 +107,7 @@ Con suerte, el desarrollador de `Piper` y algunos desarrolladores de la comunida
 
 Para cualquier otra cosa, el registro de NVDA suele indicar qué ha fallado: `menú NVDA` > `Herramientas` > `Ver registro`.
 
-Por favor, informa de errores y solicitudes de funciones en el [rastreador de incidencias de este fork](https://github.com/austek/sonata-nvda/issues), e incluye el registro junto con tu versión de NVDA y la voz que estabas usando.
+Por favor, informa de errores y solicitudes de funciones en el [rastreador de incidencias de este fork](https://github.com/austek/dengjen-nvda/issues), e incluye el registro junto con tu versión de NVDA y la voz que estabas usando.
 
 # Licencia
 

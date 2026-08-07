@@ -3,9 +3,9 @@
 Tests for the SynthDriver itself: construction, speech sequence handling,
 flush/cancel ordering, the settings NVDA reads and writes through driver
 properties, and _set_voice's failure handling
-(addon/synthDrivers/sonata_neural_voices/__init__.py).
+(addon/synthDrivers/dengjen_neural_voices/__init__.py).
 
-conftest.py registers `sonata_neural_voices` as a package without running
+conftest.py registers `dengjen_neural_voices` as a package without running
 its __init__.py, so until now nothing imported or drove the SynthDriver
 class (see issue #65 -- this is where user-reported regressions have
 historically lived). This module executes the real __init__.py under the
@@ -32,14 +32,14 @@ from logHandler import log
 
 from tests.conftest import SYNTH_PKG_DIR, load_module_from_path
 
-import sonata_neural_voices.tts_system as tts_system
-from sonata_neural_voices.const import FALLBACK_SPEAKER_NAME
+import dengjen_neural_voices.tts_system as tts_system
+from dengjen_neural_voices.const import FALLBACK_SPEAKER_NAME
 from speech.commands import BreakCommand, IndexCommand, LangChangeCommand
 
 driver_module = load_module_from_path(
-    "sonata_neural_voices",
+    "dengjen_neural_voices",
     os.path.join(SYNTH_PKG_DIR, "__init__.py"),
-    package="sonata_neural_voices",
+    package="dengjen_neural_voices",
 )
 
 SynthDriver = driver_module.SynthDriver
@@ -49,7 +49,7 @@ IndexReachedTask = driver_module.IndexReachedTask
 DoneSpeakingTask = driver_module.DoneSpeakingTask
 
 VOICE_KEY = "en_US-test-medium"
-SECTION = "sonata_neural_voices"
+SECTION = "dengjen_neural_voices"
 
 
 def _index_command(index):
@@ -81,7 +81,7 @@ def _write_voice(voices_dir, key=VOICE_KEY):
 @pytest.fixture
 def voices_dir(tmp_path, monkeypatch):
     """One fake voice on disk, wired in place of the real NVDA config dir."""
-    monkeypatch.setattr(tts_system, "SONATA_VOICES_DIR", str(tmp_path))
+    monkeypatch.setattr(tts_system, "DENGJEN_VOICES_DIR", str(tmp_path))
     _write_voice(tmp_path)
     return tmp_path
 
@@ -246,15 +246,15 @@ class TestSettings:
 
 
 _failure_driver_module = load_module_from_path(
-    "sonata_neural_voices._init_under_test",
+    "dengjen_neural_voices._init_under_test",
     os.path.join(SYNTH_PKG_DIR, "__init__.py"),
-    package="sonata_neural_voices",
+    package="dengjen_neural_voices",
 )
 _FailureSynthDriver = _failure_driver_module.SynthDriver
 
 
 class _FakeVoiceEntry:
-    """Stand-in for a _standard_voice_map value (a SonataVoice)."""
+    """Stand-in for a _standard_voice_map value (a DengjenVoice)."""
 
     def __init__(self, key, variant="unknown"):
         self.key = key
@@ -269,7 +269,7 @@ class _FakeVoiceInfo:
 
 
 class _FakeTTSRaising:
-    """Stand-in for SonataTextToSpeechSystem whose voice setter always fails,
+    """Stand-in for DengjenTextToSpeechSystem whose voice setter always fails,
     as happens when the underlying .onnx model is corrupted/incomplete."""
 
     voice = None
@@ -288,7 +288,7 @@ class _FakeTTSRaising:
 
 
 class _FakeTTSAccepting:
-    """Stand-in for SonataTextToSpeechSystem whose voice setter succeeds."""
+    """Stand-in for DengjenTextToSpeechSystem whose voice setter succeeds."""
 
     def __init__(self):
         self.voice = None

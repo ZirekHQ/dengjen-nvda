@@ -22,16 +22,16 @@ _DIR = os.path.abspath(os.path.dirname(__file__))
 _ADDON_ROOT = os.path.abspath(os.path.join(_DIR, os.pardir, os.pardir))
 _TTS_MODULE_DIR = os.path.join(_ADDON_ROOT, "synthDrivers")
 sys.path.insert(0, _TTS_MODULE_DIR)
-from sonata_neural_voices import helpers
-from sonata_neural_voices import aio
-from sonata_neural_voices.tts_system import (
-    SonataTextToSpeechSystem,
-    SONATA_VOICES_DIR,
+from dengjen_neural_voices import helpers
+from dengjen_neural_voices import aio
+from dengjen_neural_voices.tts_system import (
+    DengjenTextToSpeechSystem,
+    DENGJEN_VOICES_DIR,
 )
 sys.path.remove(_TTS_MODULE_DIR)
 del _DIR, _ADDON_ROOT, _TTS_MODULE_DIR
 
-from .voice_manager import SonataVoiceManagerDialog
+from .voice_manager import DengjenVoiceManagerDialog
 
 
 class GlobalPlugin(globalPluginHandler.GlobalPlugin):
@@ -43,30 +43,30 @@ class GlobalPlugin(globalPluginHandler.GlobalPlugin):
         self.itemHandle = gui.mainFrame.sysTrayIcon.menu.Append(
             wx.ID_ANY,
             # Translators: label of a menu item
-            _("Sonata &voice manager..."),
-            # Translators: Sonata's voice manager menu item help
-            _("Open the voice manager to preview, install or download sonata voices"),
+            _("Dengjen &voice manager..."),
+            # Translators: Dengjen's voice manager menu item help
+            _("Open the voice manager to preview, install or download dengjen voices"),
         )
         gui.mainFrame.sysTrayIcon.menu.Bind(wx.EVT_MENU, self.on_manager, self.itemHandle)
 
     def on_manager(self, event):
-        manager_dialog = SonataVoiceManagerDialog()
+        manager_dialog = DengjenVoiceManagerDialog()
         gui.runScriptModalDialog(manager_dialog)
         self.__voice_manager_shown = True
 
     def _perform_voice_check(self):
         if self.__voice_manager_shown:
             return
-        if not any(SonataTextToSpeechSystem.load_piper_voices_from_nvda_config_dir()):
+        if not any(DengjenTextToSpeechSystem.load_piper_voices_from_nvda_config_dir()):
             retval = gui.messageBox(
                 # Translators: message telling the user that no voice is installed
                 _(
-                    "No Sonata voice was found.\n"
+                    "No Dengjen voice was found.\n"
                     "You can preview and download voices from the voice manager.\n"
                     "Do you want to open the voice manager now?"
                 ),
-                # Translators: title of a message telling the user that no Sonata voice was found
-                _("Sonata Neural Voices"),
+                # Translators: title of a message telling the user that no Dengjen voice was found
+                _("Dengjen Neural Voices"),
                 wx.YES_NO | wx.ICON_WARNING,
             )
             if retval == wx.YES:
@@ -76,4 +76,4 @@ class GlobalPlugin(globalPluginHandler.GlobalPlugin):
         try:
             gui.mainFrame.sysTrayIcon.menu.DestroyItem(self.itemHandle)
         except Exception:
-            log.debug("Failed to remove the Sonata menu item", exc_info=True)
+            log.debug("Failed to remove the Dengjen menu item", exc_info=True)

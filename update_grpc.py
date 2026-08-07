@@ -49,7 +49,7 @@ with zipfile.ZipFile(wheel_path, 'r') as z:
         if info.filename.startswith("grpc/"):
             z.extract(info, extract_dir)
 
-target_dir = os.path.join("addon", "synthDrivers", "sonata_neural_voices", "lib", "grpc")
+target_dir = os.path.join("addon", "synthDrivers", "dengjen_neural_voices", "lib", "grpc")
 if os.path.exists(target_dir):
     print(f"Removing old 32-bit Python 3.11 grpc from {target_dir}...")
     shutil.rmtree(target_dir)

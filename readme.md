@@ -1,8 +1,12 @@
-# Sonata neural voices for NVDA
+# Dengjen Neural Voices for NVDA
 
 > **Maintenance fork notice**
 >
 > The original author, Musharraf Omer ([@mush42](https://github.com/mush42)), [announced on the NVDA Add-ons list](https://nvda-addons.groups.io/g/nvda-addons/message/27636) that commercial contract conflicts prevent him from continuing to maintain this open-source add-on. This fork continues the project to keep the add-on working on current NVDA releases, and carries compatibility updates alongside bug fixes to the voice manager and the synthesizer driver. All credit for the original work belongs to Musharraf Omer.
+>
+> Renamed from Sonata Neural Voices in v4.0.0, at the original author's request,
+> as a condition of listing in the NVDA Add-on Store. Same add-on, same
+> maintainer, same GPL v2 licence.
 
 This add-on adds neural text-to-speech voices to NVDA. It provides a synthesizer driver for [Piper](https://github.com/rhasspy/piper) voice models, which run entirely on your own machine, plus a voice manager for downloading and installing voices. An internet connection is needed to download voices, but not to speak with them.
 
@@ -18,7 +22,7 @@ Piper is a fast, local neural text to speech system that sounds great and is opt
 
 ## Downloading the add-on
 
-You can find the add-on package under the assets section of the [release page](https://github.com/austek/sonata-nvda/releases/latest).
+You can find the add-on package under the assets section of the [release page](https://github.com/austek/dengjen-nvda/releases/latest).
 
 ## Adding voices
 
@@ -34,7 +38,7 @@ You can also install voices from local archives. After obtaining the voice's fil
 
 # Using the voice manager
 
-Open the voice manager from NVDA's main menu, under `Sonata voice manager...`. It has two tabs: `Download` and `Installed`.
+Open the voice manager from NVDA's main menu, under `Dengjen voice manager...`. It has two tabs: `Download` and `Installed`.
 
 ## Download tab
 
@@ -57,7 +61,7 @@ After installing from a local archive or removing a voice, the add-on reloads th
 
 # Voice settings
 
-With `Sonata Neural Voices` selected as your synthesizer, the following appear in NVDA's speech settings (`NVDA menu` > `Preferences` > `Settings` > `Speech`).
+With `Dengjen Neural Voices` selected as your synthesizer, the following appear in NVDA's speech settings (`NVDA menu` > `Preferences` > `Settings` > `Speech`).
 
 `Voice` lists your installed voices as `name (language) - quality`.
 
@@ -87,7 +91,7 @@ Luckily, the `Piper` developer and some developers from the blind and vision-imp
 
 # Troubleshooting
 
-**Sonata is missing from NVDA's synthesizer list, or fails to load.** The two usual causes are the missing Visual C++ redistributable described under Requirements above, and having no voices installed — the driver deliberately refuses to load when it cannot find at least one voice. Open the voice manager from NVDA's main menu, install a voice, then restart NVDA.
+**Dengjen is missing from NVDA's synthesizer list, or fails to load.** The two usual causes are the missing Visual C++ redistributable described under Requirements above, and having no voices installed — the driver deliberately refuses to load when it cannot find at least one voice. Open the voice manager from NVDA's main menu, install a voice, then restart NVDA.
 
 **A voice I just downloaded is not offered in NVDA's voice list.** Restart NVDA. A download refreshes the voice manager's own list, but NVDA may still be holding the voice set it loaded at startup.
 
@@ -101,7 +105,7 @@ Luckily, the `Piper` developer and some developers from the blind and vision-imp
 
 For anything else, NVDA's log usually says what went wrong: `NVDA menu` > `Tools` > `View log`.
 
-Please report bugs and feature requests on the [issue tracker for this fork](https://github.com/austek/sonata-nvda/issues), and include the log along with your NVDA version and the voice you were using.
+Please report bugs and feature requests on the [issue tracker for this fork](https://github.com/austek/dengjen-nvda/issues), and include the log along with your NVDA version and the voice you were using.
 
 # License
 

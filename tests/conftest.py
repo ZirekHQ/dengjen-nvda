@@ -7,7 +7,7 @@ Strategy
 --------
 1. Stub all NVDA-internal packages (config, languageHandler, etc.).
 2. Stub the bundled Windows-only grpc Cython extensions.
-3. Register `sonata_neural_voices` as a package in sys.modules WITHOUT
+3. Register `dengjen_neural_voices` as a package in sys.modules WITHOUT
    running its __init__.py (which imports grpc_client at module level).
 4. Stub the intra-package submodules that have platform-specific deps
    (grpc_client, aio) so relative imports in tts_system.py succeed.
@@ -44,9 +44,9 @@ def _make_ready_future(value=None) -> _Future:
 
 _TESTS_DIR = os.path.dirname(__file__)
 _SYNTH_DIR = os.path.join(_TESTS_DIR, "..", "addon", "synthDrivers")
-_SYNTH_PKG_DIR = os.path.join(_SYNTH_DIR, "sonata_neural_voices")
+_SYNTH_PKG_DIR = os.path.join(_SYNTH_DIR, "dengjen_neural_voices")
 _GLOBAL_PLUGIN_DIR = os.path.join(_TESTS_DIR, "..", "addon", "globalPlugins")
-_GLOBAL_PLUGIN_PKG_DIR = os.path.join(_GLOBAL_PLUGIN_DIR, "sonata_tts_global_plugin")
+_GLOBAL_PLUGIN_PKG_DIR = os.path.join(_GLOBAL_PLUGIN_DIR, "dengjen_tts_global_plugin")
 
 REPO_ROOT = os.path.abspath(os.path.join(_TESTS_DIR, ".."))
 SYNTH_PKG_DIR = os.path.abspath(_SYNTH_PKG_DIR)
@@ -74,7 +74,7 @@ def load_module_from_path(
 def _load_real_module(module_name: str, filename: str) -> types.ModuleType:
     """Execute a real package submodule (with relative imports)."""
     return load_module_from_path(
-        module_name, os.path.join(_SYNTH_PKG_DIR, filename), "sonata_neural_voices"
+        module_name, os.path.join(_SYNTH_PKG_DIR, filename), "dengjen_neural_voices"
     )
 
 
@@ -133,7 +133,7 @@ class _FakeConfSection(dict):
 
 _fake_conf = _FakeConfSection()
 _fake_conf["audio"]["outputDevice"] = "default"
-_fake_conf["speech"]["sonata_neural_voices"] = _FakeConfSection()
+_fake_conf["speech"]["dengjen_neural_voices"] = _FakeConfSection()
 _stub_module("config", conf=_fake_conf)
 
 # configobj
@@ -251,7 +251,7 @@ _stub_module("ui", message=MagicMock())
 
 
 # ---------------------------------------------------------------------------
-# 3. Register `sonata_neural_voices` as a package WITHOUT running __init__.py
+# 3. Register `dengjen_neural_voices` as a package WITHOUT running __init__.py
 # ---------------------------------------------------------------------------
 
 # Add synthDrivers to path so the package is findable
@@ -259,15 +259,15 @@ if _SYNTH_DIR not in sys.path:
     sys.path.insert(0, _SYNTH_DIR)
 
 # Register the package stub (no __init__.py executed)
-_pkg = types.ModuleType("sonata_neural_voices")
+_pkg = types.ModuleType("dengjen_neural_voices")
 _pkg.__path__ = [_SYNTH_PKG_DIR]
-_pkg.__package__ = "sonata_neural_voices"
+_pkg.__package__ = "dengjen_neural_voices"
 _pkg.__spec__ = importlib.util.spec_from_file_location(
-    "sonata_neural_voices",
+    "dengjen_neural_voices",
     os.path.join(_SYNTH_PKG_DIR, "__init__.py"),
     submodule_search_locations=[_SYNTH_PKG_DIR],
 )
-sys.modules["sonata_neural_voices"] = _pkg
+sys.modules["dengjen_neural_voices"] = _pkg
 
 
 # ---------------------------------------------------------------------------
@@ -287,7 +287,7 @@ class _FakeVoiceInfo:
         speaker = "default"
     speakers = {}
 
-_grpc_client = _stub_module("sonata_neural_voices.grpc_client")
+_grpc_client = _stub_module("dengjen_neural_voices.grpc_client")
 _grpc_client.initialize = MagicMock(return_value=_make_ready_future(None))
 _grpc_client.check_grpc_server = MagicMock(return_value=_make_ready_future("1.0.0"))
 _grpc_client.load_voice = MagicMock(return_value=_make_ready_future(_FakeVoiceInfo()))
@@ -302,7 +302,7 @@ _grpc_client.STARTUP_TIMEOUT = 20
 _grpc_client.CALL_TIMEOUT = 10
 
 # aio — starts real threads/event loops; stub completely
-_aio = _stub_module("sonata_neural_voices.aio")
+_aio = _stub_module("dengjen_neural_voices.aio")
 _aio.initialize = MagicMock()
 _aio.ensure_running = MagicMock()
 _aio.terminate = MagicMock()
@@ -318,27 +318,27 @@ _aio.run_in_executor = MagicMock()
 # 5. Load real submodules we actually want to test
 # ---------------------------------------------------------------------------
 
-_load_real_module("sonata_neural_voices.const", "const.py")
-_load_real_module("sonata_neural_voices.helpers", "helpers.py")
-_load_real_module("sonata_neural_voices.tts_system", "tts_system.py")
+_load_real_module("dengjen_neural_voices.const", "const.py")
+_load_real_module("dengjen_neural_voices.helpers", "helpers.py")
+_load_real_module("dengjen_neural_voices.tts_system", "tts_system.py")
 
 
 # ---------------------------------------------------------------------------
-# 6. Register `sonata_tts_global_plugin` as a package WITHOUT running its
+# 6. Register `dengjen_tts_global_plugin` as a package WITHOUT running its
 #    __init__.py. That file pulls in voice_manager.py/components.py, which
 #    subclass real wx widgets (wx.ListCtrl, the vendored sized_controls.py
 #    SizedDialog) — a MagicMock `wx` can't stand in as a base class for those,
 #    so that GUI layer is out of scope here. Only expose the names
-#    __init__.py itself re-exports from sonata_neural_voices, since
-#    voice_download.py reaches them via `from . import SonataTextToSpeechSystem,
-#    helpers, SONATA_VOICES_DIR`.
+#    __init__.py itself re-exports from dengjen_neural_voices, since
+#    voice_download.py reaches them via `from . import DengjenTextToSpeechSystem,
+#    helpers, DENGJEN_VOICES_DIR`.
 # ---------------------------------------------------------------------------
 
-_gui_plugin_pkg = types.ModuleType("sonata_tts_global_plugin")
+_gui_plugin_pkg = types.ModuleType("dengjen_tts_global_plugin")
 _gui_plugin_pkg.__path__ = [_GLOBAL_PLUGIN_PKG_DIR]
-_gui_plugin_pkg.__package__ = "sonata_tts_global_plugin"
-_gui_plugin_pkg.SonataTextToSpeechSystem = sys.modules["sonata_neural_voices.tts_system"].SonataTextToSpeechSystem
-_gui_plugin_pkg.SONATA_VOICES_DIR = sys.modules["sonata_neural_voices.tts_system"].SONATA_VOICES_DIR
-_gui_plugin_pkg.helpers = sys.modules["sonata_neural_voices.helpers"]
+_gui_plugin_pkg.__package__ = "dengjen_tts_global_plugin"
+_gui_plugin_pkg.DengjenTextToSpeechSystem = sys.modules["dengjen_neural_voices.tts_system"].DengjenTextToSpeechSystem
+_gui_plugin_pkg.DENGJEN_VOICES_DIR = sys.modules["dengjen_neural_voices.tts_system"].DENGJEN_VOICES_DIR
+_gui_plugin_pkg.helpers = sys.modules["dengjen_neural_voices.helpers"]
 _gui_plugin_pkg.aio = _aio
-sys.modules["sonata_tts_global_plugin"] = _gui_plugin_pkg
+sys.modules["dengjen_tts_global_plugin"] = _gui_plugin_pkg

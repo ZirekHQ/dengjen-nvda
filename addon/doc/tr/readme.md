@@ -1,10 +1,14 @@
-# NVDA için Sonata sinir ağı sesleri
+# NVDA için Dengjen sinir ağı sesleri
 
 > **Bakım çatalı bildirimi**
 >
 > Özgün yazar Musharraf Omer ([@mush42](https://github.com/mush42)), ticari sözleşme çakışmaları nedeniyle bu açık kaynaklı eklentiyi sürdüremeyeceğini [NVDA Eklentileri listesinde duyurdu](https://nvda-addons.groups.io/g/nvda-addons/message/27636). Bu çatal, eklentiyi güncel NVDA sürümlerinde çalışır durumda tutmak için projeyi sürdürüyor; uyumluluk güncellemelerinin yanı sıra ses yöneticisi ve sentezleyici sürücüsündeki düzeltmeleri de içerir. Özgün çalışmanın tüm hakkı Musharraf Omer'e aittir.
 >
-> Bu çeviri, [İngilizce benioku dosyasının](https://github.com/austek/sonata-nvda/blob/main/readme.md) gerisinde kalmış olabilir.
+> Bu çeviri, [İngilizce benioku dosyasının](https://github.com/austek/dengjen-nvda/blob/main/readme.md) gerisinde kalmış olabilir.
+>
+> Sonata Neural Voices adından v4.0.0 sürümünde, özgün yazarın isteği
+> üzerine ve NVDA Eklenti Mağazası'nda listelenme koşulu olarak yeniden
+> adlandırıldı. Aynı eklenti, aynı sürdürücü, aynı GPL v2 lisansı.
 
 Bu eklenti NVDA'ya sinir ağı tabanlı metin okuma sesleri ekler. Tamamen kendi bilgisayarınızda çalışan [Piper](https://github.com/rhasspy/piper) ses modelleri için bir sentezleyici sürücüsünün yanı sıra, sesleri indirip yüklemeye yarayan bir ses yöneticisi sağlar. Sesleri indirmek için internet bağlantısı gerekir, ancak onlarla konuşmak için gerekmez.
 
@@ -20,7 +24,7 @@ Piper, kulağa doğal gelen ve Raspberry Pi gibi düşük donanımlı cihazlar i
 
 ## Eklentiyi indirme
 
-Eklenti paketini [sürüm sayfasındaki](https://github.com/austek/sonata-nvda/releases/latest) assets bölümünde bulabilirsiniz.
+Eklenti paketini [sürüm sayfasındaki](https://github.com/austek/dengjen-nvda/releases/latest) assets bölümünde bulabilirsiniz.
 
 ## Ses ekleme
 
@@ -36,7 +40,7 @@ Sesleri yerel arşivlerden de yükleyebilirsiniz. Ses dosyasını edindikten son
 
 # Ses yöneticisini kullanma
 
-Ses yöneticisini NVDA'nın ana menüsünden, `Sonata ses yöneticisi...` altından açın. İki sekmesi vardır: `İndir` ve `Yüklü`.
+Ses yöneticisini NVDA'nın ana menüsünden, `Dengjen ses yöneticisi...` altından açın. İki sekmesi vardır: `İndir` ve `Yüklü`.
 
 ## İndir sekmesi
 
@@ -59,7 +63,7 @@ Yerel bir arşivden yükleme yaptıktan ya da bir sesi kaldırdıktan sonra ekle
 
 # Ses ayarları
 
-Sentezleyici olarak `Sonata Neural Voices` seçiliyken aşağıdaki ayarlar NVDA'nın konuşma ayarlarında görünür (`NVDA menüsü` > `Tercihler` > `Ayarlar` > `Konuşma`).
+Sentezleyici olarak `Dengjen Neural Voices` seçiliyken aşağıdaki ayarlar NVDA'nın konuşma ayarlarında görünür (`NVDA menüsü` > `Tercihler` > `Ayarlar` > `Konuşma`).
 
 `Ses`, yüklü seslerinizi `ad (dil) - kalite` biçiminde listeler.
 
@@ -89,7 +93,7 @@ Neyse ki `Piper` geliştiricisi ile kör ve az gören topluluğundan bazı geli�
 
 # Sorun giderme
 
-**Sonata, NVDA'nın sentezleyici listesinde yok ya da yüklenmiyor.** Bunun iki olağan nedeni, yukarıda Gereksinimler bölümünde anlatılan Visual C++ paketinin eksik olması ve hiç ses yüklü olmamasıdır: sürücü, en az bir ses bulamadığında bilinçli olarak yüklenmeyi reddeder. NVDA'nın ana menüsünden ses yöneticisini açın, bir ses yükleyin ve NVDA'yı yeniden başlatın.
+**Dengjen, NVDA'nın sentezleyici listesinde yok ya da yüklenmiyor.** Bunun iki olağan nedeni, yukarıda Gereksinimler bölümünde anlatılan Visual C++ paketinin eksik olması ve hiç ses yüklü olmamasıdır: sürücü, en az bir ses bulamadığında bilinçli olarak yüklenmeyi reddeder. NVDA'nın ana menüsünden ses yöneticisini açın, bir ses yükleyin ve NVDA'yı yeniden başlatın.
 
 **Yeni indirdiğim bir ses NVDA'nın ses listesinde sunulmuyor.** NVDA'yı yeniden başlatın. İndirme, ses yöneticisinin kendi listesini tazeler, ancak NVDA hâlâ başlangıçta yüklediği ses kümesini kullanıyor olabilir.
 
@@ -103,7 +107,7 @@ Neyse ki `Piper` geliştiricisi ile kör ve az gören topluluğundan bazı geli�
 
 Bunların dışındaki durumlarda NVDA'nın günlüğü genellikle neyin ters gittiğini söyler: `NVDA menüsü` > `Araçlar` > `Günlüğü görüntüle`.
 
-Lütfen hataları ve özellik isteklerini [bu çatalın sorun izleyicisinde](https://github.com/austek/sonata-nvda/issues) bildirin; günlüğü, NVDA sürümünüzü ve kullandığınız sesi de ekleyin.
+Lütfen hataları ve özellik isteklerini [bu çatalın sorun izleyicisinde](https://github.com/austek/dengjen-nvda/issues) bildirin; günlüğü, NVDA sürümünüzü ve kullandığınız sesi de ekleyin.
 
 # Lisans
 

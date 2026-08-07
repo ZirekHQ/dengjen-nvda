@@ -9,6 +9,6 @@ omit =
     tests/*
     site_scons/*
     update_*.py
-    addon/synthDrivers/sonata_neural_voices/lib/*
-    addon/synthDrivers/sonata_neural_voices/grpc_client/grpc_protos/*
+    addon/synthDrivers/dengjen_neural_voices/lib/*
+    addon/synthDrivers/dengjen_neural_voices/grpc_client/grpc_protos/*
 relative_files = True

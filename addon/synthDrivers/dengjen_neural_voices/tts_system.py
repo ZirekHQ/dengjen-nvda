@@ -23,7 +23,7 @@ from .const import (
     DEFAULT_VOLUME,
     FALLBACK_SPEAKER_NAME,
     IGNORED_PUNCS,
-    SONATA_VOICES_DIR,
+    DENGJEN_VOICES_DIR,
 )
 from .helpers import import_bundled_library, LIB_DIRECTORY
 
@@ -76,7 +76,7 @@ class SpeechProvider(AudioProvider):
 
 
 @dataclass
-class SonataVoice:
+class DengjenVoice:
     key: str
     name: str
     language: str
@@ -188,11 +188,11 @@ class SonataVoice:
 
     @property
     def standard_variant_key(self):
-        return SonataTextToSpeechSystem.get_voice_variants(self.key)[0]
+        return DengjenTextToSpeechSystem.get_voice_variants(self.key)[0]
 
     @property
     def fast_variant_key(self):
-        return SonataTextToSpeechSystem.get_voice_variants(self.key)[1]
+        return DengjenTextToSpeechSystem.get_voice_variants(self.key)[1]
 
     async def synthesize(self, text, rate, volume, pitch, sentence_silence_ms):
         if (len(text) < 10) and (set(text.strip()).issubset(IGNORED_PUNCS)):
@@ -221,7 +221,7 @@ class SpeechOptions:
         self.pitch = pitch
         self.sentence_silence_ms = sentence_silence_ms
 
-    def set_voice(self, voice: SonataVoice):
+    def set_voice(self, voice: DengjenVoice):
         voice.load()
         self.voice = voice
 
@@ -246,10 +246,10 @@ class SpeechOptions:
         )
 
 
-class SonataTextToSpeechSystem:
+class DengjenTextToSpeechSystem:
 
     def __init__(
-        self, voices: Sequence[SonataVoice], speech_options: SpeechOptions = None
+        self, voices: Sequence[DengjenVoice], speech_options: SpeechOptions = None
     ):
         self.voices = voices
         if speech_options is not None:
@@ -392,9 +392,9 @@ class SonataTextToSpeechSystem:
 
     @classmethod
     def load_piper_voices_from_nvda_config_dir(cls):
-        Path(SONATA_VOICES_DIR).mkdir(parents=True, exist_ok=True)
+        Path(DENGJEN_VOICES_DIR).mkdir(parents=True, exist_ok=True)
         return sorted(
-            cls.load_voices_from_directory(SONATA_VOICES_DIR),
+            cls.load_voices_from_directory(DENGJEN_VOICES_DIR),
             key=operator.attrgetter("key"),
         )
 
@@ -405,7 +405,7 @@ class SonataTextToSpeechSystem:
         rv = []
         for directory in (d for d in Path(voices_directory).iterdir() if d.is_dir()):
             try:
-                voice = SonataVoice.from_path(directory)
+                voice = DengjenVoice.from_path(directory)
             except ValueError:
                 continue
             rv.append(voice)

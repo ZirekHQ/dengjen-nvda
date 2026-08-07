@@ -12,23 +12,23 @@ import pytest
 from tests.conftest import SYNTH_PKG_DIR, load_module_from_path
 
 _config = load_module_from_path(
-    "sonata_neural_voices._config_under_test",
+    "dengjen_neural_voices._config_under_test",
     os.path.join(SYNTH_PKG_DIR, "_config.py"),
-    package="sonata_neural_voices",
+    package="dengjen_neural_voices",
 )
 
-SECTION = "sonata_neural_voices"
+SECTION = "dengjen_neural_voices"
 
 
 @pytest.fixture
 def manager():
     config.conf["speech"][SECTION].clear()
-    return _config.SonataConfigManager()
+    return _config.DengjenConfigManager()
 
 
 class TestModuleLevelSingleton:
     def test_exposes_a_ready_made_manager(self):
-        assert isinstance(_config.SonataConfig, _config.SonataConfigManager)
+        assert isinstance(_config.DengjenConfig, _config.DengjenConfigManager)
 
     def test_config_spec_declares_the_voice_and_lang_sections(self):
         assert "[voices]" in _config._configSpec

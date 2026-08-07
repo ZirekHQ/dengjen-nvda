@@ -2,7 +2,7 @@
 pytest==9.1.1
 pytest-cov==7.1.0
 
-# The vendored `grpc` under synthDrivers/sonata_neural_voices/lib/ eagerly
+# The vendored `grpc` under synthDrivers/dengjen_neural_voices/lib/ eagerly
 # imports grpc.aio, which needs this. NVDA's own bundled Python already has
 # it (pulled in by some other dependency), so production never hits this;
 # a bare CI Python does. Only tests_contract/ (Windows-only) exercises the

@@ -49,7 +49,7 @@ with zipfile.ZipFile(wheel_path, 'r') as z:
         if info.filename in ("_miniaudio.pyd", "miniaudio.py"):
             z.extract(info, extract_dir)
 
-target_dir = os.path.join("addon", "synthDrivers", "sonata_neural_voices", "lib")
+target_dir = os.path.join("addon", "synthDrivers", "dengjen_neural_voices", "lib")
 
 print(f"Removing old 32-bit Python 3.11 miniaudio files from {target_dir}...")
 for name in ("_miniaudio.pyd", "miniaudio.py"):

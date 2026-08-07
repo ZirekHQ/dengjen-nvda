@@ -9,7 +9,7 @@ Deliberately out of scope: voice_manager.py, components.py, and the
 GlobalPlugin itself (see issue #65) — they subclass real wx widgets
 (wx.ListCtrl, the vendored sized_controls.SizedDialog) that a MagicMock `wx`
 can't stand in for as a base class. conftest.py registers
-`sonata_tts_global_plugin` as a package stub exposing only the names its
+`dengjen_tts_global_plugin` as a package stub exposing only the names its
 __init__.py re-exports, without running that file (which would pull in the
 GUI modules). Network access is never exercised: `request` (mureq, the
 vendored HTTP client) is monkeypatched per-test with canned responses.
@@ -36,9 +36,9 @@ import addonHandler
 addonHandler.initTranslation()
 
 voice_download = load_module_from_path(
-    "sonata_tts_global_plugin._voice_download_under_test",
+    "dengjen_tts_global_plugin._voice_download_under_test",
     os.path.join(GLOBAL_PLUGIN_PKG_DIR, "voice_download.py"),
-    package="sonata_tts_global_plugin",
+    package="dengjen_tts_global_plugin",
 )
 
 PiperVoice = voice_download.PiperVoice
@@ -385,7 +385,7 @@ class TestSelectNotInstalledVoices:
         def _set(keys):
             fake_voices = [type("V", (), {"key": k})() for k in keys]
             monkeypatch.setattr(
-                voice_download.SonataTextToSpeechSystem,
+                voice_download.DengjenTextToSpeechSystem,
                 "load_piper_voices_from_nvda_config_dir",
                 classmethod(lambda cls: fake_voices),
             )
@@ -436,7 +436,7 @@ class TestVoicesCache:
         fake_request = _FakeMureq()
         monkeypatch.setattr(voice_download, "request", fake_request)
         monkeypatch.setattr(
-            voice_download.SonataTextToSpeechSystem,
+            voice_download.DengjenTextToSpeechSystem,
             "load_piper_voices_from_nvda_config_dir",
             classmethod(lambda cls: []),
         )
@@ -463,7 +463,7 @@ class TestVoicesCache:
         ])
         monkeypatch.setattr(voice_download, "request", fake_request)
         monkeypatch.setattr(
-            voice_download.SonataTextToSpeechSystem,
+            voice_download.DengjenTextToSpeechSystem,
             "load_piper_voices_from_nvda_config_dir",
             classmethod(lambda cls: []),
         )
@@ -568,7 +568,7 @@ class TestPiperVoiceDownloaderDoneCallback:
 
     def test_success_copies_files_and_offers_a_restart(self, tmp_path, monkeypatch):
         voices_dir = tmp_path / "voices"
-        monkeypatch.setattr(voice_download, "SONATA_VOICES_DIR", str(voices_dir))
+        monkeypatch.setattr(voice_download, "DENGJEN_VOICES_DIR", str(voices_dir))
         monkeypatch.setattr(voice_download.wx, "YES", "YES")
         monkeypatch.setattr(voice_download.gui, "messageBox", MagicMock(return_value="YES"))
         restart_mock = MagicMock()
@@ -588,7 +588,7 @@ class TestPiperVoiceDownloaderDoneCallback:
 
     def test_hash_mismatch_does_not_install_and_reports_failure(self, tmp_path, monkeypatch):
         voices_dir = tmp_path / "voices"
-        monkeypatch.setattr(voice_download, "SONATA_VOICES_DIR", str(voices_dir))
+        monkeypatch.setattr(voice_download, "DENGJEN_VOICES_DIR", str(voices_dir))
         messagebox_mock = MagicMock()
         monkeypatch.setattr(voice_download.gui, "messageBox", messagebox_mock)
 
@@ -606,7 +606,7 @@ class TestPiperVoiceDownloaderDoneCallback:
 
     def test_copy_failure_reports_failure_without_crashing(self, tmp_path, monkeypatch):
         voices_dir = tmp_path / "voices"
-        monkeypatch.setattr(voice_download, "SONATA_VOICES_DIR", str(voices_dir))
+        monkeypatch.setattr(voice_download, "DENGJEN_VOICES_DIR", str(voices_dir))
         monkeypatch.setattr(voice_download.shutil, "copy", MagicMock(side_effect=IOError("disk full")))
         messagebox_mock = MagicMock()
         monkeypatch.setattr(voice_download.gui, "messageBox", messagebox_mock)
@@ -623,7 +623,7 @@ class TestPiperVoiceDownloaderDoneCallback:
 
     def test_an_exception_result_is_reported_without_touching_disk(self, tmp_path, monkeypatch):
         voices_dir = tmp_path / "voices"
-        monkeypatch.setattr(voice_download, "SONATA_VOICES_DIR", str(voices_dir))
+        monkeypatch.setattr(voice_download, "DENGJEN_VOICES_DIR", str(voices_dir))
         messagebox_mock = MagicMock()
         monkeypatch.setattr(voice_download.gui, "messageBox", messagebox_mock)
 
@@ -657,7 +657,7 @@ class TestPiperRTVoiceDownloader:
 
     def test_success_installs_the_archive_and_offers_a_restart(self, tmp_path, monkeypatch):
         voices_dir = tmp_path / "voices"
-        monkeypatch.setattr(voice_download, "SONATA_VOICES_DIR", str(voices_dir))
+        monkeypatch.setattr(voice_download, "DENGJEN_VOICES_DIR", str(voices_dir))
         monkeypatch.setattr(voice_download.wx, "YES", "YES")
         monkeypatch.setattr(voice_download.gui, "messageBox", MagicMock(return_value="YES"))
         restart_mock = MagicMock()
@@ -680,7 +680,7 @@ class TestPiperRTVoiceDownloader:
 
     def test_extraction_failure_is_reported_without_crashing(self, tmp_path, monkeypatch):
         voices_dir = tmp_path / "voices"
-        monkeypatch.setattr(voice_download, "SONATA_VOICES_DIR", str(voices_dir))
+        monkeypatch.setattr(voice_download, "DENGJEN_VOICES_DIR", str(voices_dir))
         messagebox_mock = MagicMock()
         monkeypatch.setattr(voice_download.gui, "messageBox", messagebox_mock)
 
