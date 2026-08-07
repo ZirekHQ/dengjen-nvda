@@ -12,6 +12,7 @@ keeps the widgets and the side effects; the branches it takes live here.
 
 from __future__ import annotations
 
+import operator
 import typing
 
 DENGJEN_SYNTH_NAME = "dengjen_neural_voices"
@@ -33,3 +34,15 @@ def is_active_voice(synth_name: str, synth_voice: str, voice_key: str) -> bool:
     return synth_name == DENGJEN_SYNTH_NAME and synth_voice == voice_id_from_key(
         voice_key
     )
+
+
+def group_voices_by_language(voices) -> typing.Tuple[list, dict]:
+    lang_to_voices: dict = {}
+    for voice in voices:
+        lang_to_voices.setdefault(voice.language, []).append(voice)
+    for vlist in lang_to_voices.values():
+        vlist.sort(key=operator.attrgetter("key"))
+    languages = sorted(
+        lang_to_voices.keys(), key=operator.attrgetter("name_english")
+    )
+    return languages, lang_to_voices

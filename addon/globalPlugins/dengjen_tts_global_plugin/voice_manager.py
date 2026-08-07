@@ -408,16 +408,10 @@ class OnlineDengjenVoicesPanel(SizedPanel):
 
 
     def set_voices(self, voices):
-        self.lang_to_voices = {}
-        for voice in voices:
-            self.lang_to_voices.setdefault(voice.language, []).append(voice)
-        for vlist in self.lang_to_voices.values():
-            vlist.sort(key=operator.attrgetter("key"))
-        self.languages = sorted(
-            self.lang_to_voices.keys(),
-            key=operator.attrgetter("name_english")
+        self.languages, self.lang_to_voices = logic.group_voices_by_language(voices)
+        self.language_choice.SetItems(
+            [lang.description for lang in self.languages]
         )
-        self.language_choice.SetItems([lang.description for lang in self.languages])
         self.__already_populated.set()
 
 

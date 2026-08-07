@@ -25,12 +25,44 @@ logic = load_module_from_path(
     package="dengjen_tts_global_plugin",
 )
 
+voice_download = load_module_from_path(
+    "dengjen_tts_global_plugin._voice_download_for_logic_tests",
+    os.path.join(GLOBAL_PLUGIN_PKG_DIR, "voice_download.py"),
+    package="dengjen_tts_global_plugin",
+)
+
 DengjenVoice = tts_system.DengjenVoice
 
 
 def _installed(key):
     """A real DengjenVoice, as load_piper_voices_from_nvda_config_dir yields."""
     return DengjenVoice.from_path(os.path.join(os.sep, "voices", key))
+
+
+def _language(code, name_english, country_english="Country"):
+    return voice_download.PiperVoiceLanguage(
+        code=code,
+        family=code.split("_")[0],
+        region=code.split("_")[-1],
+        name_native=name_english,
+        name_english=name_english,
+        country_english=country_english,
+    )
+
+
+def _online(key, name, language, **kwargs):
+    return voice_download.PiperVoice(
+        key=key,
+        name=name,
+        quality=voice_download.PiperVoiceQualityLevel.Medium,
+        num_speakers=kwargs.pop("num_speakers", 1),
+        speaker_id_map=kwargs.pop("speaker_id_map", {}),
+        language=language,
+        files=[],
+        has_rt_variant=kwargs.pop("has_rt_variant", False),
+        standard_variant_installed=kwargs.pop("standard_variant_installed", False),
+        fast_variant_installed=kwargs.pop("fast_variant_installed", False),
+    )
 
 
 class TestInstalledVoiceDisplayName:
@@ -84,3 +116,47 @@ class TestIsActiveVoice:
         assert logic.is_active_voice(
             "dengjen_neural_voices", "en_US-amy", "en_US-amy-high"
         )
+
+
+class TestGroupVoicesByLanguage:
+    def test_groups_voices_under_their_language(self):
+        en = _language("en_US", "English")
+        de = _language("de_DE", "German")
+        voices = [
+            _online("en_US-amy-medium", "amy", en),
+            _online("de_DE-thorsten-medium", "thorsten", de),
+            _online("en_US-ryan-medium", "ryan", en),
+        ]
+        languages, lang_to_voices = logic.group_voices_by_language(voices)
+        assert set(languages) == {en, de}
+        assert len(lang_to_voices[en]) == 2
+        assert len(lang_to_voices[de]) == 1
+
+    def test_voices_within_a_language_are_sorted_by_key(self):
+        en = _language("en_US", "English")
+        voices = [
+            _online("en_US-ryan-medium", "ryan", en),
+            _online("en_US-amy-medium", "amy", en),
+        ]
+        _languages, lang_to_voices = logic.group_voices_by_language(voices)
+        assert [v.key for v in lang_to_voices[en]] == [
+            "en_US-amy-medium",
+            "en_US-ryan-medium",
+        ]
+
+    def test_languages_are_sorted_by_english_name_not_by_code(self):
+        # "de_DE" sorts before "en_US" by code, but "English" before "German"
+        # by name -- the list the user reads is ordered by name.
+        en = _language("en_US", "English")
+        de = _language("de_DE", "German")
+        voices = [
+            _online("de_DE-thorsten-medium", "thorsten", de),
+            _online("en_US-amy-medium", "amy", en),
+        ]
+        languages, _lang_to_voices = logic.group_voices_by_language(voices)
+        assert [lang.name_english for lang in languages] == ["English", "German"]
+
+    def test_empty_input_yields_empty_output(self):
+        languages, lang_to_voices = logic.group_voices_by_language([])
+        assert languages == []
+        assert lang_to_voices == {}
