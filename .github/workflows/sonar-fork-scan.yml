@@ -1,0 +1,138 @@
+name: Sonar fork scan (manual)
+
+# Automated SonarCloud analysis of arbitrary fork PRs doesn't have a safe
+# implementation: SONAR_TOKEN is needed to post results, but no matter how
+# fork source reaches a job holding SONAR_TOKEN, that job must not execute
+# anything derived from the fork. A previous version of this workflow chained
+# automatically off sonar-fork-coverage.yml via workflow_run and used
+# actions/checkout on the PR head -- actions/checkout itself refuses that
+# combination by default ("pwn request" protection), and a purpose-built
+# action for this exact problem (matrix-org/sonarcloud-workflow-action) was
+# archived with the stated reason: "there is [no] foolproof way to run
+# Sonarcloud against attacker-controlled PRs."
+#
+# So this is manual, mirroring the "ok-to-test" model GitHub already forces
+# on fork PRs (the "Approve and run workflows" click every fork PR needs
+# before anything executes at all): a maintainer reviews the diff, then runs
+# this with the PR number and the exact commit SHA reviewed. Only users with
+# write access can dispatch a workflow_dispatch run -- GitHub enforces that
+# natively -- and pinning the SHA closes the gap where new, unreviewed
+# commits land between review and running this.
+#
+# This job still never runs anything from the fork: it downloads the tar
+# archive sonar-fork-coverage.yml built (test suite already executed there,
+# safely, with no secrets) and extracts it with plain `tar`, never a git
+# operation against fork content. The scanner only reads the result
+# statically.
+#
+# Until a maintainer runs this, the required "SonarCloud Code Analysis"
+# check on a fork PR stays pending -- merge via admin override if a scan
+# isn't warranted (e.g. docs-only changes), rather than faking green.
+
+on:
+  workflow_dispatch:
+    inputs:
+      pr_number:
+        description: "PR number to scan"
+        required: true
+        type: string
+      expected_head_sha:
+        description: "Commit SHA you reviewed (see `gh pr view <pr_number> --json headRefOid`) -- fails if the PR has moved past this"
+        required: true
+        type: string
+
+permissions: {}
+
+concurrency:
+  group: sonar-fork-scan-${{ inputs.pr_number }}
+  cancel-in-progress: true
+
+jobs:
+  scan:
+    name: Sonar fork scan (manual)
+    runs-on: ubuntu-latest
+    permissions:
+      pull-requests: read # needed by `gh pr view` to look up the PR's current head
+      actions: read # needed to find and download the matching coverage run's artifact
+      statuses: write # needed to post the real result to the PR's head commit ourselves (see below)
+    env:
+      SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
+      GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      PR_NUMBER: ${{ inputs.pr_number }}
+      EXPECTED_SHA: ${{ inputs.expected_head_sha }}
+    steps:
+      - name: Verify the PR hasn't moved since review
+        id: pr
+        run: |
+          ACTUAL_SHA=$(gh pr view "$PR_NUMBER" --repo "$GITHUB_REPOSITORY" --json headRefOid -q .headRefOid)
+          if [ "$ACTUAL_SHA" != "$EXPECTED_SHA" ]; then
+            echo "::error::PR #$PR_NUMBER head is $ACTUAL_SHA, not the reviewed $EXPECTED_SHA -- re-review before scanning."
+            exit 1
+          fi
+          echo "head_ref=$(gh pr view "$PR_NUMBER" --repo "$GITHUB_REPOSITORY" --json headRefName -q .headRefName)" >> "$GITHUB_OUTPUT"
+
+      - name: Find the matching coverage run
+        id: run
+        run: |
+          RUN_ID=$(gh api "repos/$GITHUB_REPOSITORY/actions/workflows/sonar-fork-coverage.yml/runs?event=pull_request&status=success&per_page=20" \
+            --jq "[.workflow_runs[] | select(.head_sha == \"$EXPECTED_SHA\")][0].id")
+          if [ -z "$RUN_ID" ] || [ "$RUN_ID" = "null" ]; then
+            echo "::error::No successful 'Sonar fork coverage' run found for $EXPECTED_SHA. Push a commit or re-run that workflow first."
+            exit 1
+          fi
+          echo "id=$RUN_ID" >> "$GITHUB_OUTPUT"
+
+      - name: Download coverage workspace
+        uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4.3.0
+        with:
+          name: sonar-fork-workspace
+          path: ${{ runner.temp }}/sonar-fork-workspace
+          run-id: ${{ steps.run.outputs.id }}
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Extract workspace (plain tar, not a git operation)
+        env:
+          ARCHIVE_DIR: ${{ runner.temp }}/sonar-fork-workspace
+        run: |
+          mkdir -p workspace
+          tar -xzf "$ARCHIVE_DIR/workspace.tar.gz" -C workspace
+
+      # SonarCloud's GitHub integration normally posts the
+      # "SonarCloud Code Analysis" status itself, but it attaches to
+      # whatever commit the Actions *run* is associated with -- main's tip,
+      # since this is workflow_dispatch, not the PR's head. It has no way to
+      # know to target the PR from sonar.pullrequest.key alone. So this
+      # waits for the real quality gate result and posts the status to the
+      # actual head SHA itself, rather than relying on that automatic
+      # posting.
+      - name: SonarQube scan
+        id: sonar
+        if: env.SONAR_TOKEN != ''
+        uses: SonarSource/sonarqube-scan-action@22918119ff8e1ca75a623e15c8296b6ea4fbe28f # v8.2.1
+        with:
+          args: >
+            -Dsonar.projectBaseDir=workspace
+            -Dsonar.pullrequest.key=${{ inputs.pr_number }}
+            -Dsonar.pullrequest.branch=${{ steps.pr.outputs.head_ref }}
+            -Dsonar.pullrequest.base=main
+            -Dsonar.qualitygate.wait=true
+            -Dsonar.qualitygate.timeout=300
+
+      - name: Post the real result to the PR's head commit
+        if: always() && env.SONAR_TOKEN != ''
+        env:
+          SCAN_OUTCOME: ${{ steps.sonar.outcome }}
+          RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+        run: |
+          if [ "$SCAN_OUTCOME" = "success" ]; then
+            STATE=success
+            DESC="Quality gate passed"
+          else
+            STATE=failure
+            DESC="Quality gate failed or scan errored -- see the SonarCloud dashboard"
+          fi
+          gh api --method POST "repos/$GITHUB_REPOSITORY/statuses/$EXPECTED_SHA" \
+            -f state="$STATE" \
+            -f context='SonarCloud Code Analysis' \
+            -f description="$DESC" \
+            -f target_url="https://sonarcloud.io/dashboard?id=austek_sonata-nvda&pullRequest=$PR_NUMBER"

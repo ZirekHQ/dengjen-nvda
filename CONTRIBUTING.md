@@ -45,7 +45,24 @@ scons pot
 pytest
 ```
 
-The test suite (under `tests/`) covers add-on metadata, build helpers, the TTS system, and several pure-Python parsers extracted from the synth driver. Tests stub NVDA-only modules in `tests/conftest.py` so they can run outside the NVDA runtime.
+The test suite (under `tests/`) covers add-on metadata, build helpers, the TTS system, the `SynthDriver` itself, and several pure-Python parsers extracted from the synth driver. It runs on Linux CI — none of it touches a real NVDA install.
+
+### How the NVDA stubs work
+
+`tests/conftest.py` fakes just enough of NVDA's internal API surface (`config`, `languageHandler`, `synthDriverHandler`, `speech.commands`, `nvwave`, `wx`, `gui`, ...) to import and drive add-on code that would otherwise only run inside a real NVDA process. Two helpers do the heavy lifting:
+
+- `_stub_module(name, **attrs)` — registers a bare `types.ModuleType` in `sys.modules` with the given attributes, for NVDA modules the add-on only touches at the surface (e.g. `config.conf[...]`, `wx.ID_ANY`).
+- `load_module_from_path(module_name, path, package=...)` — executes a real add-on `.py` file as a module under the stubs, so its actual logic runs and is covered, instead of being faked.
+
+`synthDriverHandler.SynthDriver` additionally carries a small `_AutoPropertyMeta` metaclass that mimics NVDA's `baseObject.AutoPropertyObject`: it turns `_get_x`/`_set_x` method pairs into a real `x` property, which is what lets tests do `driver.rate = 50` and have it actually call `_set_rate`.
+
+Intra-package submodules with hard platform dependencies (`grpc_client`, the real gRPC engine process; `aio`, background event-loop threads) stay fully stubbed rather than executed — tests assert against the calls the driver makes into them, not their real behavior.
+
+### Adding tests for a new module
+
+1. If the module only needs modules already stubbed in `conftest.py`, load it with `load_module_from_path` at the top of your test file (see `tests/test_synth_driver.py` for the pattern of loading `synthDrivers/sonata_neural_voices/__init__.py` itself).
+2. If it needs an NVDA API not yet stubbed, add a minimal `_stub_module(...)` call in `conftest.py` — only the attributes actually touched, not a full re-implementation.
+3. Prefer driving real logic (real `.py` file executed under stubs) over re-testing a mock; the goal is coverage of add-on code, not of the test doubles.
 
 ## Refreshing the bundled binaries
 
