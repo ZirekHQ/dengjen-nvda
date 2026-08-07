@@ -130,8 +130,9 @@ class TestImmutableObjectListView:
             def quality(self):
                 raise ValueError("boom")
 
+        objects = [_Exploding()]
         with pytest.raises(ValueError, match="boom"):
-            list_view.set_objects([_Exploding()])
+            list_view.set_objects(objects)
         # The failure happened inside __unsafe_modify. Without try/finally the
         # flag stays set and the list is writable from then on.
         with pytest.raises(RuntimeError, match="List is immutable"):
