@@ -26,6 +26,7 @@ from . import aio
 from . import helpers
 from .components import AsyncSnakDialog, ColumnDefn, ImmutableObjectListView, SimpleDialog, make_sized_static_box
 from .sized_controls import SizedPanel
+from . import voice_manager_logic as logic
 
 
 with helpers.import_bundled_library():
@@ -78,11 +79,13 @@ class InstalledDengjenVoicesPanel(SizedPanel):
 
     def update_voices_list(self, set_focus=False, invalidate_synth_voices_cache=False):
         voices = list(DengjenTextToSpeechSystem.load_piper_voices_from_nvda_config_dir())
-        enable = bool(voices)
-        self.buttons_panel.Enable(enable)
+        state = logic.installed_list_state(
+            voices, synthDriverHandler.getSynth().name
+        )
+        self.buttons_panel.Enable(state.buttons_enabled)
         self.voices_list.set_objects(voices, set_focus=set_focus)
-        if "dengjen" in synthDriverHandler.getSynth().name.lower():
-            self.remove_voice_button.Enable(len(voices) >= 2)
+        if state.is_dengjen_synth:
+            self.remove_voice_button.Enable(state.remove_enabled)
             if invalidate_synth_voices_cache:
                 synth = synthDriverHandler.getSynth()
                 synth.terminate()
@@ -97,7 +100,7 @@ class InstalledDengjenVoicesPanel(SizedPanel):
         self.__already_populated.clear()
 
     def _get_installed_voice_name(self, voice):
-        return f"{voice.name} ({voice.variant})"
+        return logic.installed_voice_display_name(voice)
 
     def on_model_card(self, event):
         selected = self.voices_list.get_selected()
@@ -108,7 +111,7 @@ class InstalledDengjenVoicesPanel(SizedPanel):
         if os.path.exists(model_card_file):
             with open(model_card_file, "r", encoding="utf-8") as file:
                 content = file.read()
-            content = content.replace("#", "").replace("*", "")
+            content = logic.sanitize_model_card(content)
             gui.messageBox(
                 content,
                 #! Intentionally untranslatable 
@@ -130,11 +133,9 @@ class InstalledDengjenVoicesPanel(SizedPanel):
         if selected is None:
             self.voices_list.set_focused_item(0)
             return
-        voice_id = "-".join(selected.key.split("-")[:-1])
         synth = synthDriverHandler.getSynth()
-        if (
-            (synth.name == "dengjen_neural_voices")
-            and (synth.voice == voice_id)
+        if logic.is_active_voice(
+            synth_name=synth.name, synth_voice=synth.voice, voice_key=selected.key
         ):
             gui.messageBox(
                 # Translators: message in a message box
@@ -327,17 +328,13 @@ class OnlineDengjenVoicesPanel(SizedPanel):
         selected_voice = self.voices_list.get_selected()
         if selected_voice is None:
             return
-        self.download_std_btn.Enable(not selected_voice.standard_variant_installed)
-        self.download_rt_btn.Enable(
-            selected_voice.has_rt_variant and not selected_voice.fast_variant_installed
-        )
-        if selected_voice.num_speakers > 1:
-            self.speaker_choice.Enable(True)
-            speakers = list(selected_voice.speaker_id_map.keys())
-            self.speaker_choice.SetItems(speakers)
+        state = logic.download_button_state(selected_voice)
+        self.download_std_btn.Enable(state.std_enabled)
+        self.download_rt_btn.Enable(state.rt_enabled)
+        self.speaker_choice.Enable(state.speaker_enabled)
+        if state.speaker_enabled:
+            self.speaker_choice.SetItems(list(state.speakers))
             self.speaker_choice.SetSelection(0)
-        else:
-            self.speaker_choice.Enable(False)
 
     def on_preview(self, event):
         # While a preview is playing, the same button acts as Stop. This keeps
@@ -411,16 +408,10 @@ class OnlineDengjenVoicesPanel(SizedPanel):
 
 
     def set_voices(self, voices):
-        self.lang_to_voices = {}
-        for voice in voices:
-            self.lang_to_voices.setdefault(voice.language, []).append(voice)
-        for vlist in self.lang_to_voices.values():
-            vlist.sort(key=operator.attrgetter("key"))
-        self.languages = sorted(
-            self.lang_to_voices.keys(),
-            key=operator.attrgetter("name_english")
+        self.languages, self.lang_to_voices = logic.group_voices_by_language(voices)
+        self.language_choice.SetItems(
+            [lang.description for lang in self.languages]
         )
-        self.language_choice.SetItems([lang.description for lang in self.languages])
         self.__already_populated.set()
 
 
