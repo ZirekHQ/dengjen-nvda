@@ -7,7 +7,7 @@
 > Dibe ku ev werger li paş [benioku ya îngilîzî](https://github.com/austek/dengjen-nvda/blob/main/readme.md) bimîne.
 >
 > Navê vê pêvekê di guhertoya v4.0.0 de, li gorî daxwaza nivîskarê resen,
-> wekî mercekî ji bo cih girtina di firotgeha pêvekên NVDA-yê de, ji Sonata
+> wekî mercekî ji bo cih girtina di Dikana Pêvekên NVDA-yê de, ji Sonata
 > Neural Voices hate guhertin. Heman pêvek e, heman lênêr e, heman lîsansa
 > GPL v2 ye.
 
