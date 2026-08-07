@@ -25,6 +25,7 @@ then drifts. Strategy, unchanged from before:
 """
 
 import builtins
+import inspect
 import sys
 import os
 import types
@@ -260,9 +261,16 @@ def install(*, stub_wx: bool = True) -> None:
     )
 
     # addonHandler
-    # initTranslation() installs gettext's `_`, which module-level `_("...")` needs at import.
+    # The real initTranslation() binds `_` on the calling module alone, so a
+    # module that skips it silently falls through to the builtin NVDA installs
+    # and misses the add-on's catalogue (issue #102). Bind the same way here,
+    # and keep the builtin fallback, so tests reproduce that silence rather
+    # than turning it into an import error.
+    builtins._ = lambda message: message
+
     def _init_translation():
-        builtins._ = lambda message: message
+        module = inspect.getmodule(inspect.currentframe().f_back)
+        module._ = lambda message: message
 
     _stub_module(
         "addonHandler",

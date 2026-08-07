@@ -15,7 +15,10 @@ import wx.lib.mixins.listctrl as listmix
 from . import sized_controls as sc
 
 
+import addonHandler
 import gui
+
+addonHandler.initTranslation()
 
 
 ObjectCollection = typing.Iterable[typing.Any]

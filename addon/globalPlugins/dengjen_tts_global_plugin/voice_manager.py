@@ -16,9 +16,12 @@ import winsound
 
 import wx
 from wx.adv import CommandLinkButton
+import addonHandler
 import gui
 import synthDriverHandler
 from logHandler import log
+
+addonHandler.initTranslation()
 
 from . import DengjenTextToSpeechSystem, DENGJEN_VOICES_DIR
 from . import voice_migration
