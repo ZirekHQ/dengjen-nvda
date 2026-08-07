@@ -43,9 +43,9 @@ class GlobalPlugin(globalPluginHandler.GlobalPlugin):
         self.itemHandle = gui.mainFrame.sysTrayIcon.menu.Append(
             wx.ID_ANY,
             # Translators: label of a menu item
-            _("Sonata &voice manager..."),
-            # Translators: Sonata's voice manager menu item help
-            _("Open the voice manager to preview, install or download sonata voices"),
+            _("Dengjen &voice manager..."),
+            # Translators: Dengjen's voice manager menu item help
+            _("Open the voice manager to preview, install or download dengjen voices"),
         )
         gui.mainFrame.sysTrayIcon.menu.Bind(wx.EVT_MENU, self.on_manager, self.itemHandle)
 
@@ -61,12 +61,12 @@ class GlobalPlugin(globalPluginHandler.GlobalPlugin):
             retval = gui.messageBox(
                 # Translators: message telling the user that no voice is installed
                 _(
-                    "No Sonata voice was found.\n"
+                    "No Dengjen voice was found.\n"
                     "You can preview and download voices from the voice manager.\n"
                     "Do you want to open the voice manager now?"
                 ),
-                # Translators: title of a message telling the user that no Sonata voice was found
-                _("Sonata Neural Voices"),
+                # Translators: title of a message telling the user that no Dengjen voice was found
+                _("Dengjen Neural Voices"),
                 wx.YES_NO | wx.ICON_WARNING,
             )
             if retval == wx.YES:
@@ -76,4 +76,4 @@ class GlobalPlugin(globalPluginHandler.GlobalPlugin):
         try:
             gui.mainFrame.sysTrayIcon.menu.DestroyItem(self.itemHandle)
         except Exception:
-            log.debug("Failed to remove the Sonata menu item", exc_info=True)
+            log.debug("Failed to remove the Dengjen menu item", exc_info=True)

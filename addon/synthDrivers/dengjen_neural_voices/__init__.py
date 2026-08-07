@@ -174,7 +174,7 @@ class SynthDriver(synthDriverHandler.SynthDriver):
     }
     supportedNotifications = {synthIndexReached, synthDoneSpeaking}
 
-    description = "Sonata Neural Voices"
+    description = "Dengjen Neural Voices"
     name = "dengjen_neural_voices"
     cachePropertiesByDefault = False
 
@@ -197,7 +197,7 @@ class SynthDriver(synthDriverHandler.SynthDriver):
             grpc_init_fut.result(timeout=grpc_client.STARTUP_TIMEOUT)
         except Exception:
             log.exception(
-                "Failed to initialize Sonata services. Synthesizer will not be available.",
+                "Failed to initialize Dengjen services. Synthesizer will not be available.",
                 exc_info=True,
             )
             return
@@ -207,16 +207,16 @@ class SynthDriver(synthDriverHandler.SynthDriver):
             )
         except Exception:
             log.exception(
-                "Failed to connect to sonata GRPC server. Synthesizer will not be available.",
+                "Failed to connect to Dengjen GRPC server. Synthesizer will not be available.",
                 exc_info=True,
             )
             return
-        log.info(f"Sonata GRPC server running on port {grpc_client.SONATA_GRPC_SERVER_PORT}")
-        log.info("Connected to Sonata GRPC server")
-        log.info(f"Sonata GRPC server version: {sonata_grpc_server_version}")
+        log.info(f"Dengjen GRPC server running on port {grpc_client.SONATA_GRPC_SERVER_PORT}")
+        log.info("Connected to Dengjen GRPC server")
+        log.info(f"Dengjen GRPC server version: {sonata_grpc_server_version}")
         if not any(DengjenTextToSpeechSystem.load_piper_voices_from_nvda_config_dir()):
             log.error(
-                "No installed voices were found for Sonata. Synthesizer will not be available."
+                "No installed voices were found for Dengjen. Synthesizer will not be available."
             )
             return
         self.voices = DengjenTextToSpeechSystem.load_piper_voices_from_nvda_config_dir()
@@ -448,7 +448,7 @@ class SynthDriver(synthDriverHandler.SynthDriver):
         except Exception:
             log.exception(f"Failed to load voice `{value}`")
             ui.message(
-                # Translators: reported when NVDA fails to switch to a Sonata
+                # Translators: reported when NVDA fails to switch to a Dengjen
                 # voice, e.g. because the voice's model file is corrupted or
                 # incomplete. The previous voice remains in use.
                 _("Failed to load voice {voice}. Keeping the previous voice.").format(

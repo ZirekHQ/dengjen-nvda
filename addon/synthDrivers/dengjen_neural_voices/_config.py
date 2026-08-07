@@ -22,7 +22,7 @@ voice = string(default=None)
 
 
 class DengjenConfigManager:
-    """Config manager for Sonata."""
+    """Config manager for Dengjen."""
 
     def __init__(self):
         if not config.conf["speech"].isSet("dengjen_neural_voices"):

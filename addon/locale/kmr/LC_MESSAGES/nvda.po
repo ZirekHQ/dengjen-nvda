@@ -19,33 +19,33 @@ msgstr ""
 
 #. Translators: label of a menu item
 #: addon\globalPlugins\dengjen_tts_global_plugin\__init__.py:46
-msgid "Sonata &voice manager..."
-msgstr "&Rêveberê dengên Sonata..."
+msgid "Dengjen &voice manager..."
+msgstr "&Rêveberê dengên Dengjen..."
 
-#. Translators: Sonata's voice manager menu item help
+#. Translators: Dengjen's voice manager menu item help
 #: addon\globalPlugins\dengjen_tts_global_plugin\__init__.py:48
-msgid "Open the voice manager to preview, install or download sonata voices"
-msgstr "Ji bo pêşdîtin, sazkirin an daxistina dengên Sonata rêveberê dengan veke"
+msgid "Open the voice manager to preview, install or download dengjen voices"
+msgstr "Ji bo pêşdîtin, sazkirin an daxistina dengên Dengjen rêveberê dengan veke"
 
 #. Translators: message telling the user that no voice is installed
 #: addon\globalPlugins\dengjen_tts_global_plugin\__init__.py:63
 msgid ""
-"No Sonata voice was found.\n"
+"No Dengjen voice was found.\n"
 "You can preview and download voices from the voice manager.\n"
 "Do you want to open the voice manager now?"
 msgstr ""
-"Tu dengê Sonata nehat dîtin.\n"
+"Tu dengê Dengjen nehat dîtin.\n"
 "Tu dikarî dengan ji rêveberê dengan pêşdîtin û daxînî.\n"
 "Ma tu dixwazî rêveberê dengan niha vekî?"
 
-#. Translators: title of a message telling the user that no Sonata voice was found
+#. Translators: title of a message telling the user that no Dengjen voice was found
 #. Add-on summary/title, usually the user visible name of the add-on
 #. Translators: Summary/title for this add-on
 #. to be shown on installation and add-on information found in add-on store
 #: addon\globalPlugins\dengjen_tts_global_plugin\__init__.py:69
 #: buildVars.py:21
-msgid "Sonata Neural Voices"
-msgstr "Dengên Neuronî yên Sonata"
+msgid "Dengjen Neural Voices"
+msgstr "Dengên Neuronî yên Dengjen"
 
 #. Translators: the label of the OK button in a dialog
 #: addon\globalPlugins\dengjen_tts_global_plugin\components.py:86
@@ -372,8 +372,8 @@ msgstr "Pêşdîtin bi ser neket"
 
 #. Translators: title of voice manager dialog
 #: addon\globalPlugins\dengjen_tts_global_plugin\voice_manager.py:437
-msgid "Sonata voice manager"
-msgstr "Rêveberê dengên Sonata"
+msgid "Dengjen voice manager"
+msgstr "Rêveberê dengên Dengjen"
 
 #. Translators: label of a tab in a tab control
 #: addon\globalPlugins\dengjen_tts_global_plugin\voice_manager.py:448

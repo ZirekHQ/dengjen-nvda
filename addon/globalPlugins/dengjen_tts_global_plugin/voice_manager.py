@@ -4,7 +4,7 @@
 # This file is covered by the GNU General Public License.
 
 
-"""Preview and download sonata voices."""
+"""Preview and download dengjen voices."""
 
 import functools
 import operator
@@ -430,7 +430,7 @@ class DengjenVoiceManagerDialog(SimpleDialog):
         super().__init__(
             gui.mainFrame,
             # Translators: title of voice manager dialog
-            title=_("Sonata voice manager"),
+            title=_("Dengjen voice manager"),
         )
         self.SetSize((500, -1))
         self.CenterOnScreen()

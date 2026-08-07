@@ -46,12 +46,12 @@ def _show_vcruntime_warning():
         wx.CallAfter(
             gui.messageBox,
             (
-                "Sonata Neural Voices could not start because the "
+                "Dengjen Neural Voices could not start because the "
                 "Microsoft Visual C++ 2015-2022 Redistributable (x64) "
                 f"is not installed.\n\nDownload and install it from:\n{VC_REDIST_URL}\n\n"
                 "Then restart NVDA."
             ),
-            "Sonata: missing dependency",
+            "Dengjen: missing dependency",
             style=wx.ICON_ERROR,
             parent=gui.mainFrame,
         )
@@ -89,7 +89,7 @@ def start_grpc_server():
         return True
     if _vcruntime_missing():
         log.error(
-            "Sonata GRPC server cannot start: vcruntime140_1.dll not found. "
+            "Dengjen GRPC server cannot start: vcruntime140_1.dll not found. "
             "The Microsoft Visual C++ 2015-2022 Redistributable (x64) is required. "
             f"Download and install it from {VC_REDIST_URL} then restart NVDA."
         )
@@ -127,7 +127,7 @@ def start_grpc_server():
         )
     except Exception:
         log.exception(
-            "Failed to start Sonata GRPC server. The synth will not be available.",
+            "Failed to start Dengjen GRPC server. The synth will not be available.",
             exc_info=True
         )
         return False
