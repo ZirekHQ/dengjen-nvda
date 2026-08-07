@@ -20,7 +20,7 @@ import gui
 import synthDriverHandler
 from logHandler import log
 
-from . import SonataTextToSpeechSystem, SONATA_VOICES_DIR
+from . import DengjenTextToSpeechSystem, DENGJEN_VOICES_DIR
 from . import voice_download
 from . import aio
 from . import helpers
@@ -33,7 +33,7 @@ with helpers.import_bundled_library():
     from pathlib import Path
 
 
-class InstalledSonataVoicesPanel(SizedPanel):
+class InstalledDengjenVoicesPanel(SizedPanel):
     def __init__(self, parent):
         super().__init__(parent, -1)
         self.__already_populated = threading.Event()
@@ -77,7 +77,7 @@ class InstalledSonataVoicesPanel(SizedPanel):
         self.Bind(wx.EVT_BUTTON, self._on_install_voice_from_tar, add_voice_button)
 
     def update_voices_list(self, set_focus=False, invalidate_synth_voices_cache=False):
-        voices = list(SonataTextToSpeechSystem.load_piper_voices_from_nvda_config_dir())
+        voices = list(DengjenTextToSpeechSystem.load_piper_voices_from_nvda_config_dir())
         enable = bool(voices)
         self.buttons_panel.Enable(enable)
         self.voices_list.set_objects(voices, set_focus=set_focus)
@@ -203,7 +203,7 @@ class InstalledSonataVoicesPanel(SizedPanel):
             return
         try:
             voice_key = voice_download.install_voice_from_tar_archive(
-                filepath, SONATA_VOICES_DIR
+                filepath, DENGJEN_VOICES_DIR
             )
         except Exception as exc:
             log.error("Failed to install voice from archive", exc_info=True)
@@ -229,7 +229,7 @@ class InstalledSonataVoicesPanel(SizedPanel):
             self.update_voices_list(set_focus=True, invalidate_synth_voices_cache=True)
 
 
-class OnlineSonataVoicesPanel(SizedPanel):
+class OnlineDengjenVoicesPanel(SizedPanel):
     def __init__(self, parent):
         super().__init__(parent, -1)
         self.__already_populated = threading.Event()
@@ -424,7 +424,7 @@ class OnlineSonataVoicesPanel(SizedPanel):
         self.__already_populated.set()
 
 
-class SonataVoiceManagerDialog(SimpleDialog):
+class DengjenVoiceManagerDialog(SimpleDialog):
 
     def __init__(self):
         super().__init__(
@@ -442,12 +442,12 @@ class SonataVoiceManagerDialog(SimpleDialog):
             (
                 # Translators: label of a tab in a tab control
                 _("Installed"),
-                InstalledSonataVoicesPanel(self.notebookCtrl),
+                InstalledDengjenVoicesPanel(self.notebookCtrl),
             ),
             (
                 # Translators: label of a tab in a tab control
                 _("Download"),
-                OnlineSonataVoicesPanel(self.notebookCtrl),
+                OnlineDengjenVoicesPanel(self.notebookCtrl),
             ),
         ]
         for label, panel in panel_info:

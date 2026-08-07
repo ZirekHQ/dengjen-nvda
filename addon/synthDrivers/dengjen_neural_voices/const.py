@@ -6,8 +6,8 @@
 __all__ = [
     "IGNORED_PUNCS",
     "PIPER_VOICES_VERSION",
-    "SONATA_VOICES_BASE_DIR",
-    "SONATA_VOICES_DIR",
+    "DENGJEN_VOICES_BASE_DIR",
+    "DENGJEN_VOICES_DIR",
     "BATCH_SIZE",
     "FALLBACK_SPEAKER_NAME",
     "DEFAULT_RATE",
@@ -24,9 +24,9 @@ import globalVars
 # Eventually, this should be moved to sonata-rs
 IGNORED_PUNCS = frozenset(",(){}[]`\"'")
 PIPER_VOICES_VERSION = "v1.0"
-SONATA_VOICES_BASE_DIR = os.path.join(globalVars.appArgs.configPath, "sonata")
-SONATA_VOICES_DIR = os.path.join(
-    SONATA_VOICES_BASE_DIR, "voices", "piper"
+DENGJEN_VOICES_BASE_DIR = os.path.join(globalVars.appArgs.configPath, "sonata")
+DENGJEN_VOICES_DIR = os.path.join(
+    DENGJEN_VOICES_BASE_DIR, "voices", "piper"
 )
 BATCH_SIZE = max(os.cpu_count() // 2, 2)
 FALLBACK_SPEAKER_NAME = "default"

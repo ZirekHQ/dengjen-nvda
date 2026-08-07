@@ -330,15 +330,15 @@ _load_real_module("dengjen_neural_voices.tts_system", "tts_system.py")
 #    SizedDialog) — a MagicMock `wx` can't stand in as a base class for those,
 #    so that GUI layer is out of scope here. Only expose the names
 #    __init__.py itself re-exports from dengjen_neural_voices, since
-#    voice_download.py reaches them via `from . import SonataTextToSpeechSystem,
-#    helpers, SONATA_VOICES_DIR`.
+#    voice_download.py reaches them via `from . import DengjenTextToSpeechSystem,
+#    helpers, DENGJEN_VOICES_DIR`.
 # ---------------------------------------------------------------------------
 
 _gui_plugin_pkg = types.ModuleType("dengjen_tts_global_plugin")
 _gui_plugin_pkg.__path__ = [_GLOBAL_PLUGIN_PKG_DIR]
 _gui_plugin_pkg.__package__ = "dengjen_tts_global_plugin"
-_gui_plugin_pkg.SonataTextToSpeechSystem = sys.modules["dengjen_neural_voices.tts_system"].SonataTextToSpeechSystem
-_gui_plugin_pkg.SONATA_VOICES_DIR = sys.modules["dengjen_neural_voices.tts_system"].SONATA_VOICES_DIR
+_gui_plugin_pkg.DengjenTextToSpeechSystem = sys.modules["dengjen_neural_voices.tts_system"].DengjenTextToSpeechSystem
+_gui_plugin_pkg.DENGJEN_VOICES_DIR = sys.modules["dengjen_neural_voices.tts_system"].DENGJEN_VOICES_DIR
 _gui_plugin_pkg.helpers = sys.modules["dengjen_neural_voices.helpers"]
 _gui_plugin_pkg.aio = _aio
 sys.modules["dengjen_tts_global_plugin"] = _gui_plugin_pkg

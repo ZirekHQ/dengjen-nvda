@@ -25,13 +25,13 @@ sys.path.insert(0, _TTS_MODULE_DIR)
 from dengjen_neural_voices import helpers
 from dengjen_neural_voices import aio
 from dengjen_neural_voices.tts_system import (
-    SonataTextToSpeechSystem,
-    SONATA_VOICES_DIR,
+    DengjenTextToSpeechSystem,
+    DENGJEN_VOICES_DIR,
 )
 sys.path.remove(_TTS_MODULE_DIR)
 del _DIR, _ADDON_ROOT, _TTS_MODULE_DIR
 
-from .voice_manager import SonataVoiceManagerDialog
+from .voice_manager import DengjenVoiceManagerDialog
 
 
 class GlobalPlugin(globalPluginHandler.GlobalPlugin):
@@ -50,14 +50,14 @@ class GlobalPlugin(globalPluginHandler.GlobalPlugin):
         gui.mainFrame.sysTrayIcon.menu.Bind(wx.EVT_MENU, self.on_manager, self.itemHandle)
 
     def on_manager(self, event):
-        manager_dialog = SonataVoiceManagerDialog()
+        manager_dialog = DengjenVoiceManagerDialog()
         gui.runScriptModalDialog(manager_dialog)
         self.__voice_manager_shown = True
 
     def _perform_voice_check(self):
         if self.__voice_manager_shown:
             return
-        if not any(SonataTextToSpeechSystem.load_piper_voices_from_nvda_config_dir()):
+        if not any(DengjenTextToSpeechSystem.load_piper_voices_from_nvda_config_dir()):
             retval = gui.messageBox(
                 # Translators: message telling the user that no voice is installed
                 _(

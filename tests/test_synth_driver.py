@@ -81,7 +81,7 @@ def _write_voice(voices_dir, key=VOICE_KEY):
 @pytest.fixture
 def voices_dir(tmp_path, monkeypatch):
     """One fake voice on disk, wired in place of the real NVDA config dir."""
-    monkeypatch.setattr(tts_system, "SONATA_VOICES_DIR", str(tmp_path))
+    monkeypatch.setattr(tts_system, "DENGJEN_VOICES_DIR", str(tmp_path))
     _write_voice(tmp_path)
     return tmp_path
 
@@ -254,7 +254,7 @@ _FailureSynthDriver = _failure_driver_module.SynthDriver
 
 
 class _FakeVoiceEntry:
-    """Stand-in for a _standard_voice_map value (a SonataVoice)."""
+    """Stand-in for a _standard_voice_map value (a DengjenVoice)."""
 
     def __init__(self, key, variant="unknown"):
         self.key = key
@@ -269,7 +269,7 @@ class _FakeVoiceInfo:
 
 
 class _FakeTTSRaising:
-    """Stand-in for SonataTextToSpeechSystem whose voice setter always fails,
+    """Stand-in for DengjenTextToSpeechSystem whose voice setter always fails,
     as happens when the underlying .onnx model is corrupted/incomplete."""
 
     voice = None
@@ -288,7 +288,7 @@ class _FakeTTSRaising:
 
 
 class _FakeTTSAccepting:
-    """Stand-in for SonataTextToSpeechSystem whose voice setter succeeds."""
+    """Stand-in for DengjenTextToSpeechSystem whose voice setter succeeds."""
 
     def __init__(self):
         self.voice = None

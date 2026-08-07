@@ -23,12 +23,12 @@ SECTION = "dengjen_neural_voices"
 @pytest.fixture
 def manager():
     config.conf["speech"][SECTION].clear()
-    return _config.SonataConfigManager()
+    return _config.DengjenConfigManager()
 
 
 class TestModuleLevelSingleton:
     def test_exposes_a_ready_made_manager(self):
-        assert isinstance(_config.SonataConfig, _config.SonataConfigManager)
+        assert isinstance(_config.DengjenConfig, _config.DengjenConfigManager)
 
     def test_config_spec_declares_the_voice_and_lang_sections(self):
         assert "[voices]" in _config._configSpec

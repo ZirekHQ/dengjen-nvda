@@ -15,8 +15,8 @@ from unittest.mock import MagicMock
 
 from dengjen_neural_voices import grpc_client
 from dengjen_neural_voices.tts_system import (
-    SonataVoice,
-    SonataTextToSpeechSystem,
+    DengjenVoice,
+    DengjenTextToSpeechSystem,
     SpeechOptions,
     SilenceProvider,
     VoiceNotFoundError,
@@ -44,8 +44,8 @@ def _make_voice(
     is_multi_speaker=False,
     speakers=None,
 ):
-    """Create a fully loaded SonataVoice without hitting the gRPC server."""
-    v = SonataVoice(
+    """Create a fully loaded DengjenVoice without hitting the gRPC server."""
+    v = DengjenVoice(
         key=key,
         name=name,
         language=language,
@@ -96,33 +96,33 @@ def tts(voice_list):
     opts.volume = None
     opts.pitch = None
     opts.sentence_silence_ms = None
-    system = SonataTextToSpeechSystem.__new__(SonataTextToSpeechSystem)
+    system = DengjenTextToSpeechSystem.__new__(DengjenTextToSpeechSystem)
     system.voices = voice_list
     system.speech_options = opts
     return system
 
 
 # ---------------------------------------------------------------------------
-# SonataVoice unit tests
+# DengjenVoice unit tests
 # ---------------------------------------------------------------------------
 
-class TestSonataVoiceFromPath:
+class TestDengjenVoiceFromPath:
 
     def test_parses_standard_key(self):
-        v = SonataVoice.from_path("/tmp/en-john-medium")
+        v = DengjenVoice.from_path("/tmp/en-john-medium")
         assert v.key == "en-john-medium"
         assert v.name == "john"
         assert v.language == "en"
         assert v.properties["quality"] == "medium"
 
     def test_parses_rt_key(self):
-        v = SonataVoice.from_path("/tmp/en-john+RT-medium")
+        v = DengjenVoice.from_path("/tmp/en-john+RT-medium")
         # name should strip '+RT'
         assert v.name == "john"
 
     def test_invalid_path_raises(self):
         with pytest.raises(ValueError):
-            SonataVoice.from_path("/tmp/notavalidkey")
+            DengjenVoice.from_path("/tmp/notavalidkey")
 
     def test_is_fast_property(self, single_voice):
         assert not single_voice.is_fast
@@ -165,7 +165,7 @@ class TestSilenceProvider:
 
 
 # ---------------------------------------------------------------------------
-# SonataTextToSpeechSystem — defaults
+# DengjenTextToSpeechSystem — defaults
 # ---------------------------------------------------------------------------
 
 class TestTTSDefaults:
@@ -187,7 +187,7 @@ class TestTTSDefaults:
 
 
 # ---------------------------------------------------------------------------
-# SonataTextToSpeechSystem — voice switching
+# DengjenTextToSpeechSystem — voice switching
 # ---------------------------------------------------------------------------
 
 class TestTTSVoiceSwitching:
@@ -227,7 +227,7 @@ class TestTTSVoiceSwitching:
         opts = SpeechOptions.__new__(SpeechOptions)
         opts.voice = dialect_voice
         opts.rate = opts.volume = opts.pitch = opts.sentence_silence_ms = None
-        system = SonataTextToSpeechSystem.__new__(SonataTextToSpeechSystem)
+        system = DengjenTextToSpeechSystem.__new__(DengjenTextToSpeechSystem)
         system.voices = [dialect_voice]
         system.speech_options = opts
 
@@ -245,7 +245,7 @@ class TestTTSVoiceSwitching:
         opts = SpeechOptions.__new__(SpeechOptions)
         opts.voice = dialect_voice
         opts.rate = opts.volume = opts.pitch = opts.sentence_silence_ms = None
-        system = SonataTextToSpeechSystem.__new__(SonataTextToSpeechSystem)
+        system = DengjenTextToSpeechSystem.__new__(DengjenTextToSpeechSystem)
         system.voices = [dialect_voice]
         system.speech_options = opts
 
@@ -256,7 +256,7 @@ class TestTTSVoiceSwitching:
 
 
 # ---------------------------------------------------------------------------
-# SonataTextToSpeechSystem — rate / volume / pitch
+# DengjenTextToSpeechSystem — rate / volume / pitch
 # ---------------------------------------------------------------------------
 
 class TestTTSParameters:
@@ -275,7 +275,7 @@ class TestTTSParameters:
 
 
 # ---------------------------------------------------------------------------
-# SonataTextToSpeechSystem — synthesis context
+# DengjenTextToSpeechSystem — synthesis context
 # ---------------------------------------------------------------------------
 
 class TestSynthesisContext:
@@ -300,7 +300,7 @@ class TestSynthesisContext:
 
 
 # ---------------------------------------------------------------------------
-# SonataTextToSpeechSystem — providers
+# DengjenTextToSpeechSystem — providers
 # ---------------------------------------------------------------------------
 
 class TestProviders:
@@ -316,18 +316,18 @@ class TestProviders:
 
 
 # ---------------------------------------------------------------------------
-# SonataTextToSpeechSystem — get_voice_variants
+# DengjenTextToSpeechSystem — get_voice_variants
 # ---------------------------------------------------------------------------
 
 class TestGetVoiceVariants:
 
     def test_standard_and_rt_keys(self):
-        std, rt = SonataTextToSpeechSystem.get_voice_variants("en-john-medium")
+        std, rt = DengjenTextToSpeechSystem.get_voice_variants("en-john-medium")
         assert std == "en-john-medium"
         assert rt == "en-john+RT-medium"
 
     def test_rt_key_is_normalized(self):
-        std, rt = SonataTextToSpeechSystem.get_voice_variants("en-john+RT-medium")
+        std, rt = DengjenTextToSpeechSystem.get_voice_variants("en-john+RT-medium")
         assert std == "en-john-medium"
         assert rt == "en-john+RT-medium"
 

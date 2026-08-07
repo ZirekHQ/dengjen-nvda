@@ -147,7 +147,7 @@ def downloaded_voice(tmp_path_factory):
     """Download the voice once per session; returns the config (.onnx.json) path.
 
     LoadVoice takes the config path and expects the matching .onnx file
-    alongside it (same naming convention SonataVoice.load() relies on in
+    alongside it (same naming convention DengjenVoice.load() relies on in
     production).
     """
     voice_dir = tmp_path_factory.mktemp("voice")

@@ -21,7 +21,7 @@ voice = string(default=None)
 """
 
 
-class SonataConfigManager:
+class DengjenConfigManager:
     """Config manager for Sonata."""
 
     def __init__(self):
@@ -45,4 +45,4 @@ class SonataConfigManager:
         return config.conf["speech"]["dengjen_neural_voices"][key]
 
 
-SonataConfig = SonataConfigManager()
+DengjenConfig = DengjenConfigManager()
