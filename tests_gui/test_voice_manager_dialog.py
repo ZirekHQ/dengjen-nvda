@@ -328,6 +328,21 @@ class TestKeyboardAccess:
     straight at the binding, so it fires a handler whether or not a user could
     ever have reached the control (#97)."""
 
+    def test_every_button_carries_an_access_key(self, dialog):
+        # tests/test_translations.py catches a locale that drops an `&`; this is
+        # the other half, a button that never had one to drop. Two of the
+        # CommandLinkButtons did not, so Alt reached neither (#108).
+        buttons = list(_buttons(dialog))
+        # positive control: a _buttons that walked nothing would pass below.
+        assert len(buttons) >= 9
+        assert [
+            # The main label only: a CommandLinkButton's GetLabel() returns the
+            # note too, and no note carries a mnemonic.
+            button.GetLabel().splitlines()[0]
+            for button in buttons
+            if _access_key(button) is None
+        ] == []
+
     @pytest.mark.parametrize("page", [0, 1])
     def test_access_keys_do_not_collide_on_a_page(self, dialog, page):
         # Only one notebook page is ever visible, so a letter reused across the

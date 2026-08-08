@@ -69,7 +69,7 @@ class InstalledDengjenVoicesPanel(SizedPanel):
             self,
             -1,
             # Translators: the main label of the install button
-            _("Install from local file"),
+            _("&Install from local file"),
             # Translators: the note for this button
             _(
                 "Install a voice from a local archive.\n"
@@ -81,7 +81,7 @@ class InstalledDengjenVoicesPanel(SizedPanel):
             self,
             -1,
             # Translators: the main label of the button for importing pre-rename voices
-            _("Import voices from Sonata"),
+            _("Import voices from &Sonata"),
             # Translators: the note for the button for importing pre-rename voices
             _(
                 "Copy voices you downloaded with the Sonata Neural Voices add-on.\n"

@@ -179,8 +179,8 @@ msgstr "&Supprimer la voix..."
 
 #. Translators: the main label of the install button
 #: addon\globalPlugins\dengjen_tts_global_plugin\voice_manager.py:67
-msgid "Install from local file"
-msgstr "Installer à partir d'un fichier local"
+msgid "&Install from local file"
+msgstr "&Installer à partir d'un fichier local"
 
 #: addon\globalPlugins\dengjen_tts_global_plugin\voice_manager.py:70
 msgid ""
@@ -426,8 +426,8 @@ msgstr "Échec de l'aperçu"
 
 #. Translators: the main label of the button for importing pre-rename voices
 #: addon\globalPlugins\dengjen_tts_global_plugin\voice_manager.py:84
-msgid "Import voices from Sonata"
-msgstr "Importer les voix depuis Sonata"
+msgid "Import voices from &Sonata"
+msgstr "Importer les &voix depuis Sonata"
 
 #. Translators: the note for the button for importing pre-rename voices
 #: addon\globalPlugins\dengjen_tts_global_plugin\voice_manager.py:86
