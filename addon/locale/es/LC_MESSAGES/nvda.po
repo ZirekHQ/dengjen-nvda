@@ -253,7 +253,7 @@ msgstr "La voz se ha eliminado con éxito."
 #. Translators: title of a message box
 #: addon\globalPlugins\dengjen_tts_global_plugin\voice_manager.py:179
 msgid "Done"
-msgstr "Echo"
+msgstr "Hecho"
 
 #. Translators: title for a dialog for opening a file
 #: addon\globalPlugins\dengjen_tts_global_plugin\voice_manager.py:188
@@ -428,7 +428,7 @@ msgstr "Prueba fallida"
 #. Translators: the main label of the button for importing pre-rename voices
 #: addon\globalPlugins\dengjen_tts_global_plugin\voice_manager.py:84
 msgid "Import voices from Sonata"
-msgstr ""
+msgstr "Importar voces desde Sonata"
 
 #. Translators: the note for the button for importing pre-rename voices
 #: addon\globalPlugins\dengjen_tts_global_plugin\voice_manager.py:86
@@ -436,6 +436,8 @@ msgid ""
 "Copy voices you downloaded with the Sonata Neural Voices add-on.\n"
 "The originals are left in place, so Sonata keeps working."
 msgstr ""
+"Copia las voces que descargaste con el complemento Voces Neuronales Sonata.\n"
+"Los originales se conservan en su sitio, por lo que Sonata sigue funcionando."
 
 #. Translators: message in a message box; {voices} is a list of voice names
 #: addon\globalPlugins\dengjen_tts_global_plugin\voice_manager.py:206
@@ -445,11 +447,15 @@ msgid ""
 "\n"
 "The originals are left in place, so Sonata keeps working. This needs as much free disk space as the voices take up."
 msgstr ""
+"¿Copiar las siguientes voces del complemento Voces Neuronales Sonata?\n"
+"{voices}\n"
+"\n"
+"Los originales se conservan en su sitio, por lo que Sonata sigue funcionando. Esto necesita tanto espacio libre en disco como ocupen las voces."
 
 #. Translators: title of a message box
 #: addon\globalPlugins\dengjen_tts_global_plugin\voice_manager.py:213
 msgid "Import voices from Sonata?"
-msgstr ""
+msgstr "¿Importar voces desde Sonata?"
 
 #. Translators: message telling the user that importing voices has failed
 #: addon\globalPlugins\dengjen_tts_global_plugin\voice_manager.py:224
@@ -460,11 +466,16 @@ msgid ""
 "\n"
 "See NVDA's log for more details."
 msgstr ""
+"Se produjo un error al importar las voces.\n"
+"\n"
+"{detail}\n"
+"\n"
+"Verifica el registro de NVDA para más detalles."
 
 #. Translators: title of a message box
 #: addon\globalPlugins\dengjen_tts_global_plugin\voice_manager.py:229
 msgid "Import failed"
-msgstr ""
+msgstr "Importación fallida"
 
 #. Translators: message telling the user which voices were imported
 #: addon\globalPlugins\dengjen_tts_global_plugin\voice_manager.py:236
@@ -472,28 +483,30 @@ msgid ""
 "The following voices were imported:\n"
 "{voices}"
 msgstr ""
+"Se importaron las siguientes voces:\n"
+"{voices}"
 
 #. Translators: title of a message box
 #: addon\globalPlugins\dengjen_tts_global_plugin\voice_manager.py:240
 msgid "Voices imported"
-msgstr ""
+msgstr "Voces importadas"
 
 #. Translators: shown after installing when the pre-rename add-on is still present
 #: addon\installTasks.py:77
 msgid "The Sonata Neural Voices add-on is still installed, so your downloaded voices have been left where they are and Sonata keeps working. To use them with Dengjen Neural Voices, open the Dengjen voice manager and choose \"Import voices from Sonata\". Removing the Sonata Neural Voices add-on also avoids two synthesizers appearing in your speech settings."
-msgstr ""
+msgstr "El complemento Voces Neuronales Sonata sigue instalado, por lo que las voces que descargaste se han dejado donde estaban y Sonata sigue funcionando. Para usarlas con Voces Neuronales Dengjen, abre el administrador de voces Dengjen y elige \"Importar voces desde Sonata\". Eliminar el complemento Voces Neuronales Sonata también evita que aparezcan dos sintetizadores en las opciones de voz."
 
 #. Translators: title of the message shown when the pre-rename add-on is still present
 #: addon\installTasks.py:85
 msgid "Old add-on still installed"
-msgstr ""
+msgstr "El complemento antiguo sigue instalado"
 
 #. Translators: reported when NVDA fails to switch to a Dengjen
 #: addon\synthDrivers\dengjen_neural_voices\__init__.py:454
 msgid "Failed to load voice {voice}. Keeping the previous voice."
-msgstr ""
+msgstr "Se produjo un error al cargar la voz {voice}. Se mantiene la voz anterior."
 
 #. Translators: what's new content for the add-on version to be shown in the add-on store
 #: buildVars.py:31
 msgid "The add-on has been renamed to Dengjen Neural Voices at the request of the original author, as a condition of listing in the NVDA Add-on Store. After upgrading you must reselect the synthesizer in NVDA's speech settings; your installed voices, rate, pitch and volume carry over automatically. Remove the old Sonata Neural Voices add-on, which no longer has access to the downloaded voices."
-msgstr ""
+msgstr "El complemento ha pasado a llamarse Voces Neuronales Dengjen a petición del autor original, como condición para aparecer en la Tienda de Complementos de NVDA. Después de actualizar debes volver a seleccionar el sintetizador en las opciones de voz de NVDA; tus voces instaladas, la velocidad, el tono y el volumen se conservan automáticamente. Elimina el antiguo complemento Voces Neuronales Sonata, que ya no tiene acceso a las voces descargadas."
