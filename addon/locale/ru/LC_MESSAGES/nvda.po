@@ -430,7 +430,7 @@ msgstr "Сбой воспроизведения образца"
 #. Translators: the main label of the button for importing pre-rename voices
 #: addon\globalPlugins\dengjen_tts_global_plugin\voice_manager.py:84
 msgid "Import voices from Sonata"
-msgstr ""
+msgstr "Импортировать голоса из Sonata"
 
 #. Translators: the note for the button for importing pre-rename voices
 #: addon\globalPlugins\dengjen_tts_global_plugin\voice_manager.py:86
@@ -438,6 +438,8 @@ msgid ""
 "Copy voices you downloaded with the Sonata Neural Voices add-on.\n"
 "The originals are left in place, so Sonata keeps working."
 msgstr ""
+"Скопировать голоса, загруженные с помощью дополнения Нейронные голоса Sonata.\n"
+"Оригиналы остаются на месте, поэтому Sonata продолжает работать."
 
 #. Translators: message in a message box; {voices} is a list of voice names
 #: addon\globalPlugins\dengjen_tts_global_plugin\voice_manager.py:206
@@ -447,11 +449,15 @@ msgid ""
 "\n"
 "The originals are left in place, so Sonata keeps working. This needs as much free disk space as the voices take up."
 msgstr ""
+"Скопировать следующие голоса из дополнения Нейронные голоса Sonata?\n"
+"{voices}\n"
+"\n"
+"Оригиналы остаются на месте, поэтому Sonata продолжает работать. Для этого потребуется столько свободного места на диске, сколько занимают голоса."
 
 #. Translators: title of a message box
 #: addon\globalPlugins\dengjen_tts_global_plugin\voice_manager.py:213
 msgid "Import voices from Sonata?"
-msgstr ""
+msgstr "Импортировать голоса из Sonata?"
 
 #. Translators: message telling the user that importing voices has failed
 #: addon\globalPlugins\dengjen_tts_global_plugin\voice_manager.py:224
@@ -462,11 +468,16 @@ msgid ""
 "\n"
 "See NVDA's log for more details."
 msgstr ""
+"Не удалось импортировать голоса.\n"
+"\n"
+"{detail}\n"
+"\n"
+"Более подробную информацию см. в журнале NVDA."
 
 #. Translators: title of a message box
 #: addon\globalPlugins\dengjen_tts_global_plugin\voice_manager.py:229
 msgid "Import failed"
-msgstr ""
+msgstr "Не удалось импортировать"
 
 #. Translators: message telling the user which voices were imported
 #: addon\globalPlugins\dengjen_tts_global_plugin\voice_manager.py:236
@@ -474,28 +485,30 @@ msgid ""
 "The following voices were imported:\n"
 "{voices}"
 msgstr ""
+"Импортированы следующие голоса:\n"
+"{voices}"
 
 #. Translators: title of a message box
 #: addon\globalPlugins\dengjen_tts_global_plugin\voice_manager.py:240
 msgid "Voices imported"
-msgstr ""
+msgstr "Голоса импортированы"
 
 #. Translators: shown after installing when the pre-rename add-on is still present
 #: addon\installTasks.py:77
 msgid "The Sonata Neural Voices add-on is still installed, so your downloaded voices have been left where they are and Sonata keeps working. To use them with Dengjen Neural Voices, open the Dengjen voice manager and choose \"Import voices from Sonata\". Removing the Sonata Neural Voices add-on also avoids two synthesizers appearing in your speech settings."
-msgstr ""
+msgstr "Дополнение Нейронные голоса Sonata всё ещё установлено, поэтому загруженные голоса оставлены на своих местах и Sonata продолжает работать. Чтобы использовать их с Нейронными голосами Dengjen, откройте менеджер голосов Dengjen и выберите \"Импортировать голоса из Sonata\". Удаление дополнения Нейронные голоса Sonata также избавит вас от двух синтезаторов в настройках речи."
 
 #. Translators: title of the message shown when the pre-rename add-on is still present
 #: addon\installTasks.py:85
 msgid "Old add-on still installed"
-msgstr ""
+msgstr "Старое дополнение всё ещё установлено"
 
 #. Translators: reported when NVDA fails to switch to a Dengjen
 #: addon\synthDrivers\dengjen_neural_voices\__init__.py:454
 msgid "Failed to load voice {voice}. Keeping the previous voice."
-msgstr ""
+msgstr "Не удалось загрузить голос {voice}. Сохранён предыдущий голос."
 
 #. Translators: what's new content for the add-on version to be shown in the add-on store
 #: buildVars.py:31
 msgid "The add-on has been renamed to Dengjen Neural Voices at the request of the original author, as a condition of listing in the NVDA Add-on Store. After upgrading you must reselect the synthesizer in NVDA's speech settings; your installed voices, rate, pitch and volume carry over automatically. Remove the old Sonata Neural Voices add-on, which no longer has access to the downloaded voices."
-msgstr ""
+msgstr "Дополнение переименовано в Нейронные голоса Dengjen по просьбе первоначального автора, как условие размещения в Магазине дополнений NVDA. После обновления необходимо заново выбрать синтезатор в настройках речи NVDA; установленные голоса, скорость, высота и громкость переносятся автоматически. Удалите старое дополнение Нейронные голоса Sonata — у него больше нет доступа к загруженным голосам."
