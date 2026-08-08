@@ -123,6 +123,40 @@ def test_translations_neither_drop_nor_invent_access_keys(catalogue):
     assert not invented, f"translations added an access key: {invented}"
 
 
+# The Installed tab's buttons plus the dialog's own Close button: the set a
+# user sees at once, so a letter reused inside it makes Alt ambiguous. The
+# Download tab is a separate page and free to reuse the same letters.
+_INSTALLED_TAB_LABELS = (
+    "&Voice model card...",
+    "&Remove voice...",
+    "&Install from local file",
+    "Import voices from &Sonata",
+    "&Close",
+)
+
+
+@pytest.mark.parametrize("catalogue", _CATALOGUES, ids=_LOCALES)
+def test_translated_access_keys_do_not_collide_on_the_installed_tab(catalogue):
+    """tests_gui/ only ever sees English, so a collision a translator
+    introduces is invisible to it -- and finding a free letter is not the same
+    problem in every language. French cannot mirror the English `&Sonata`:
+    `&Supprimer la voix...` already claims its `s` (#108).
+    """
+    entries = dict(_po_entries(catalogue))
+    drifted = [label for label in _INSTALLED_TAB_LABELS if label not in entries]
+    assert not drifted, f"this list no longer matches the catalogue: {drifted}"
+
+    claimed = {}
+    for label in _INSTALLED_TAB_LABELS:
+        key = _access_key(entries[label])
+        if key is not None:  # a string no translator has reached yet
+            claimed.setdefault(key, []).append(entries[label])
+    # positive control: an empty or near-empty tally cannot collide.
+    assert len(claimed) >= 3, claimed
+    collisions = {key: labels for key, labels in claimed.items() if len(labels) > 1}
+    assert not collisions, f"Alt is ambiguous: {collisions}"
+
+
 def _binds_gettext(source):
     """Does the module give itself a `_`, rather than inheriting NVDA's?"""
     return (
