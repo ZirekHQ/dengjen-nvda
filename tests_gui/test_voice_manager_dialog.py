@@ -358,6 +358,46 @@ class TestKeyboardAccess:
         assert panel.buttons_panel.IsEnabled() is False
         assert _reachable_by_tab(panel.download_std_btn) is False
 
+    def test_the_installed_pages_controls_all_precede_the_close_button(self, dialog):
+        panel = dialog.notebookCtrl.GetPage(0)
+        # Enabled by hand: this dialog has no voices installed, so
+        # update_voices_list disables the panel and its two buttons drop out of
+        # the order entirely -- which is the shipped behaviour, not the subject.
+        panel.buttons_panel.Enable()
+        order = _tab_order_from(panel.voices_list)
+        close = dialog.FindWindowById(wx.ID_CANCEL)
+        assert close.GetId() in order
+        assert order[: order.index(close.GetId()) + 1] == _ids(
+            panel.voices_list,
+            panel.model_card_button,
+            panel.remove_voice_button,
+            _find_child_of_type(panel, CommandLinkButton),
+            close,
+        )
+
+    def test_the_download_pages_controls_all_precede_the_close_button(self, dialog):
+        # Selected first: the walk starts by focusing a control, and a control
+        # on an unselected notebook page is hidden, so focus never lands on it.
+        dialog.notebookCtrl.SetSelection(1)
+        panel = dialog.notebookCtrl.GetPage(1)
+        panel.buttons_panel.Enable()
+        order = _tab_order_from(panel.language_choice)
+        close = dialog.FindWindowById(wx.ID_CANCEL)
+        assert close.GetId() in order
+        assert order[: order.index(close.GetId()) + 1] == _ids(
+            panel.language_choice,
+            panel.voices_list,
+            panel.preview_btn,
+            panel.download_std_btn,
+            panel.download_rt_btn,
+            _find_child_of_type(panel, wx.Button),  # the refresh button
+            close,
+        )
+        # Anchor: the speaker choice is Enable(False)'d in its own right, so
+        # enabling the panel above does not bring it back. Without it, a walk
+        # that only mirrored child order would pass the assertion above.
+        assert panel.speaker_choice.GetId() not in order
+
 
 class TestNotebookPageChanged:
     def test_switching_to_the_download_tab_reaches_its_populate_list(
@@ -382,6 +422,35 @@ class TestNotebookPageChanged:
         dialog.notebookCtrl.SetSelection(1)
         assert calls == [{"force_online": False}]
         assert online_panel.language_choice.GetCount() == 2
+
+
+def _ids(*windows):
+    return [window.GetId() for window in windows]
+
+
+def _tab_order_from(control, limit=15):
+    """The ids of the windows Tab visits from `control`, starting with it.
+
+    Navigate() raises the same wxNavigationKeyEvent a Tab press does, and it is
+    the only way to get the order here: wx.UIActionSimulator exists on the
+    runner but its keystrokes land nowhere, the job having no foreground
+    session. Walking off the end of the page and into the notebook is an
+    artefact of that -- entering a page from the tab strip is native handling a
+    synthetic event never reaches -- so callers slice at the Close button (#97).
+
+    Ids rather than the windows themselves: for a control the add-on keeps no
+    Python reference to, wx builds a fresh wrapper per lookup, so the Close
+    button FindFocus() returns is never the object FindWindowById() does.
+    """
+    control.SetFocus()
+    order = []
+    while len(order) < limit:
+        current = wx.Window.FindFocus()
+        if current is None or current.GetId() in order:
+            break
+        order.append(current.GetId())
+        current.Navigate()
+    return order
 
 
 def _reachable_by_tab(window):
