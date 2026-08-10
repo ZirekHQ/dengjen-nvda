@@ -92,9 +92,34 @@ def voice_manager_state(nvda, expr: str) -> Any:
     """Evaluate `expr` inside NVDA against the current top-level window.
 
     `expr` sees `dialog` (wx.GetActiveWindow()) and `wx`. Read-only use only
-    -- see the "Global Constraints" note on nvda.eval() in the plan this
-    helper was written from. Requires allow-eval = true in pyproject.toml.
+    -- a synchronization/assertion oracle, never a way to drive controls;
+    driving goes through nvda.keys, because proving real keyboard
+    reachability against a real NVDA is the point of this suite. Requires
+    allow-eval = true in pyproject.toml.
     """
     return nvda.eval(
         "(lambda wx, dialog: " + expr + ")(__import__('wx'), __import__('wx').GetActiveWindow())"
     )
+
+
+def press_until(
+    nvda,
+    gesture: str,
+    predicate: Callable[[], Any],
+    *,
+    attempts: int = 5,
+    timeout: float = 2.0,
+    description: str = "",
+) -> None:
+    """Retry a keystroke whose effect can be silently swallowed by a UI-focus
+    race, polling `predicate` (a read-only check, e.g. via voice_manager_state)
+    after each press. Re-raises the last timeout if every attempt fails.
+    """
+    for attempt in range(attempts):
+        nvda.keys.press(gesture)
+        try:
+            wait_until(predicate, timeout=timeout, description=description or f"{gesture!r} to land")
+            return
+        except AssertionError:
+            if attempt == attempts - 1:
+                raise

@@ -16,10 +16,11 @@ import pytest
 if sys.platform == "win32":
     from nvda_testkit.namespaces.addons import AddonState
 
-from .conftest import voice_manager_state, wait_until
+from .conftest import press_until, voice_manager_state, wait_until
 
 ADDON_NAME = "dengjen_neural_voices"
 NO_VOICE_MODAL_TEXT = "no dengjen voice was found"
+NO_VOICE_MODAL_TITLE = "Dengjen Neural Voices"
 VOICE_MANAGER_TITLE = "dengjen voice manager"
 
 #: populate_list() (voice_manager.py) shows an AsyncSnakDialog "please wait"
@@ -90,7 +91,19 @@ def downloaded_voice_key(nvda_session, addon_under_test):
     nvda.keys.press("y")  # open the voice manager
 
     nvda.speech.wait_for(VOICE_MANAGER_TITLE, timeout=10, since=before)
-    nvda.keys.press("control+tab")  # Installed tab -> Download tab
+    # Same "keystroke right after a UI transition" race as the retry in
+    # test_downloading_the_fast_variant_voice_installs_it below, just in the
+    # opposite tab direction -- go through the same shared helper rather
+    # than trust that the preceding speech.wait_for makes this one safe.
+    press_until(
+        nvda,
+        "control+tab",  # Installed tab -> Download tab
+        lambda: voice_manager_state(
+            nvda, f"{_VOICE_MANAGER_DIALOG}.notebookCtrl.GetSelection()"
+        )
+        == 1,
+        description="the notebook to switch to the Download tab",
+    )
 
     before = nvda.speech.index()
     nvda.speech.wait_for("retrieving voices list", timeout=10, since=before)
@@ -177,24 +190,19 @@ def test_downloading_the_fast_variant_voice_installs_it(nvda, downloaded_voice_k
     # returned to the notebook after the fixture dismissed its real Windows
     # messageBox with "n" -- when that happens the keystroke is swallowed
     # outright: GetSelection() stays on the Download tab (1) forever, not
-    # just slow to flip (confirmed live on CI: 29 samples over 15s all read
-    # 1). Retrying the press itself, not just the wait, is what a sighted
-    # user would do if a keypress visibly didn't register.
-    for attempt in range(5):
-        nvda.keys.press("control+tab")  # Download tab -> Installed tab
-        try:
-            wait_until(
-                lambda: voice_manager_state(
-                    nvda, f"{_VOICE_MANAGER_DIALOG}.notebookCtrl.GetSelection()"
-                )
-                == 0,
-                timeout=2,
-                description="the notebook to switch to the Installed tab",
-            )
-            break
-        except AssertionError:
-            if attempt == 4:
-                raise
+    # just slow to flip. Retrying the press itself via press_until, not just
+    # the wait, is what a sighted user would do if a keypress visibly didn't
+    # register -- the fixture's own Installed->Download control+tab has the
+    # same race, so both go through the shared helper.
+    press_until(
+        nvda,
+        "control+tab",  # Download tab -> Installed tab
+        lambda: voice_manager_state(
+            nvda, f"{_VOICE_MANAGER_DIALOG}.notebookCtrl.GetSelection()"
+        )
+        == 0,
+        description="the notebook to switch to the Installed tab",
+    )
 
     installed_keys = wait_until(
         lambda: voice_manager_state(
