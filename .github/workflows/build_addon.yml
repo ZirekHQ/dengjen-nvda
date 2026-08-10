@@ -118,8 +118,8 @@ jobs:
     needs: ["build"]
     # Real network calls to Hugging Face for voice downloads (added in a
     # later task) make this slower and flakier than the deterministic
-    # suites. Kept out of the `test` gate deliberately -- see the plan this
-    # job was written from.
+    # suites, so it's kept out of the `test` gate deliberately rather than
+    # blocking merges on a flaky external dependency.
     continue-on-error: true
     steps:
       - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5.1.0
