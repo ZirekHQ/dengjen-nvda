@@ -1,0 +1,4 @@
+[tool.nvda-testkit]
+addon-bundle = "dengjen_neural_voices-*.nvda-addon"
+nvda-channel = "stable"
+allow-eval = true
