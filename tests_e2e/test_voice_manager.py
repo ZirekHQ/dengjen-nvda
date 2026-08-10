@@ -183,3 +183,16 @@ def test_downloading_the_fast_variant_voice_installs_it(nvda, downloaded_voice_k
     )
     assert downloaded_voice_key in installed_keys
     assert_no_unexpected_errors(nvda)
+
+
+def test_the_downloaded_voice_produces_real_speech(nvda, downloaded_voice_key, assert_no_unexpected_errors):
+    nvda.config.set(["speech", "synth"], ADDON_NAME)
+    nvda.config.set(["speech", ADDON_NAME, "voice"], downloaded_voice_key)
+    nvda.restart()  # NVDA reads config.conf["speech"]["synth"] on startup
+
+    before = nvda.speech.index()
+    phrase = "dengjen testkit smoke phrase"
+    nvda.speech.speak(phrase)
+    found = nvda.speech.wait_for(phrase, timeout=15, since=before)
+    assert phrase in found.text.lower()
+    assert_no_unexpected_errors(nvda)
