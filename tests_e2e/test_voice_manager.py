@@ -199,6 +199,24 @@ def downloaded_voice_key(nvda_session, addon_under_test):
         description="the voice-downloaded message box to close",
     )
 
+    # This messageBox's parent is gui.mainFrame (voice_download.py), not the
+    # voice manager dialog, so closing it does not reliably hand keyboard
+    # focus back to the dialog -- Windows can instead give it to whatever
+    # window was active before NVDA's UI intervened, and a control+tab sent
+    # there lands on that window's own tab handling, not the notebook's. A
+    # sighted user landing on the wrong window would Alt+Tab back; do the
+    # same for real (never via eval, which stays read-only in this suite),
+    # only if focus genuinely isn't on the dialog already.
+    if not voice_manager_state(nvda, "dialog is not None and hasattr(dialog, 'notebookCtrl')"):
+        press_until(
+            nvda,
+            "alt+tab",
+            lambda: voice_manager_state(
+                nvda, "dialog is not None and hasattr(dialog, 'notebookCtrl')"
+            ),
+            description="focus to return to the voice manager dialog",
+        )
+
     # on_download_rt's success_callback invalidates both pages' cache and
     # re-triggers the *online* page's own populate_list -- another
     # AsyncSnakDialog toast, timed independently of the messageBox we just
