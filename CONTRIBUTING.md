@@ -45,19 +45,28 @@ scons pot
 pytest                    # the stub-based suite -- runs anywhere, incl. Linux
 pytest tests_contract/    # real sonata-grpc.exe        (Windows only)
 pytest tests_gui/         # real wxPython               (Windows only)
+pytest tests_e2e/ -v      # real NVDA, install to speech (Windows CI only)
 ```
 
-Three trees, because the process-wide fakes they need are mutually exclusive:
+Four trees, because the process-wide fakes they need are mutually exclusive:
 
 | Tree | Fakes | Real | Runs on |
 | --- | --- | --- | --- |
 | `tests/` | NVDA, `wx`, `grpc` | add-on logic | Linux + Windows |
 | `tests_contract/` | nothing — avoids NVDA entirely | `grpc`, `sonata-grpc.exe` | Windows |
 | `tests_gui/` | NVDA | `wxPython` | Windows |
+| `tests_e2e/` | nothing | a full NVDA install, driven end to end | Windows CI only |
 
-`tests/conftest.py` installs a stub `wx` into `sys.modules` for the whole process, so a test needing real wx cannot live there — hence `tests_gui/`. Same reason `tests_contract/` is separate: it needs the real `grpc` that `tests/` mocks. `pytest.ini`'s `testpaths = tests` keeps both Windows-only trees out of a bare `pytest`, and their test modules self-skip on other platforms, so a Linux `pytest` is always green.
+`tests/conftest.py` installs a stub `wx` into `sys.modules` for the whole process, so a test needing real wx cannot live there — hence `tests_gui/`. Same reason `tests_contract/` is separate: it needs the real `grpc` that `tests/` mocks. `pytest.ini`'s `testpaths = tests` keeps the Windows-only trees out of a bare `pytest`, and their test modules self-skip on other platforms, so a Linux `pytest` is always green.
 
 You cannot run `tests_gui/` on Linux at all — wxPython publishes no Linux wheels on PyPI for any release, so `pip install`ing it there is a doomed source build. The tree self-skips instead (see below), and verification happens on the `windows-latest` CI leg.
+
+`tests_e2e/` drives a real, disposable NVDA install end to end — installing the built add-on, working through its no-voice modal, downloading a real voice, speaking with it, and removing it again — using [nvda-addon-testkit](https://pypi.org/project/nvda-addon-testkit/). Unlike `tests_gui/`, this isn't something to run on a personal Windows machine either: it needs the `e2e` CI job's setup (a provisioned NVDA, `requirements-test-e2e.txt`). Treat it as CI-only and read its job output on GitHub Actions rather than trying to reproduce it locally. If you're changing that job itself, `nvda-testkit doctor` is worth running once in it to sanity-check the environment before the suite:
+
+```bash
+nvda-testkit doctor
+pytest tests_e2e/ -v
+```
 
 ### How the NVDA stubs work
 

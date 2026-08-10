@@ -196,3 +196,11 @@ def test_the_downloaded_voice_produces_real_speech(nvda, downloaded_voice_key, a
     found = nvda.speech.wait_for(phrase, timeout=15, since=before)
     assert phrase in found.text.lower()
     assert_no_unexpected_errors(nvda)
+
+
+def test_removal_is_also_two_phase(nvda):
+    """Must stay last in this file: uninstalls what addon_under_test set up."""
+    nvda.addons.remove(ADDON_NAME)
+    assert nvda.addons.state(ADDON_NAME) is AddonState.PENDING_REMOVE
+    nvda.restart()
+    assert nvda.addons.state(ADDON_NAME) is AddonState.NOT_INSTALLED
