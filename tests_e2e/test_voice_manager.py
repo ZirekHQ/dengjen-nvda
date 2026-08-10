@@ -10,6 +10,7 @@ nvda-addon-testkit's own tests_e2e/test_demo_addon.py.
 from __future__ import annotations
 
 import sys
+import time
 
 import pytest
 
@@ -173,6 +174,20 @@ def test_downloading_the_fast_variant_voice_installs_it(nvda, downloaded_voice_k
     # from disk, same as a user checking their download landed.
     nvda.wait_until_idle(timeout=15)  # let the fixture's trailing UI activity settle first
     nvda.keys.press("control+tab")  # Download tab -> Installed tab
+
+    # TEMPORARY DIAGNOSTIC (flake investigation, remove before merging):
+    # does the notebook's own page index actually flip to 0 (Installed),
+    # and if so how long does that take relative to the list repopulating?
+    _diag_deadline = time.monotonic() + 15
+    _diag_seen = []
+    while time.monotonic() < _diag_deadline:
+        _sel = voice_manager_state(nvda, f"{_VOICE_MANAGER_DIALOG}.notebookCtrl.GetSelection()")
+        _diag_seen.append((round(time.monotonic() - (_diag_deadline - 15), 2), _sel))
+        if _sel == 0:
+            break
+        time.sleep(0.5)
+    print(f"DIAGNOSTIC GetSelection() samples (elapsed_s, selection): {_diag_seen}")
+
     installed_keys = wait_until(
         lambda: voice_manager_state(
             nvda,
