@@ -148,6 +148,13 @@ def downloaded_voice_key(nvda_session, addon_under_test):
     nvda.speech.wait_for("voice downloaded|successfully downloaded", timeout=90, since=before)
     nvda.keys.press("n")  # decline the immediate restart offer; Task 5 restarts explicitly
 
+    # on_download_rt's success_callback invalidates both pages' cache and
+    # re-triggers the *online* page's own populate_list -- another
+    # AsyncSnakDialog toast, timed independently of the messageBox we just
+    # dismissed. Settling here, not in the test, keeps that race off of every
+    # caller of this fixture.
+    nvda.wait_until_idle(timeout=15)
+
     # DengjenTextToSpeechSystem.get_voice_variants (tts_system.py:383-387) keys
     # the installed fast variant "{lang}-{name}+RT-{quality}", not the plain
     # online key -- e.g. online "ar_JO-kareem-low" installs as
@@ -164,10 +171,15 @@ def test_downloading_the_fast_variant_voice_installs_it(nvda, downloaded_voice_k
     # does not repopulate a tab that isn't showing. Switching to it is what
     # triggers onNotebookPageChanged -> populate_list() -> a real refresh
     # from disk, same as a user checking their download landed.
+    nvda.wait_until_idle(timeout=15)  # let the fixture's trailing UI activity settle first
     nvda.keys.press("control+tab")  # Download tab -> Installed tab
-    installed_keys = voice_manager_state(
-        nvda,
-        f"[v.key for v in {_VOICE_MANAGER_DIALOG}.notebookCtrl.GetPage(0).voices_list._objects]",
+    installed_keys = wait_until(
+        lambda: voice_manager_state(
+            nvda,
+            f"[v.key for v in {_VOICE_MANAGER_DIALOG}.notebookCtrl.GetPage(0).voices_list._objects]",
+        ),
+        timeout=15,
+        description="the Installed tab to list the just-downloaded voice",
     )
     assert downloaded_voice_key in installed_keys
     assert_no_unexpected_errors(nvda)
