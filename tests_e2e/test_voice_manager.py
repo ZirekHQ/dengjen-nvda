@@ -22,6 +22,14 @@ ADDON_NAME = "dengjen_neural_voices"
 NO_VOICE_MODAL_TEXT = "no dengjen voice was found"
 VOICE_MANAGER_TITLE = "dengjen voice manager"
 
+#: populate_list() (voice_manager.py) shows an AsyncSnakDialog "please wait"
+#: toast modally (components.py's gui.runScriptModalDialog) while the voice
+#: list loads in the background, so wx.GetActiveWindow() -- the `dialog`
+#: voice_manager_state() binds -- is that toast, not DengjenVoiceManagerDialog,
+#: for as long as the fetch is in flight. Locating the real dialog by its
+#: notebookCtrl attribute instead sidesteps that race.
+_VOICE_MANAGER_DIALOG = "next(w for w in wx.GetTopLevelWindows() if hasattr(w, 'notebookCtrl'))"
+
 
 @pytest.mark.fresh_nvda
 def test_install_is_two_phase_and_completes_on_restart(
@@ -88,7 +96,7 @@ def downloaded_voice_key(nvda_session, addon_under_test):
     nvda.speech.wait_for("retrieving voices list", timeout=10, since=before)
     wait_until(
         lambda: voice_manager_state(
-            nvda, "dialog.notebookCtrl.GetPage(1).language_choice.GetCount()"
+            nvda, f"{_VOICE_MANAGER_DIALOG}.notebookCtrl.GetPage(1).language_choice.GetCount()"
         ) > 0,
         timeout=30,
         description="the online language list to populate",
@@ -97,7 +105,7 @@ def downloaded_voice_key(nvda_session, addon_under_test):
     nvda.keys.press("downArrow")  # select the first language
     wait_until(
         lambda: voice_manager_state(
-            nvda, "dialog.notebookCtrl.GetPage(1).voices_list.GetItemCount()"
+            nvda, f"{_VOICE_MANAGER_DIALOG}.notebookCtrl.GetPage(1).voices_list.GetItemCount()"
         ) > 0,
         timeout=10,
         description="voices for the selected language to list",
@@ -106,7 +114,9 @@ def downloaded_voice_key(nvda_session, addon_under_test):
     rt_index = voice_manager_state(
         nvda,
         "next("
-        "  i for i, v in enumerate(dialog.notebookCtrl.GetPage(1).voices_list._objects)"
+        "  i for i, v in enumerate("
+        f"    {_VOICE_MANAGER_DIALOG}.notebookCtrl.GetPage(1).voices_list._objects"
+        "  )"
         "  if v.has_rt_variant"
         ")",
     )
@@ -116,7 +126,7 @@ def downloaded_voice_key(nvda_session, addon_under_test):
         nvda.keys.press("downArrow")
 
     voice_key = voice_manager_state(
-        nvda, "dialog.notebookCtrl.GetPage(1).voices_list.get_selected().key"
+        nvda, f"{_VOICE_MANAGER_DIALOG}.notebookCtrl.GetPage(1).voices_list.get_selected().key"
     )
 
     nvda.keys.press_all("tab", "tab", "tab")  # voices_list -> preview -> std -> rt button
@@ -138,7 +148,7 @@ def test_downloading_the_fast_variant_voice_installs_it(nvda, downloaded_voice_k
     nvda.keys.press("control+tab")  # Download tab -> Installed tab
     installed_keys = voice_manager_state(
         nvda,
-        "[v.key for v in dialog.notebookCtrl.GetPage(0).voices_list._objects]",
+        f"[v.key for v in {_VOICE_MANAGER_DIALOG}.notebookCtrl.GetPage(0).voices_list._objects]",
     )
     assert downloaded_voice_key in installed_keys
     assert_no_unexpected_errors(nvda)
