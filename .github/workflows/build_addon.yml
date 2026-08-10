@@ -139,9 +139,8 @@ jobs:
       - name: Install e2e test dependencies
         run: "pip install --only-binary :all: -r requirements-test-e2e.txt"
 
-      - name: Cache NVDA launcher
-        # zizmor: ignore[cache-poisoning] only caches the read-only NVDA launcher download, not build/release artifacts
-        uses: actions/cache@0057852bfaa89a56745cba8c7296529d2fc39830 # v4.3.0
+      - name: Restore NVDA launcher cache
+        uses: actions/cache/restore@0057852bfaa89a56745cba8c7296529d2fc39830 # v4.3.0
         with:
           path: ~/.cache/nvda-testkit
           key: nvda-launcher-stable-${{ github.run_id }}
@@ -149,6 +148,13 @@ jobs:
 
       - run: nvda-testkit doctor
       - run: pytest tests_e2e/ -v
+
+      - name: Save NVDA launcher cache
+        if: always() && github.event_name != 'pull_request'
+        uses: actions/cache/save@0057852bfaa89a56745cba8c7296529d2fc39830 # v4.3.0
+        with:
+          path: ~/.cache/nvda-testkit
+          key: nvda-launcher-stable-${{ github.run_id }}
 
       - if: failure()
         uses: actions/upload-artifact@330a01c490aca151604b8cf639adc76d48f6c5d4 # v5.0.0
