@@ -68,8 +68,21 @@ def test_the_no_voice_modal_appears_and_no_declines_it(
 
     nvda.keys.press("n")  # decline
 
-    active_title = voice_manager_state(nvda, "dialog.GetTitle() if dialog else ''")
-    assert VOICE_MANAGER_TITLE not in active_title.lower()
+    # Only a positive wait proves the "n" actually landed. Without it,
+    # GetActiveWindow() can still be the messageBox itself (title
+    # "Dengjen Neural Voices") if the keystroke was swallowed -- and that
+    # title also doesn't mention the voice manager, so the old assertion
+    # below would pass either way.
+    wait_until(
+        lambda: voice_manager_state(nvda, "dialog.GetTitle() if dialog else ''")
+        != NO_VOICE_MODAL_TITLE,
+        timeout=5,
+        description="the no-voice message box to close",
+    )
+    has_voice_manager = voice_manager_state(
+        nvda, "any(hasattr(w, 'notebookCtrl') for w in wx.GetTopLevelWindows())"
+    )
+    assert not has_voice_manager
     assert_no_unexpected_errors(nvda)
 
 
