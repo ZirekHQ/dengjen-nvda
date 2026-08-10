@@ -102,6 +102,13 @@ def downloaded_voice_key(nvda_session, addon_under_test):
         description="the online language list to populate",
     )
 
+    # control+tab switches the notebook's page but leaves keyboard focus on
+    # the tab strip itself, not the new page's controls -- nothing in
+    # voice_manager.py moves it in. One more tab reaches language_choice,
+    # confirmed first in the real tab order by
+    # tests_gui/test_voice_manager_dialog.py's
+    # test_the_download_pages_controls_all_precede_the_close_button.
+    nvda.keys.press("tab")  # notebook tab strip -> language_choice
     nvda.keys.press("downArrow")  # select the first language
     wait_until(
         lambda: voice_manager_state(
@@ -122,6 +129,11 @@ def downloaded_voice_key(nvda_session, addon_under_test):
     )
     assert rt_index is not None, "no voice for the first language has a fast (RT) variant"
 
+    # on_language_selection_change() sets the list's *internal* focused item
+    # (SetItemState(..., LIST_STATE_FOCUSED, ...)) but never calls SetFocus,
+    # so keyboard focus is still on language_choice -- without this tab the
+    # downArrow loop below would just keep changing the language.
+    nvda.keys.press("tab")  # language_choice -> voices_list
     for _ in range(rt_index):
         nvda.keys.press("downArrow")
 
