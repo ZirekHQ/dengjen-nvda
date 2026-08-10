@@ -65,11 +65,17 @@ def test_the_no_voice_modal_appears_and_no_declines_it(
 
 
 @pytest.fixture(scope="session")
-def downloaded_voice_key(nvda, addon_under_test):
+def downloaded_voice_key(nvda_session, addon_under_test):
     """Downloads one real voice via the real dialog, once per session.
     Tests 4 (this) and 5 (real speech) both need a voice actually on disk;
     this fixture is where that happens so speech-focused tests don't also
-    have to drive the download UI."""
+    have to drive the download UI.
+
+    Depends on nvda_session, not the function-scoped nvda: a session-scoped
+    fixture cannot request a narrower-scoped one (pytest ScopeMismatch).
+    nvda_session is the same underlying NvdaClient nvda wraps with a
+    per-test reset()."""
+    nvda = nvda_session
     nvda.restart()  # fresh startup -> the no-voice modal fires again
     before = nvda.speech.index()
     nvda.speech.wait_for(NO_VOICE_MODAL_TEXT, timeout=15, since=before)
