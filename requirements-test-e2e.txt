@@ -1,0 +1,6 @@
+# nvda-addon-testkit for the real-NVDA e2e layer (Windows leg only).
+#
+# Installs a disposable portable NVDA, installs the built .nvda-addon into
+# it, and drives it via pytest. See tests_e2e/conftest.py for why this tree
+# is kept out of every other suite's collection.
+nvda-addon-testkit==0.1.1

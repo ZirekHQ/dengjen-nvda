@@ -45,19 +45,28 @@ scons pot
 pytest                    # the stub-based suite -- runs anywhere, incl. Linux
 pytest tests_contract/    # real sonata-grpc.exe        (Windows only)
 pytest tests_gui/         # real wxPython               (Windows only)
+pytest tests_e2e/ -v      # real NVDA, install to speech (Windows CI only)
 ```
 
-Three trees, because the process-wide fakes they need are mutually exclusive:
+Four trees, because the process-wide fakes they need are mutually exclusive:
 
 | Tree | Fakes | Real | Runs on |
 | --- | --- | --- | --- |
 | `tests/` | NVDA, `wx`, `grpc` | add-on logic | Linux + Windows |
 | `tests_contract/` | nothing — avoids NVDA entirely | `grpc`, `sonata-grpc.exe` | Windows |
 | `tests_gui/` | NVDA | `wxPython` | Windows |
+| `tests_e2e/` | nothing | a full NVDA install, driven end to end | Windows CI only |
 
-`tests/conftest.py` installs a stub `wx` into `sys.modules` for the whole process, so a test needing real wx cannot live there — hence `tests_gui/`. Same reason `tests_contract/` is separate: it needs the real `grpc` that `tests/` mocks. `pytest.ini`'s `testpaths = tests` keeps both Windows-only trees out of a bare `pytest`, and their test modules self-skip on other platforms, so a Linux `pytest` is always green.
+`tests/conftest.py` installs a stub `wx` into `sys.modules` for the whole process, so a test needing real wx cannot live there — hence `tests_gui/`. Same reason `tests_contract/` is separate: it needs the real `grpc` that `tests/` mocks. `pytest.ini`'s `testpaths = tests` keeps the Windows-only trees out of a bare `pytest`, and their test modules self-skip on other platforms, so a Linux `pytest` is always green.
 
 You cannot run `tests_gui/` on Linux at all — wxPython publishes no Linux wheels on PyPI for any release, so `pip install`ing it there is a doomed source build. The tree self-skips instead (see below), and verification happens on the `windows-latest` CI leg.
+
+`tests_e2e/` drives a real, disposable NVDA install end to end — installing the built add-on, working through its no-voice modal, downloading a real voice, speaking with it, and removing it again — using [nvda-addon-testkit](https://pypi.org/project/nvda-addon-testkit/). Unlike `tests_gui/`, this isn't something to run on a personal Windows machine either: it needs the `e2e` CI job's setup (a provisioned NVDA, `requirements-test-e2e.txt`). Treat it as CI-only and read its job output on GitHub Actions rather than trying to reproduce it locally. If you're changing that job itself, `nvda-testkit doctor` is worth running once in it to sanity-check the environment before the suite:
+
+```bash
+nvda-testkit doctor
+pytest tests_e2e/ -v
+```
 
 ### How the NVDA stubs work
 
@@ -78,6 +87,7 @@ Intra-package submodules with hard platform dependencies (`grpc_client`, `aio`) 
 2. **Needs an NVDA API not yet stubbed?** Add a minimal `_stub_module(...)` call in `tests/nvda_stubs.py` — only the attributes actually touched.
 3. **Needs real wx widgets?** Put it in `tests_gui/`, guard the module with `pytest.skip(..., allow_module_level=True)` on non-Windows (see any file under `tests_gui/` for the exact guard), and use the `nvda_gui` fixture for a real parent window.
 4. Prefer driving real logic (a real `.py` file executed under stubs) over re-testing a mock; the goal is coverage of add-on code, not of the doubles.
+5. **Needs a real, installed NVDA?** Put it in `tests_e2e/`, guard the module the same way as `tests_gui/` (non-Windows self-skip), and drive it through `nvda-addon-testkit`'s `nvda` fixture rather than any stub.
 
 #### `tests_gui/` gotchas
 
@@ -92,7 +102,7 @@ Each of these cost a CI round or a review finding to nail down — read before w
 - **Walk tab order with `Navigate()`, not `wx.UIActionSimulator`.** The simulator imports fine on `windows-latest` and does nothing: six simulated Tabs left focus exactly where `SetFocus()` had put it, because the job has no foreground session for OS-level input to land in. `Navigate()` raises the same `wxNavigationKeyEvent` a real Tab does and works with no event loop and without `Show()`. Its one blind spot is native handling: a forward walk leaves the notebook page, lands on the tab strip, and then cycles between that and the dialog's Close button, because entering a page from the tab strip lives in `wxNotebook::MSWTranslateMessage`, which only a real `WM_KEYDOWN` reaches. So start the walk inside the page and slice at the Close button (#97).
 - **Never call `ShowModal()`.** With no running event loop it blocks until the CI job times out. Construct the dialog, assert against it, `Destroy()` it.
 
-Coverage note: all three trees feed one `coverage.xml`. `sonar.yml` runs a `windows_coverage` job that measures `tests/`, `tests_contract/` and `tests_gui/` — each into its own `COVERAGE_FILE`, because a bare `pytest --cov` erases the data files it finds — and the scan job `coverage combine`s them with its own ubuntu run. `relative_files` in `.coveragerc` is what lets that work across OSes: combine remaps the Windows data's `addon\...` paths onto `addon/...`. Only `grpc_client/**` stays in `sonar.coverage.exclusions`, because no tree executes it (`tests_contract/` talks to the generated stubs directly).
+Coverage note: `tests/`, `tests_contract/` and `tests_gui/` feed one `coverage.xml` — `tests_e2e/` contributes none, since it drives a real installed add-on rather than an in-process coverage-instrumented one. `sonar.yml` runs a `windows_coverage` job that measures those three trees — each into its own `COVERAGE_FILE`, because a bare `pytest --cov` erases the data files it finds — and the scan job `coverage combine`s them with its own ubuntu run. `relative_files` in `.coveragerc` is what lets that work across OSes: combine remaps the Windows data's `addon\...` paths onto `addon/...`. Only `grpc_client/**` stays in `sonar.coverage.exclusions`, because no tree executes it (`tests_contract/` talks to the generated stubs directly).
 
 ## Refreshing the bundled binaries
 

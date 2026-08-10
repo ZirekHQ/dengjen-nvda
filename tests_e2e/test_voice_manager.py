@@ -1,0 +1,295 @@
+# coding: utf-8
+"""Real-NVDA end-to-end tests: install the built add-on into a real,
+disposable NVDA and drive it exactly as a user would.
+
+Order matters in this file: later tests build on state earlier ones leave
+behind (the addon_under_test fixture is session-scoped), same convention as
+nvda-addon-testkit's own tests_e2e/test_demo_addon.py.
+"""
+
+from __future__ import annotations
+
+import sys
+
+import pytest
+
+if sys.platform == "win32":
+    from nvda_testkit.namespaces.addons import AddonState
+
+from .conftest import press_until, voice_manager_state, wait_until
+
+ADDON_NAME = "dengjen_neural_voices"
+NO_VOICE_MODAL_TEXT = "no dengjen voice was found"
+NO_VOICE_MODAL_TITLE = "Dengjen Neural Voices"
+VOICE_MANAGER_TITLE = "dengjen voice manager"
+VOICE_DOWNLOADED_TITLE = "Voice downloaded"
+
+#: populate_list() (voice_manager.py) shows an AsyncSnakDialog "please wait"
+#: toast modally (components.py's gui.runScriptModalDialog) while the voice
+#: list loads in the background, so wx.GetActiveWindow() -- the `dialog`
+#: voice_manager_state() binds -- is that toast, not DengjenVoiceManagerDialog,
+#: for as long as the fetch is in flight. Locating the real dialog by its
+#: notebookCtrl attribute instead sidesteps that race.
+_VOICE_MANAGER_DIALOG = "next(w for w in wx.GetTopLevelWindows() if hasattr(w, 'notebookCtrl'))"
+
+
+@pytest.mark.fresh_nvda
+def test_install_is_two_phase_and_completes_on_restart(
+    nvda, addon_bundle, assert_no_unexpected_errors
+):
+    """Owns its own install/remove cycle so the rest of this file can rely
+    on addon_under_test staying installed -- same reasoning as
+    nvda-addon-testkit's own equivalent test."""
+    assert nvda.addons.state(ADDON_NAME) is AddonState.NOT_INSTALLED
+
+    info = nvda.addons.install(addon_bundle)
+    assert info.name == ADDON_NAME
+    assert nvda.addons.state(ADDON_NAME) is AddonState.PENDING_INSTALL
+
+    nvda.restart()
+    assert nvda.addons.state(ADDON_NAME) is AddonState.ENABLED
+    assert_no_unexpected_errors(nvda)
+
+    nvda.addons.remove(ADDON_NAME)
+    nvda.restart()
+    assert nvda.addons.state(ADDON_NAME) is AddonState.NOT_INSTALLED
+
+
+def test_the_no_voice_modal_appears_and_no_declines_it(
+    nvda, addon_under_test, assert_no_unexpected_errors
+):
+    """_perform_voice_check fires a real, blocking gui.messageBox 3s after
+    startup when no voice is installed (__init__.py:58-74). This is exactly
+    the behavior tests_gui/test_global_plugin.py cannot prove, since it
+    mocks gui.messageBox so the call never actually blocks."""
+    nvda.restart()  # fresh startup -> _voice_checker fires again
+
+    before = nvda.speech.index()
+    nvda.speech.wait_for(NO_VOICE_MODAL_TEXT, timeout=15, since=before)
+
+    nvda.keys.press("n")  # decline
+
+    # Only a positive wait proves the "n" actually landed. Without it,
+    # GetActiveWindow() can still be the messageBox itself (title
+    # "Dengjen Neural Voices") if the keystroke was swallowed -- and that
+    # title also doesn't mention the voice manager, so the old assertion
+    # below would pass either way.
+    wait_until(
+        lambda: voice_manager_state(nvda, "dialog.GetTitle() if dialog else ''")
+        != NO_VOICE_MODAL_TITLE,
+        timeout=5,
+        description="the no-voice message box to close",
+    )
+    has_voice_manager = voice_manager_state(
+        nvda, "any(hasattr(w, 'notebookCtrl') for w in wx.GetTopLevelWindows())"
+    )
+    assert not has_voice_manager
+    assert_no_unexpected_errors(nvda)
+
+
+@pytest.fixture(scope="session")
+def downloaded_voice_key(nvda_session, addon_under_test):
+    """Downloads one real voice via the real dialog, once per session.
+    Tests 4 (this) and 5 (real speech) both need a voice actually on disk;
+    this fixture is where that happens so speech-focused tests don't also
+    have to drive the download UI.
+
+    Depends on nvda_session, not the function-scoped nvda: a session-scoped
+    fixture cannot request a narrower-scoped one (pytest ScopeMismatch).
+    nvda_session is the same underlying NvdaClient nvda wraps with a
+    per-test reset()."""
+    nvda = nvda_session
+    nvda.restart()  # fresh startup -> the no-voice modal fires again
+    before = nvda.speech.index()
+    nvda.speech.wait_for(NO_VOICE_MODAL_TEXT, timeout=15, since=before)
+    nvda.keys.press("y")  # open the voice manager
+
+    nvda.speech.wait_for(VOICE_MANAGER_TITLE, timeout=10, since=before)
+    # Same "keystroke right after a UI transition" race as the retry in
+    # test_downloading_the_fast_variant_voice_installs_it below, just in the
+    # opposite tab direction -- go through the same shared helper rather
+    # than trust that the preceding speech.wait_for makes this one safe.
+    # `before` is captured ahead of the press, not after press_until
+    # confirms the switch landed: onNotebookPageChanged fires the
+    # "retrieving voices list" toast synchronously with that same
+    # GetSelection() flip, so capturing the index afterward can miss it --
+    # the speech has already happened by the time press_until returns.
+    before = nvda.speech.index()
+    press_until(
+        nvda,
+        "control+tab",  # Installed tab -> Download tab
+        lambda: voice_manager_state(
+            nvda, f"{_VOICE_MANAGER_DIALOG}.notebookCtrl.GetSelection()"
+        )
+        == 1,
+        description="the notebook to switch to the Download tab",
+    )
+
+    nvda.speech.wait_for("retrieving voices list", timeout=10, since=before)
+    wait_until(
+        lambda: voice_manager_state(
+            nvda, f"{_VOICE_MANAGER_DIALOG}.notebookCtrl.GetPage(1).language_choice.GetCount()"
+        ) > 0,
+        timeout=30,
+        description="the online language list to populate",
+    )
+
+    # control+tab switches the notebook's page but leaves keyboard focus on
+    # the tab strip itself, not the new page's controls -- nothing in
+    # voice_manager.py moves it in. One more tab reaches language_choice,
+    # confirmed first in the real tab order by
+    # tests_gui/test_voice_manager_dialog.py's
+    # test_the_download_pages_controls_all_precede_the_close_button.
+    nvda.keys.press("tab")  # notebook tab strip -> language_choice
+    nvda.keys.press("downArrow")  # select the first language
+    wait_until(
+        lambda: voice_manager_state(
+            nvda, f"{_VOICE_MANAGER_DIALOG}.notebookCtrl.GetPage(1).voices_list.GetItemCount()"
+        ) > 0,
+        timeout=10,
+        description="voices for the selected language to list",
+    )
+
+    # Excludes multi-speaker voices (num_speakers > 1): those enable
+    # speaker_choice (voice_manager.py:403), a wx.Choice that sits between
+    # voices_list and preview_btn in tab order, which would silently shift
+    # the fixed tab chain below onto the wrong button. next(..., None), not
+    # a bare next(...): a genuine "no RT voice available" case must surface
+    # the assert's message below, not an opaque eval-side StopIteration.
+    rt_index = voice_manager_state(
+        nvda,
+        "next("
+        "  (i for i, v in enumerate("
+        f"    {_VOICE_MANAGER_DIALOG}.notebookCtrl.GetPage(1).voices_list._objects"
+        "  )"
+        "  if v.has_rt_variant and v.num_speakers <= 1),"
+        "  None"
+        ")",
+    )
+    assert rt_index is not None, "no voice for the first language has a fast (RT) variant"
+
+    # on_language_selection_change() sets the list's *internal* focused item
+    # (SetItemState(..., LIST_STATE_FOCUSED, ...)) but never calls SetFocus,
+    # so keyboard focus is still on language_choice -- without this tab the
+    # downArrow loop below would just keep changing the language.
+    nvda.keys.press("tab")  # language_choice -> voices_list
+    for _ in range(rt_index):
+        nvda.keys.press("downArrow")
+
+    online_key = voice_manager_state(
+        nvda, f"{_VOICE_MANAGER_DIALOG}.notebookCtrl.GetPage(1).voices_list.get_selected().key"
+    )
+
+    nvda.keys.press_all("tab", "tab", "tab")  # voices_list -> preview -> std -> rt button
+    before = nvda.speech.index()
+    nvda.keys.press("space")  # "Download &fast variant"
+
+    nvda.speech.wait_for("voice downloaded|successfully downloaded", timeout=90, since=before)
+    # Another real Windows messageBox, same swallowed-keystroke risk as the
+    # no-voice modal's decline -- a lost "n" here leaves it open and blocks
+    # every keystroke the rest of this fixture and test_downloading_the_fast_
+    # variant_voice_installs_it try to send, since it's still the modal
+    # window in front of the notebook. Confirm it actually closed, retrying
+    # the press if it didn't.
+    press_until(
+        nvda,
+        "n",  # decline the immediate restart offer; Task 5 restarts explicitly
+        lambda: voice_manager_state(nvda, "dialog.GetTitle() if dialog else ''")
+        != VOICE_DOWNLOADED_TITLE,
+        description="the voice-downloaded message box to close",
+    )
+
+    # This messageBox's parent is gui.mainFrame (voice_download.py), not the
+    # voice manager dialog, so closing it does not reliably hand keyboard
+    # focus back to the dialog -- Windows can instead give it to whatever
+    # window was active before NVDA's UI intervened, and a control+tab sent
+    # there lands on that window's own tab handling, not the notebook's. A
+    # sighted user landing on the wrong window would Alt+Tab back; do the
+    # same for real (never via eval, which stays read-only in this suite),
+    # only if focus genuinely isn't on the dialog already.
+    if not voice_manager_state(nvda, "dialog is not None and hasattr(dialog, 'notebookCtrl')"):
+        press_until(
+            nvda,
+            "alt+tab",
+            lambda: voice_manager_state(
+                nvda, "dialog is not None and hasattr(dialog, 'notebookCtrl')"
+            ),
+            description="focus to return to the voice manager dialog",
+        )
+
+    # on_download_rt's success_callback invalidates both pages' cache and
+    # re-triggers the *online* page's own populate_list -- another
+    # AsyncSnakDialog toast, timed independently of the messageBox we just
+    # dismissed. Settling here, not in the test, keeps that race off of every
+    # caller of this fixture.
+    nvda.wait_until_idle(timeout=15)
+
+    # DengjenTextToSpeechSystem.get_voice_variants (tts_system.py:383-387) keys
+    # the installed fast variant "{lang}-{name}+RT-{quality}", not the plain
+    # online key -- e.g. online "ar_JO-kareem-low" installs as
+    # "ar_JO-kareem+RT-low". Replicating that here, not calling the addon's
+    # own method, since it lives in a synthDriver module this fixture has no
+    # other reason to import.
+    lang, name, quality = online_key.split("-")
+    return f"{lang}-{name}+RT-{quality}"
+
+
+def test_downloading_the_fast_variant_voice_installs_it(nvda, downloaded_voice_key, assert_no_unexpected_errors):
+    """Depends on downloaded_voice_key leaving the voice manager dialog open on the Download tab."""
+    # DengjenVoiceManagerDialog._invalidate_pages_voice_cache invalidates
+    # every notebook page's cache, not just the Installed tab's -- but that
+    # only clears the "already populated" flag; nothing proactively
+    # repopulates a page that isn't showing. Switching to it is what
+    # triggers onNotebookPageChanged -> populate_list() -> a real refresh
+    # from disk, same as a user checking their download landed.
+    nvda.wait_until_idle(timeout=15)  # let the fixture's trailing UI activity settle first
+
+    # control+tab can be sent before OS-level keyboard focus has genuinely
+    # returned to the notebook after the fixture dismissed its real Windows
+    # messageBox with "n" -- when that happens the keystroke is swallowed
+    # outright: GetSelection() stays on the Download tab (1) forever, not
+    # just slow to flip. Retrying the press itself via press_until, not just
+    # the wait, is what a sighted user would do if a keypress visibly didn't
+    # register -- the fixture's own Installed->Download control+tab has the
+    # same race, so both go through the shared helper.
+    press_until(
+        nvda,
+        "control+tab",  # Download tab -> Installed tab
+        lambda: voice_manager_state(
+            nvda, f"{_VOICE_MANAGER_DIALOG}.notebookCtrl.GetSelection()"
+        )
+        == 0,
+        description="the notebook to switch to the Installed tab",
+    )
+
+    installed_keys = wait_until(
+        lambda: voice_manager_state(
+            nvda,
+            f"[v.key for v in {_VOICE_MANAGER_DIALOG}.notebookCtrl.GetPage(0).voices_list._objects]",
+        ),
+        timeout=15,
+        description="the Installed tab to list the just-downloaded voice",
+    )
+    assert downloaded_voice_key in installed_keys
+    assert_no_unexpected_errors(nvda)
+
+
+def test_the_downloaded_voice_produces_real_speech(nvda, downloaded_voice_key, assert_no_unexpected_errors):
+    nvda.config.set(["speech", "synth"], ADDON_NAME)
+    nvda.config.set(["speech", ADDON_NAME, "voice"], downloaded_voice_key)
+    nvda.restart()  # NVDA reads config.conf["speech"]["synth"] on startup
+
+    before = nvda.speech.index()
+    phrase = "dengjen testkit smoke phrase"
+    nvda.speech.speak(phrase)
+    found = nvda.speech.wait_for(phrase, timeout=15, since=before)
+    assert phrase in found.text.lower()
+    assert_no_unexpected_errors(nvda)
+
+
+def test_removal_is_also_two_phase(nvda):
+    """Must stay last in this file: uninstalls what addon_under_test set up."""
+    nvda.addons.remove(ADDON_NAME)
+    assert nvda.addons.state(ADDON_NAME) is AddonState.PENDING_REMOVE
+    nvda.restart()
+    assert nvda.addons.state(ADDON_NAME) is AddonState.NOT_INSTALLED
