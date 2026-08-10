@@ -137,7 +137,7 @@ def downloaded_voice_key(nvda_session, addon_under_test):
     for _ in range(rt_index):
         nvda.keys.press("downArrow")
 
-    voice_key = voice_manager_state(
+    online_key = voice_manager_state(
         nvda, f"{_VOICE_MANAGER_DIALOG}.notebookCtrl.GetPage(1).voices_list.get_selected().key"
     )
 
@@ -148,7 +148,14 @@ def downloaded_voice_key(nvda_session, addon_under_test):
     nvda.speech.wait_for("voice downloaded|successfully downloaded", timeout=90, since=before)
     nvda.keys.press("n")  # decline the immediate restart offer; Task 5 restarts explicitly
 
-    return voice_key
+    # DengjenTextToSpeechSystem.get_voice_variants (tts_system.py:383-387) keys
+    # the installed fast variant "{lang}-{name}+RT-{quality}", not the plain
+    # online key -- e.g. online "ar_JO-kareem-low" installs as
+    # "ar_JO-kareem+RT-low". Replicating that here, not calling the addon's
+    # own method, since it lives in a synthDriver module this fixture has no
+    # other reason to import.
+    lang, name, quality = online_key.split("-")
+    return f"{lang}-{name}+RT-{quality}"
 
 
 def test_downloading_the_fast_variant_voice_installs_it(nvda, downloaded_voice_key, assert_no_unexpected_errors):
