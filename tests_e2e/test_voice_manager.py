@@ -22,6 +22,7 @@ ADDON_NAME = "dengjen_neural_voices"
 NO_VOICE_MODAL_TEXT = "no dengjen voice was found"
 NO_VOICE_MODAL_TITLE = "Dengjen Neural Voices"
 VOICE_MANAGER_TITLE = "dengjen voice manager"
+VOICE_DOWNLOADED_TITLE = "Voice downloaded"
 
 #: populate_list() (voice_manager.py) shows an AsyncSnakDialog "please wait"
 #: toast modally (components.py's gui.runScriptModalDialog) while the voice
@@ -184,7 +185,19 @@ def downloaded_voice_key(nvda_session, addon_under_test):
     nvda.keys.press("space")  # "Download &fast variant"
 
     nvda.speech.wait_for("voice downloaded|successfully downloaded", timeout=90, since=before)
-    nvda.keys.press("n")  # decline the immediate restart offer; Task 5 restarts explicitly
+    # Another real Windows messageBox, same swallowed-keystroke risk as the
+    # no-voice modal's decline -- a lost "n" here leaves it open and blocks
+    # every keystroke the rest of this fixture and test_downloading_the_fast_
+    # variant_voice_installs_it try to send, since it's still the modal
+    # window in front of the notebook. Confirm it actually closed, retrying
+    # the press if it didn't.
+    press_until(
+        nvda,
+        "n",  # decline the immediate restart offer; Task 5 restarts explicitly
+        lambda: voice_manager_state(nvda, "dialog.GetTitle() if dialog else ''")
+        != VOICE_DOWNLOADED_TITLE,
+        description="the voice-downloaded message box to close",
+    )
 
     # on_download_rt's success_callback invalidates both pages' cache and
     # re-triggers the *online* page's own populate_list -- another
