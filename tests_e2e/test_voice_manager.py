@@ -144,13 +144,20 @@ def downloaded_voice_key(nvda_session, addon_under_test):
         description="voices for the selected language to list",
     )
 
+    # Excludes multi-speaker voices (num_speakers > 1): those enable
+    # speaker_choice (voice_manager.py:403), a wx.Choice that sits between
+    # voices_list and preview_btn in tab order, which would silently shift
+    # the fixed tab chain below onto the wrong button. next(..., None), not
+    # a bare next(...): a genuine "no RT voice available" case must surface
+    # the assert's message below, not an opaque eval-side StopIteration.
     rt_index = voice_manager_state(
         nvda,
         "next("
-        "  i for i, v in enumerate("
+        "  (i for i, v in enumerate("
         f"    {_VOICE_MANAGER_DIALOG}.notebookCtrl.GetPage(1).voices_list._objects"
         "  )"
-        "  if v.has_rt_variant"
+        "  if v.has_rt_variant and v.num_speakers <= 1),"
+        "  None"
         ")",
     )
     assert rt_index is not None, "no voice for the first language has a fast (RT) variant"
