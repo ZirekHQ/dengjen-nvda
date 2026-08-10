@@ -108,6 +108,12 @@ def downloaded_voice_key(nvda_session, addon_under_test):
     # test_downloading_the_fast_variant_voice_installs_it below, just in the
     # opposite tab direction -- go through the same shared helper rather
     # than trust that the preceding speech.wait_for makes this one safe.
+    # `before` is captured ahead of the press, not after press_until
+    # confirms the switch landed: onNotebookPageChanged fires the
+    # "retrieving voices list" toast synchronously with that same
+    # GetSelection() flip, so capturing the index afterward can miss it --
+    # the speech has already happened by the time press_until returns.
+    before = nvda.speech.index()
     press_until(
         nvda,
         "control+tab",  # Installed tab -> Download tab
@@ -118,7 +124,6 @@ def downloaded_voice_key(nvda_session, addon_under_test):
         description="the notebook to switch to the Download tab",
     )
 
-    before = nvda.speech.index()
     nvda.speech.wait_for("retrieving voices list", timeout=10, since=before)
     wait_until(
         lambda: voice_manager_state(
