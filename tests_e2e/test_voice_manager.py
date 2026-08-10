@@ -199,9 +199,11 @@ def downloaded_voice_key(nvda_session, addon_under_test):
 
 
 def test_downloading_the_fast_variant_voice_installs_it(nvda, downloaded_voice_key, assert_no_unexpected_errors):
-    # The download's success callback only invalidates the Installed tab's
-    # cache (DengjenVoiceManagerDialog._invalidate_pages_voice_cache); it
-    # does not repopulate a tab that isn't showing. Switching to it is what
+    """Depends on downloaded_voice_key leaving the voice manager dialog open on the Download tab."""
+    # DengjenVoiceManagerDialog._invalidate_pages_voice_cache invalidates
+    # every notebook page's cache, not just the Installed tab's -- but that
+    # only clears the "already populated" flag; nothing proactively
+    # repopulates a page that isn't showing. Switching to it is what
     # triggers onNotebookPageChanged -> populate_list() -> a real refresh
     # from disk, same as a user checking their download landed.
     nvda.wait_until_idle(timeout=15)  # let the fixture's trailing UI activity settle first
