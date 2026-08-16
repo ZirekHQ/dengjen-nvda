@@ -191,6 +191,9 @@ class SynthDriver(synthDriverHandler.SynthDriver):
         self.tts = None
         self._player = None
         self._players = {}
+        self._noise_scale_factor = None
+        self._length_scale_factor = None
+        self._noise_w_factor = None
         aio.ensure_running()
         grpc_init_fut = grpc_client.initialize()
         try:
@@ -214,12 +217,13 @@ class SynthDriver(synthDriverHandler.SynthDriver):
         log.info(f"Dengjen GRPC server running on port {grpc_client.SONATA_GRPC_SERVER_PORT}")
         log.info("Connected to Dengjen GRPC server")
         log.info(f"Dengjen GRPC server version: {sonata_grpc_server_version}")
-        if not any(DengjenTextToSpeechSystem.load_piper_voices_from_nvda_config_dir()):
+        voices = DengjenTextToSpeechSystem.load_piper_voices_from_nvda_config_dir()
+        if not any(voices):
             log.error(
                 "No installed voices were found for Dengjen. Synthesizer will not be available."
             )
             return
-        self.voices = DengjenTextToSpeechSystem.load_piper_voices_from_nvda_config_dir()
+        self.voices = voices
         try:
             voice_key = config.conf["speech"]["dengjen_neural_voices"]["voice"]
             configured_voice = next(
@@ -371,74 +375,56 @@ class SynthDriver(synthDriverHandler.SynthDriver):
     def _get_voice(self):
         return self._get_variant_independent_voice_id(self.tts.voice)
 
-    def _get_noise_scale(self):
-        factor = 50
-        if hasattr(self, "_noise_scale_factor"):
-            factor = self._noise_scale_factor
-        elif self.voice in DengjenConfig:
-            factor = DengjenConfig[self.voice].get("noise_scale", 50)
-            self._noise_scale_factor = factor
+    # name -> (backing attribute, default_scales multiplier, skip re-applying
+    # an unchanged value). name doubles as the DengjenConfig key and the
+    # attribute on tts.speech_options.voice / voice.default_scales.
+    _SCALE_SETTINGS = {
+        "noise_scale": {"factor_attr": "_noise_scale_factor", "multiplier": 3, "skip_if_unchanged": False},
+        "length_scale": {"factor_attr": "_length_scale_factor", "multiplier": 2, "skip_if_unchanged": False},
+        "noise_w": {"factor_attr": "_noise_w_factor", "multiplier": 3, "skip_if_unchanged": True},
+    }
 
-        return factor
+    def _get_scale_factor(self, name):
+        factor_attr = self._SCALE_SETTINGS[name]["factor_attr"]
+        factor = getattr(self, factor_attr, None)
+        if factor is not None:
+            return factor
+        if self.voice in DengjenConfig:
+            factor = DengjenConfig[self.voice].get(name, 50)
+            setattr(self, factor_attr, factor)
+            return factor
+        return 50
+
+    def _set_scale_factor(self, name, value):
+        spec = self._SCALE_SETTINGS[name]
+        factor_attr = spec["factor_attr"]
+        if spec["skip_if_unchanged"] and getattr(self, factor_attr, None) == value:
+            return
+        voice = self.tts.speech_options.voice
+        default = getattr(voice.default_scales, name)
+        if value == 50:
+            setattr(voice, name, default)
+        else:
+            setattr(voice, name, max(0.1, round(self._percentToParam(value, 0.0, default * spec["multiplier"]), 2)))
+        setattr(self, factor_attr, value)
+
+    def _get_noise_scale(self):
+        return self._get_scale_factor("noise_scale")
 
     def _set_noise_scale(self, value):
-        voice = self.tts.speech_options.voice
-        default_noise_scale = voice.default_scales.noise_scale
-        if value == 50:
-            self.tts.speech_options.voice.noise_scale = default_noise_scale
-        else:
-            self.tts.speech_options.voice.noise_scale = max(
-                0.1, round(self._percentToParam(value, 0.0, default_noise_scale * 3), 2)
-            )
-        self._noise_scale_factor = value
+        self._set_scale_factor("noise_scale", value)
 
     def _get_length_scale(self):
-        factor = 50
-        if hasattr(self, "_length_scale_factor"):
-            factor = self._length_scale_factor
-        elif self.voice in DengjenConfig:
-            factor = DengjenConfig[self.voice].get("length_scale", 50)
-            self._length_scale_factor = factor
-
-        return factor
+        return self._get_scale_factor("length_scale")
 
     def _set_length_scale(self, value):
-        voice = self.tts.speech_options.voice
-        default_length_scale = voice.default_scales.length_scale
-        if value == 50:
-            self.tts.speech_options.voice.length_scale = default_length_scale
-        else:
-            self.tts.speech_options.voice.length_scale = max(
-                0.1,
-                round(self._percentToParam(value, 0.0, default_length_scale * 2), 2),
-            )
-
-        self._length_scale_factor = value
+        self._set_scale_factor("length_scale", value)
 
     def _get_noise_w(self):
-        factor = 50
-        if hasattr(self, "_noise_w_factor"):
-            factor = self._noise_w_factor
-        elif self.voice in DengjenConfig:
-            factor = DengjenConfig[self.voice].get("noise_w", 50)
-            self._noise_w_factor = factor
-
-        return factor
+        return self._get_scale_factor("noise_w")
 
     def _set_noise_w(self, value):
-        factor = getattr(self, "_noise_w_factor", None)
-        if factor and value == factor:
-            return
-
-        voice = self.tts.speech_options.voice
-        default_noise_w = voice.default_scales.noise_w
-        if value == 50:
-            self.tts.speech_options.voice.noise_w = default_noise_w
-        else:
-            self.tts.speech_options.voice.noise_w = max(
-                0.1, round(self._percentToParam(value, 0.0, default_noise_w * 3), 2)
-            )
-        self._noise_w_factor = value
+        self._set_scale_factor("noise_w", value)
 
     def _set_voice(self, value):
         if value not in self.availableVoices:
