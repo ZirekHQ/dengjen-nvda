@@ -145,7 +145,7 @@ async def initialize():
             # grpc.aio binds a channel to the loop that created it, so a channel
             # outliving its loop has to be replaced rather than reused.
             channel_loop = getattr(CHANNEL, "_loop", None)
-            if channel_loop is aio.ASYNCIO_EVENT_LOOP and aio.ASYNCIO_EVENT_LOOP.is_running():
+            if channel_loop is aio.ENGINE.event_loop and aio.ENGINE.event_loop.is_running():
                 return
         except Exception:
             log.debug("Failed to inspect the existing GRPC channel", exc_info=True)
@@ -169,7 +169,7 @@ def close_channel():
     if CHANNEL is None:
         return
     channel, CHANNEL = CHANNEL, None
-    loop = aio.ASYNCIO_EVENT_LOOP
+    loop = aio.ENGINE.event_loop
     if loop is None or not loop.is_running():
         log.debug("Discarding the GRPC channel: its event loop is gone")
         channel.close().close()

@@ -279,7 +279,7 @@ class TestOnlinePanelControls:
     def test_preview_button_reaches_on_preview(
         self, panel, voice_manager, monkeypatch, sync_executor, online_voices
     ):
-        monkeypatch.setattr(voice_manager.aio, "THREADED_EXECUTOR", sync_executor)
+        monkeypatch.setattr(voice_manager.aio.ENGINE, "executor", sync_executor)
         calls = []
         monkeypatch.setattr(voice_manager, "play_remote_mp3", calls.append)
         selected_voice = online_voices[0]

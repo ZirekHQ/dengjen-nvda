@@ -57,7 +57,7 @@ def sync_call_after(monkeypatch):
 
 
 class _SyncExecutor:
-    """Stand-in for voice_download.THREAD_POOL_EXECUTOR / aio.THREADED_EXECUTOR:
+    """Stand-in for voice_download.THREAD_POOL_EXECUTOR / aio.ENGINE.executor:
     runs the callable on the calling thread and hands back a settled Future, so
     done-callbacks are assertable inline."""
 
