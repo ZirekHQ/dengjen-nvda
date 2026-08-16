@@ -132,6 +132,27 @@ class TestConstruction:
         expected_lang = languageHandler.normalizeLanguage(lang).replace("_", "-")
         assert f"({expected_lang})" in display_name
 
+    def test_loads_voices_from_disk_only_once(self, configured_voice, monkeypatch):
+        """A previous version called load_piper_voices_from_nvda_config_dir()
+        twice back to back in __init__ for no reason."""
+        real_load = driver_module.DengjenTextToSpeechSystem.load_piper_voices_from_nvda_config_dir.__func__
+        calls = []
+
+        def counting_load(cls):
+            calls.append(1)
+            return real_load(cls)
+
+        monkeypatch.setattr(
+            driver_module.DengjenTextToSpeechSystem,
+            "load_piper_voices_from_nvda_config_dir",
+            classmethod(counting_load),
+        )
+        d = SynthDriver()
+        try:
+            assert len(calls) == 1
+        finally:
+            d.terminate()
+
 
 class TestBuildSpeechTasks:
     """`_build_speech_tasks` is where flush/cancel ordering bugs have
@@ -243,6 +264,44 @@ class TestSettings:
     def test_noise_scale_round_trips_through_the_engine(self, driver):
         driver.noise_scale = 75
         assert driver.noise_scale == 75
+
+    def test_noise_scale_reapplies_an_unchanged_value(self, driver):
+        # voice.noise_scale is a live round trip through grpc_client (stubbed),
+        # not stored state, so assert on whether the stub call fired rather
+        # than on the value read back afterwards.
+        driver.noise_scale = 75
+        driver_module.grpc_client.set_synth_options.reset_mock()
+        driver.noise_scale = 75
+        driver_module.grpc_client.set_synth_options.assert_called_once()
+
+    def test_length_scale_defaults_to_fifty(self, driver):
+        assert driver.length_scale == 50
+
+    def test_length_scale_round_trips_through_the_engine(self, driver):
+        driver.length_scale = 75
+        assert driver.length_scale == 75
+
+    def test_length_scale_reapplies_an_unchanged_value(self, driver):
+        driver.length_scale = 75
+        driver_module.grpc_client.set_synth_options.reset_mock()
+        driver.length_scale = 75
+        driver_module.grpc_client.set_synth_options.assert_called_once()
+
+    def test_noise_w_defaults_to_fifty(self, driver):
+        assert driver.noise_w == 50
+
+    def test_noise_w_round_trips_through_the_engine(self, driver):
+        driver.noise_w = 75
+        assert driver.noise_w == 75
+
+    def test_noise_w_skips_reapplying_an_unchanged_value(self, driver):
+        # Unlike noise_scale/length_scale, noise_w short-circuits when set to
+        # the value it's already at -- confirm the stubbed grpc call is not
+        # made again for the redundant second set.
+        driver.noise_w = 75
+        driver_module.grpc_client.set_synth_options.reset_mock()
+        driver.noise_w = 75
+        driver_module.grpc_client.set_synth_options.assert_not_called()
 
 
 _failure_driver_module = load_module_from_path(
