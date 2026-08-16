@@ -223,7 +223,11 @@ def _stream_to_file(response, target_file, total_size, progress_callback, hasher
                 progress_callback(math.floor((downloaded_til_now / total_size) * 100))
 
 
-class PiperVoiceDownloader:
+class _VoiceInstallError(Exception):
+    """Raised by a downloader's `_install` hook to signal a failed install."""
+
+
+class _BaseVoiceDownloader:
     def __init__(self, voice: PiperVoice, success_callback):
         self.voice = voice
         self.success_callback = success_callback
@@ -237,6 +241,16 @@ class PiperVoiceDownloader:
             _("Downloaded: {progress}%").format(progress=progress),
         )
 
+    def download(self):
+        self.progress_dialog = wx.ProgressDialog(
+            title=self._progress_title(),
+            # Translators: message of a progress dialog
+            message=_("Retrieving download information..."),
+            parent=gui.mainFrame,
+        )
+        self.progress_dialog.CenterOnScreen()
+        THREAD_POOL_EXECUTOR.submit(self._download_work).add_done_callback(partial(self._done_callback_wrapper, self.done_callback))
+
     def done_callback(self, result):
         has_error = isinstance(result, Exception)
         if not has_error:
@@ -245,23 +259,10 @@ class PiperVoiceDownloader:
                 # Translators: message shown in the voice download progress dialog
                 _("Installing voice")
             )
-            hashes = {
-                file.name: (file.md5hash, md5hash)
-                for (file, __, md5hash) in result
-            }
-            if not all(expected == actual for expected, actual in hashes.values()):
+            try:
+                self._install(result)
+            except _VoiceInstallError:
                 has_error = True
-                log.error("File hashes do not match")
-            else:
-                voice_dir = Path(DENGJEN_VOICES_DIR).joinpath(self.voice.key)
-                voice_dir.mkdir(parents=True, exist_ok=True)
-                for file, src, __ in result:
-                    dst = os.path.join(voice_dir, file.name)
-                    try:
-                        shutil.copy(src, dst)
-                    except IOError:
-                        log.exception(f"Failed to copy file: {file}", exc_info=True)
-                        has_error = True
 
         self.progress_dialog.Hide()
         self.progress_dialog.Destroy()
@@ -270,16 +271,9 @@ class PiperVoiceDownloader:
         if not has_error:
             self.success_callback()
             retval = gui.messageBox(
-            # Translators: content of a message box
-            _(
-                "Successfully downloaded voice  {voice}.\n"
-                "To use this voice, you need to restart NVDA.\n"
-                "Do you want to restart NVDA now?"
-            ).format(
-                voice=self.voice.key
-            ),
-            # Translators: title of a message box
-            _("Voice downloaded"),
+                self._success_message(),
+                # Translators: title of a message box
+                _("Voice downloaded"),
                 wx.YES_NO | wx.ICON_WARNING,
                 parent=gui.mainFrame,
             )
@@ -288,9 +282,7 @@ class PiperVoiceDownloader:
         else:
             wx.CallAfter(
                 gui.messageBox,
-                _(
-                    "Cannot download voice {voice}.\nPlease check your connection and try again."
-                ).format(voice=self.voice.key),
+                self._failure_message(),
                 _("Download failed"),
                 style=wx.ICON_ERROR,
                 parent=gui.mainFrame,
@@ -299,18 +291,55 @@ class PiperVoiceDownloader:
                 f"Failed to download voice.\nException: {result}"
             )
 
-    def download(self):
-        self.progress_dialog = wx.ProgressDialog(
-            # Translators: title of a progress dialog
-            title=_("Downloading voice {voice}").format(
-                voice=self.voice.key
-            ),
-            # Translators: message of a progress dialog
-            message=_("Retrieving download information..."),
-            parent=gui.mainFrame,
-        )
-        self.progress_dialog.CenterOnScreen()
-        THREAD_POOL_EXECUTOR.submit(self.download_voice_files).add_done_callback(partial(self._done_callback_wrapper, self.done_callback))
+    @staticmethod
+    def _done_callback_wrapper(done_callback, future):
+        if done_callback is None:
+            return
+        try:
+            result = future.result()
+        except Exception as e:
+            done_callback(e)
+        else:
+            done_callback(result)
+
+    # Hooks implemented by subclasses.
+
+    def _download_work(self):
+        raise NotImplementedError
+
+    def _install(self, result):
+        raise NotImplementedError
+
+    def _progress_title(self):
+        raise NotImplementedError
+
+    def _success_message(self):
+        raise NotImplementedError
+
+    def _failure_message(self):
+        raise NotImplementedError
+
+
+class PiperVoiceDownloader(_BaseVoiceDownloader):
+    def _progress_title(self):
+        # Translators: title of a progress dialog
+        return _("Downloading voice {voice}").format(voice=self.voice.key)
+
+    def _success_message(self):
+        # Translators: content of a message box
+        return _(
+            "Successfully downloaded voice  {voice}.\n"
+            "To use this voice, you need to restart NVDA.\n"
+            "Do you want to restart NVDA now?"
+        ).format(voice=self.voice.key)
+
+    def _failure_message(self):
+        return _(
+            "Cannot download voice {voice}.\nPlease check your connection and try again."
+        ).format(voice=self.voice.key)
+
+    def _download_work(self):
+        return self.download_voice_files()
 
     def download_voice_files(self):
         retvals = []
@@ -342,94 +371,53 @@ class PiperVoiceDownloader:
 
         return (file, target_file, hasher.hexdigest())
 
-    @staticmethod
-    def _done_callback_wrapper(done_callback, future):
-        if done_callback is None:
-            return
-        try:
-            result = future.result()
-        except Exception as e:
-            done_callback(e)
-        else:
-            done_callback(result)
+    def _install(self, result):
+        hashes = {
+            file.name: (file.md5hash, md5hash)
+            for (file, __, md5hash) in result
+        }
+        if not all(expected == actual for expected, actual in hashes.values()):
+            log.error("File hashes do not match")
+            raise _VoiceInstallError
 
-
-class PiperRTVoiceDownloader:
-    def __init__(self, voice: PiperVoice, success_callback):
-        self.voice = voice
-        self.success_callback = success_callback
-        self.rt_download_url = self.voice.get_rt_variant_download_url()
-        self.temp_download_dir = tempfile.TemporaryDirectory()
-        self.progress_dialog = None
-
-    def update_progress(self, progress):
-        self.progress_dialog.Update(
-            progress,
-            # Translators: message of a progress dialog
-            _("Downloaded: {progress}%").format(progress=progress),
-        )
-
-    def done_callback(self, result):
-        has_error = isinstance(result, Exception)
-        if not has_error:
-            self.progress_dialog.Update(
-                0,
-                # Translators: message shown in the voice download progress dialog
-                _("Installing voice")
-            )
+        voice_dir = Path(DENGJEN_VOICES_DIR).joinpath(self.voice.key)
+        voice_dir.mkdir(parents=True, exist_ok=True)
+        copy_failed = False
+        for file, src, __ in result:
+            dst = os.path.join(voice_dir, file.name)
             try:
-                install_voice_from_tar_archive(result, DENGJEN_VOICES_DIR)
-            except Exception:
-                log.exception("Failed to extract voice archive", exc_info=True)
-                has_error = True
-        self.progress_dialog.Hide()
-        self.progress_dialog.Destroy()
-        del self.progress_dialog
+                shutil.copy(src, dst)
+            except IOError:
+                log.exception(f"Failed to copy file: {file}", exc_info=True)
+                copy_failed = True
+        if copy_failed:
+            raise _VoiceInstallError
 
-        if not has_error:
-            self.success_callback()
-            retval = gui.messageBox(
-            # Translators: content of a message box
-            _(
-                "Successfully downloaded fast variant of the voice  {voice}.\n"
-                "To use this voice, you need to restart NVDA.\n"
-                "Do you want to restart NVDA now?"
-            ).format(
-                voice=self.voice.key
-            ),
-            # Translators: title of a message box
-            _("Voice downloaded"),
-                wx.YES_NO | wx.ICON_WARNING,
-                parent=gui.mainFrame,
-            )
-            if retval == wx.YES:
-                core.restart()
-        else:
-            wx.CallAfter(
-                gui.messageBox,
-                _(
-                    "Cannot download fast variant of the voice {voice}.\nPlease check your connection and try again."
-                ).format(voice=self.voice.key),
-                _("Download failed"),
-                style=wx.ICON_ERROR,
-                parent=gui.mainFrame,
-            )
-            log.exception(
-                f"Failed to download voice.\nException: {result}"
-            )
 
-    def download(self):
-        self.progress_dialog = wx.ProgressDialog(
-            # Translators: title of a progress dialog
-            title=_("Downloading fast variant of the voice {voice}").format(
-                voice=self.voice.key
-            ),
-            # Translators: message of a progress dialog
-            message=_("Retrieving download information..."),
-            parent=gui.mainFrame,
-        )
-        self.progress_dialog.CenterOnScreen()
-        THREAD_POOL_EXECUTOR.submit(self.download_voice_archive).add_done_callback(partial(self._done_callback_wrapper, self.done_callback))
+class PiperRTVoiceDownloader(_BaseVoiceDownloader):
+    def __init__(self, voice: PiperVoice, success_callback):
+        self.rt_download_url = voice.get_rt_variant_download_url()
+        super().__init__(voice, success_callback)
+
+    def _progress_title(self):
+        # Translators: title of a progress dialog
+        return _("Downloading fast variant of the voice {voice}").format(voice=self.voice.key)
+
+    def _success_message(self):
+        # Translators: content of a message box
+        return _(
+            "Successfully downloaded fast variant of the voice  {voice}.\n"
+            "To use this voice, you need to restart NVDA.\n"
+            "Do you want to restart NVDA now?"
+        ).format(voice=self.voice.key)
+
+    def _failure_message(self):
+        return _(
+            "Cannot download fast variant of the voice {voice}.\nPlease check your connection and try again."
+        ).format(voice=self.voice.key)
+
+    def _download_work(self):
+        return self.download_voice_archive()
 
     def download_voice_archive(self):
         voice_name = self.rt_download_url.split("/")[-1].strip()
@@ -454,16 +442,12 @@ class PiperRTVoiceDownloader:
 
         return target_file
 
-    @staticmethod
-    def _done_callback_wrapper(done_callback, future):
-        if done_callback is None:
-            return
+    def _install(self, result):
         try:
-            result = future.result()
-        except Exception as e:
-            done_callback(e)
-        else:
-            done_callback(result)
+            install_voice_from_tar_archive(result, DENGJEN_VOICES_DIR)
+        except Exception:
+            log.exception("Failed to extract voice archive", exc_info=True)
+            raise _VoiceInstallError
 
 
 def _voice_key_from_filename(stem):
