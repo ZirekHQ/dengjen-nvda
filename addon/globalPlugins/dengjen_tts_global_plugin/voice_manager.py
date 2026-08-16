@@ -421,7 +421,7 @@ class OnlineDengjenVoicesPanel(SizedPanel):
         self._preview_active = True
         # Translators: label of the preview button while audio is playing
         self.preview_btn.SetLabel(_("&Stop preview"))
-        future = aio.THREADED_EXECUTOR.submit(play_remote_mp3, mp3url)
+        future = aio.ENGINE.executor.submit(play_remote_mp3, mp3url)
         future.add_done_callback(
             lambda f: wx.CallAfter(self._on_preview_done, f)
         )

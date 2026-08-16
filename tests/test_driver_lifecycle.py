@@ -124,20 +124,20 @@ class TestAioLifecycle:
     def test_initialize_is_idempotent(self):
         aio.initialize()
         aio.initialize()
-        assert aio.ASYNCIO_EVENT_LOOP is not None
-        assert aio.ASYNCIO_EVENT_LOOP.is_running()
-        assert aio.THREADED_EXECUTOR is not None
+        assert aio.ENGINE.event_loop is not None
+        assert aio.ENGINE.event_loop.is_running()
+        assert aio.ENGINE.executor is not None
 
     def test_reinitialization_after_terminate(self):
         # Shutdown loop and executor
         aio.terminate()
-        assert aio.THREADED_EXECUTOR is None
+        assert aio.ENGINE.executor is None
 
         # Re-initialize
         aio.initialize()
-        assert aio.ASYNCIO_EVENT_LOOP is not None
-        assert aio.ASYNCIO_EVENT_LOOP.is_running()
-        assert aio.THREADED_EXECUTOR is not None
+        assert aio.ENGINE.event_loop is not None
+        assert aio.ENGINE.event_loop.is_running()
+        assert aio.ENGINE.executor is not None
 
     def test_asyncio_coroutine_to_concurrent_future_resurrects_stopped_loop(self):
         aio.terminate()
@@ -171,19 +171,19 @@ class TestAioLifecycle:
         @aio.asyncio_coroutine_to_concurrent_future
         async def create_task_like_process_speech():
             loop = aio.asyncio.get_running_loop()
-            assert loop is aio.ASYNCIO_EVENT_LOOP
+            assert loop is aio.ENGINE.event_loop
             return await loop.create_task(spoken())
 
         assert create_task_like_process_speech().result(timeout=5) == "spoken"
 
     def test_terminate_closes_and_clears_the_loop(self):
-        loop = aio.ASYNCIO_EVENT_LOOP
+        loop = aio.ENGINE.event_loop
         assert loop is not None
 
         aio.terminate()
 
         assert loop.is_closed()
-        assert aio.ASYNCIO_EVENT_LOOP is None
+        assert aio.ENGINE.event_loop is None
 
     def test_repeated_cycles_do_not_accumulate_loop_threads(self):
         for _ in range(10):
@@ -204,8 +204,8 @@ class TestAioLifecycle:
                 except Exception as exc:
                     errors.append(repr(exc))
                     continue
-                if aio.ASYNCIO_EVENT_LOOP is None:
-                    errors.append("ensure_running() left ASYNCIO_EVENT_LOOP unset")
+                if aio.ENGINE.event_loop is None:
+                    errors.append("ensure_running() left the event loop unset")
 
         threads = [threading.Thread(target=worker) for _ in range(_STRESS_THREADS)]
         for thread in threads:
@@ -223,10 +223,19 @@ class TestAioLifecycle:
         assert _settled_loop_thread_count() == 1
 
 
-class TestAioGlobalsAreNotAliased:
-    """Guards against re-introducing a stale by-value import of a mutable aio global."""
+class TestAioGlobalsDoNotLeakMutableState:
+    """Guards against re-introducing scattered mutable globals: the event
+    loop/executor live on aio.ENGINE (a stable singleton whose properties
+    are read fresh on every access), never as rebindable module-level
+    names a caller could import by value and have go stale."""
 
-    def test_no_module_imports_the_event_loop_by_value(self):
+    def test_the_old_scattered_globals_are_gone(self):
+        assert not hasattr(aio, "ASYNCIO_EVENT_LOOP")
+        assert not hasattr(aio, "THREADED_EXECUTOR")
+        assert not hasattr(aio, "ASYNCIO_LOOP_THREAD")
+        assert not hasattr(aio, "EXECUTOR_IS_SHUTDOWN")
+
+    def test_no_module_imports_a_loop_or_executor_by_value_from_aio(self):
         offenders = []
         for path, tree in _package_sources():
             for node in ast.walk(tree):
@@ -235,13 +244,17 @@ class TestAioGlobalsAreNotAliased:
                 if (node.module or "").split(".")[-1] != "aio":
                     continue
                 for alias in node.names:
-                    if alias.name == "ASYNCIO_EVENT_LOOP":
-                        offenders.append(os.path.basename(path))
+                    name = alias.name
+                    # UPPER_CASE only: aio's helper functions (run_in_executor,
+                    # etc.) also contain "loop"/"executor" but are stable
+                    # function references, not mutable state.
+                    if name.isupper() and ("LOOP" in name or "EXECUTOR" in name):
+                        offenders.append(f"{os.path.basename(path)}: {name}")
 
         assert offenders == [], (
-            f"{offenders} import ASYNCIO_EVENT_LOOP by value; the alias goes stale once "
-            "aio.initialize() rebinds the loop. Reference aio.ASYNCIO_EVENT_LOOP or "
-            "asyncio.get_running_loop() instead."
+            f"{offenders} import loop/executor state by value from aio; read "
+            "aio.ENGINE.event_loop / aio.ENGINE.executor fresh instead, or use "
+            "asyncio.get_running_loop()."
         )
 
 
@@ -285,7 +298,7 @@ class TestGrpcChannelTeardown:
         namespace, caught = self._close_channel_with(channel)
 
         assert channel.close_awaited
-        assert channel.closed_on_loop is aio.ASYNCIO_EVENT_LOOP
+        assert channel.closed_on_loop is aio.ENGINE.event_loop
         assert namespace["CHANNEL"] is None
         assert _never_awaited_warnings(caught) == []
 
