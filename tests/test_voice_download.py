@@ -21,6 +21,7 @@ import json
 import os
 import shutil
 import tarfile
+from concurrent.futures import Future
 from contextlib import contextmanager
 from unittest.mock import MagicMock
 
@@ -694,3 +695,116 @@ class TestPiperRTVoiceDownloader:
 
         downloader.success_callback.assert_not_called()
         messagebox_mock.assert_called_once()
+
+
+class _SyncExecutor:
+    """Stand-in for THREAD_POOL_EXECUTOR that runs work inline, so `.download()`
+    can be tested without waiting on a real background thread."""
+
+    def submit(self, fn, *args, **kwargs):
+        future = Future()
+        try:
+            result = fn(*args, **kwargs)
+        except Exception as e:
+            future.set_exception(e)
+        else:
+            future.set_result(result)
+        return future
+
+
+class TestDownloadWiresProgressDialogToInstall:
+    """`.download()`, `_progress_title`, `_success_message`, and
+    `_failure_message` are the shared _BaseVoiceDownloader machinery neither
+    class's other tests exercise -- those go through done_callback()/
+    download_voice_files()/download_voice_archive() directly instead."""
+
+    @pytest.fixture
+    def sync_executor(self, monkeypatch):
+        monkeypatch.setattr(voice_download, "THREAD_POOL_EXECUTOR", _SyncExecutor())
+
+    @pytest.fixture
+    def progress_dialog(self, monkeypatch):
+        instance = MagicMock()
+        dialog_cls = MagicMock(return_value=instance)
+        monkeypatch.setattr(voice_download.wx, "ProgressDialog", dialog_cls)
+        return dialog_cls, instance
+
+    def test_standard_download_uses_the_voice_progress_title_and_installs(
+        self, tmp_path, monkeypatch, sync_executor, progress_dialog
+    ):
+        dialog_cls, __ = progress_dialog
+        voices_dir = tmp_path / "voices"
+        monkeypatch.setattr(voice_download, "DENGJEN_VOICES_DIR", str(voices_dir))
+        body = b"model-bytes"
+        file = PiperVoiceFile(
+            file_path="en/en_US-lessac-medium.onnx",
+            size_in_bytes=len(body),
+            md5hash=hashlib.md5(body).hexdigest(),
+        )
+        fake_request = _FakeMureq(stream_responses=[
+            _FakeResponse(status=200, headers={"Content-Type": "application/octet-stream"}, body=body),
+        ])
+        monkeypatch.setattr(voice_download, "request", fake_request)
+        voice = _piper_voice(key="en_US-lessac-medium", files=[file])
+        downloader = PiperVoiceDownloader(voice, success_callback=MagicMock())
+
+        downloader.download()
+
+        assert dialog_cls.call_args.kwargs["title"] == "Downloading voice en_US-lessac-medium"
+        installed = voices_dir / "en_US-lessac-medium" / file.name
+        assert installed.read_bytes() == body
+        downloader.success_callback.assert_called_once()
+
+    def test_rt_download_uses_the_fast_variant_progress_title_and_installs(
+        self, tmp_path, monkeypatch, sync_executor, progress_dialog
+    ):
+        dialog_cls, __ = progress_dialog
+        voices_dir = tmp_path / "voices"
+        monkeypatch.setattr(voice_download, "DENGJEN_VOICES_DIR", str(voices_dir))
+        tar_path = _make_tar(tmp_path, "en_US-lessac-medium.tar.gz", {
+            "en_US-lessac+RT-medium.onnx": b"rt-model",
+            "en_US-lessac+RT-medium.onnx.json": b"{}",
+        })
+        body = tar_path.read_bytes()
+        fake_request = _FakeMureq(stream_responses=[
+            _FakeResponse(status=200, headers={"Content-Length": str(len(body))}, body=body),
+        ])
+        monkeypatch.setattr(voice_download, "request", fake_request)
+        voice = _piper_voice(key="en_US-lessac-medium", has_rt_variant=True)
+        downloader = PiperRTVoiceDownloader(voice, success_callback=MagicMock())
+
+        downloader.download()
+
+        assert dialog_cls.call_args.kwargs["title"] == "Downloading fast variant of the voice en_US-lessac-medium"
+        installed = voices_dir / "en_US-lessac+RT-medium" / "en_US-lessac+RT-medium.onnx"
+        assert installed.read_bytes() == b"rt-model"
+        downloader.success_callback.assert_called_once()
+
+    def test_standard_and_rt_failure_messages_differ(
+        self, tmp_path, monkeypatch, sync_executor, progress_dialog
+    ):
+        # Both go through the same _BaseVoiceDownloader.done_callback -- this
+        # guards against the two subclasses' _failure_message hooks getting
+        # mixed up.
+        voices_dir = tmp_path / "voices"
+        monkeypatch.setattr(voice_download, "DENGJEN_VOICES_DIR", str(voices_dir))
+        messagebox_mock = MagicMock()
+        monkeypatch.setattr(voice_download.gui, "messageBox", messagebox_mock)
+        fake_request = _FakeMureq(stream_responses=[_FakeResponse(status=404)])
+        monkeypatch.setattr(voice_download, "request", fake_request)
+
+        voice = _piper_voice(key="en_US-lessac-medium", files=[
+            PiperVoiceFile(file_path="en/f.onnx", size_in_bytes=1, md5hash="x"),
+        ])
+        PiperVoiceDownloader(voice, success_callback=MagicMock()).download()
+        std_message = messagebox_mock.call_args.args[0]
+
+        messagebox_mock.reset_mock()
+        fake_request._stream_responses.append(_FakeResponse(status=404))
+        rt_voice = _piper_voice(key="en_US-lessac-medium", has_rt_variant=True)
+        PiperRTVoiceDownloader(rt_voice, success_callback=MagicMock()).download()
+        rt_message = messagebox_mock.call_args.args[0]
+
+        assert std_message != rt_message
+        assert "fast variant" not in std_message
+        assert "fast variant" in rt_message
