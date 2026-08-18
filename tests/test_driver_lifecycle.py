@@ -13,6 +13,7 @@ import time
 import types
 import warnings
 import importlib.util
+from types import SimpleNamespace
 
 _STRESS_THREADS = 8
 _STRESS_ITERATIONS = 40
@@ -339,4 +340,103 @@ class TestCrossModuleAttributesResolve:
             f"{unresolved} reference names that grpc_client does not define at module "
             "level; these fail at runtime only, since NVDA-only modules are not importable."
         )
+
+
+class _FakeProcess:
+    def __init__(self, pid, exe, *, survives_terminate=False):
+        self.info = {"pid": pid, "exe": exe}
+        self.survives_terminate = survives_terminate
+        self.terminated = False
+        self.killed = False
+
+    def terminate(self):
+        self.terminated = True
+
+    def kill(self):
+        self.killed = True
+
+
+class _FakePsutil:
+    class AccessDenied(Exception):
+        pass
+
+    class NoSuchProcess(Exception):
+        pass
+
+    def __init__(self, processes):
+        self.processes = processes
+        self.wait_calls = []
+
+    def process_iter(self, attrs):
+        assert attrs == ["pid", "exe"]
+        return iter(self.processes)
+
+    def wait_procs(self, processes, timeout):
+        processes = list(processes)
+        self.wait_calls.append((processes, timeout))
+        alive = [p for p in processes if p.survives_terminate and not p.killed]
+        return [p for p in processes if p not in alive], alive
+
+
+class TestGrpcServerProcessLifecycle:
+    def _load_reaper(self, processes, *, current_pid=100):
+        fake_psutil = _FakePsutil(processes)
+        messages = []
+        namespace = {
+            "os": SimpleNamespace(
+                getpid=lambda: current_pid,
+                path=os.path,
+            ),
+            "psutil": fake_psutil,
+            "log": SimpleNamespace(info=messages.append),
+            "PROCESS_EXIT_TIMEOUT": 3,
+        }
+        reaper = _load_module_function(
+            _GRPC_CLIENT_PATH, "_reap_stale_grpc_servers", namespace
+        )
+        return reaper, fake_psutil, messages
+
+    def test_reaper_only_stops_helpers_from_this_addon_copy(self, tmp_path):
+        expected = str(tmp_path / "addon" / "sonata-grpc.exe")
+        ours = _FakeProcess(1, expected)
+        another_copy = _FakeProcess(2, str(tmp_path / "portable" / "sonata-grpc.exe"))
+        current = _FakeProcess(100, expected)
+        reaper, fake_psutil, messages = self._load_reaper(
+            [ours, another_copy, current]
+        )
+
+        reaper(expected)
+
+        assert ours.terminated
+        assert not another_copy.terminated
+        assert not current.terminated
+        assert len(fake_psutil.wait_calls) == 1
+        assert messages == ["Removed 1 abandoned Dengjen GRPC helper process(es)"]
+
+    def test_reaper_force_kills_a_helper_that_will_not_exit(self, tmp_path):
+        expected = str(tmp_path / "sonata-grpc.exe")
+        stuck = _FakeProcess(1, expected, survives_terminate=True)
+        reaper, _, _ = self._load_reaper([stuck])
+
+        reaper(expected)
+
+        assert stuck.terminated
+        assert stuck.killed
+
+    def test_clear_saved_state_removes_both_global_values(self):
+        saved_state = SimpleNamespace(
+            SONATA_GRPC_SERVER_PORT=12345,
+            GRPC_SERVER_PROCESS=object(),
+            unrelated="preserved",
+        )
+        namespace = {"globalVars": saved_state}
+        clear_state = _load_module_function(
+            _GRPC_CLIENT_PATH, "_clear_saved_server_state", namespace
+        )
+
+        clear_state()
+
+        assert not hasattr(saved_state, "SONATA_GRPC_SERVER_PORT")
+        assert not hasattr(saved_state, "GRPC_SERVER_PROCESS")
+        assert saved_state.unrelated == "preserved"
 

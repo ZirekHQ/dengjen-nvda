@@ -64,6 +64,7 @@ from ..helpers import BIN_DIRECTORY, find_free_port, import_bundled_library
 
 with import_bundled_library():
     import grpc
+    import psutil
     from .. import aio
     from .grpc_protos.sonata_grpc_pb2_grpc import sonata_grpcStub
     from .grpc_protos import sonata_grpc_pb2 as msgs
@@ -79,14 +80,54 @@ SERVER_CHECK_TIMEOUT = 15
 STARTUP_TIMEOUT = SERVER_CHECK_TIMEOUT + 5
 CALL_TIMEOUT = 10
 CHANNEL_CLOSE_TIMEOUT = 5
+PROCESS_EXIT_TIMEOUT = 3
+
+
+def _clear_saved_server_state():
+    for name in ("SONATA_GRPC_SERVER_PORT", "GRPC_SERVER_PROCESS"):
+        if hasattr(globalVars, name):
+            delattr(globalVars, name)
+
+
+def _reap_stale_grpc_servers(grpc_server_exe):
+    """Stop helpers left behind by earlier NVDA processes using this add-on copy."""
+    expected_exe = os.path.normcase(os.path.realpath(grpc_server_exe))
+    stale_processes = []
+    for proc in psutil.process_iter(attrs=["pid", "exe"]):
+        try:
+            process_exe = proc.info.get("exe")
+            if proc.info.get("pid") == os.getpid() or not process_exe:
+                continue
+            if os.path.normcase(os.path.realpath(process_exe)) != expected_exe:
+                continue
+            proc.terminate()
+            stale_processes.append(proc)
+        except (psutil.AccessDenied, psutil.NoSuchProcess, OSError):
+            continue
+    if not stale_processes:
+        return
+    _, alive = psutil.wait_procs(stale_processes, timeout=PROCESS_EXIT_TIMEOUT)
+    if alive:
+        for proc in alive:
+            try:
+                proc.kill()
+            except (psutil.AccessDenied, psutil.NoSuchProcess):
+                pass
+        psutil.wait_procs(alive, timeout=PROCESS_EXIT_TIMEOUT)
+    log.info(f"Removed {len(stale_processes)} abandoned Dengjen GRPC helper process(es)")
 
 
 def start_grpc_server():
     global GRPC_SERVER_PROCESS, SONATA_GRPC_SERVER_PORT
     if hasattr(globalVars, "SONATA_GRPC_SERVER_PORT"):
-        SONATA_GRPC_SERVER_PORT = globalVars.SONATA_GRPC_SERVER_PORT
-        GRPC_SERVER_PROCESS = globalVars.GRPC_SERVER_PROCESS
-        return True
+        saved_process = getattr(globalVars, "GRPC_SERVER_PROCESS", None)
+        if saved_process is not None and saved_process.poll() is None:
+            SONATA_GRPC_SERVER_PORT = globalVars.SONATA_GRPC_SERVER_PORT
+            GRPC_SERVER_PROCESS = saved_process
+            return True
+        _clear_saved_server_state()
+    grpc_server_exe = os.path.join(BIN_DIRECTORY, "sonata-grpc.exe")
+    _reap_stale_grpc_servers(grpc_server_exe)
     if _vcruntime_missing():
         log.error(
             "Dengjen GRPC server cannot start: vcruntime140_1.dll not found. "
@@ -96,7 +137,6 @@ def start_grpc_server():
         _show_vcruntime_warning()
         return False
     SONATA_GRPC_SERVER_PORT = find_free_port()
-    grpc_server_exe = os.path.join(BIN_DIRECTORY, "sonata-grpc.exe")
     nvda_espeak_dir = os.path.join(globalVars.appDir, "synthDrivers")
     env = os.environ.copy()
     env.update({
@@ -189,8 +229,16 @@ def terminate():
     close_channel()
     aio.terminate()
     if GRPC_SERVER_PROCESS is not None:
-        GRPC_SERVER_PROCESS.terminate()
+        try:
+            GRPC_SERVER_PROCESS.terminate()
+            GRPC_SERVER_PROCESS.wait(timeout=PROCESS_EXIT_TIMEOUT)
+        except subprocess.TimeoutExpired:
+            GRPC_SERVER_PROCESS.kill()
+            GRPC_SERVER_PROCESS.wait(timeout=PROCESS_EXIT_TIMEOUT)
+        except OSError:
+            pass
         GRPC_SERVER_PROCESS = None
+    _clear_saved_server_state()
 
 
 @aio.asyncio_coroutine_to_concurrent_future
