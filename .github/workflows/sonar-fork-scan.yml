@@ -38,7 +38,14 @@ on:
 permissions: {}
 
 concurrency:
-  group: sonar-fork-scan-${{ github.event.issue.number }}
+  # Every comment on the PR fires this trigger, not just /sonar ones -- so a
+  # group keyed on PR number alone would let an unrelated comment (including
+  # SonarCloud's own "Quality Gate Passed" bot comment, posted *by* our own
+  # run) cancel a scan that's mid-flight. Non-/sonar comments each get their
+  # own group, keyed on the comment id, so only genuine /sonar comments ever
+  # compete for the slot -- which is what cancel-in-progress is actually for:
+  # a second /sonar superseding a stale first one.
+  group: sonar-fork-scan-${{ github.event.issue.number }}-${{ startsWith(github.event.comment.body, '/sonar') && 'sonar' || github.event.comment.id }}
   cancel-in-progress: true
 
 jobs:
