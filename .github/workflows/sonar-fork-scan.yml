@@ -1,4 +1,4 @@
-name: Sonar fork scan (manual)
+name: Sonar fork scan
 
 # Automated SonarCloud analysis of arbitrary fork PRs doesn't have a safe
 # implementation: SONAR_TOKEN is needed to post results, but no matter how
@@ -11,73 +11,86 @@ name: Sonar fork scan (manual)
 # archived with the stated reason: "there is [no] foolproof way to run
 # Sonarcloud against attacker-controlled PRs."
 #
-# So this is manual, mirroring the "ok-to-test" model GitHub already forces
-# on fork PRs (the "Approve and run workflows" click every fork PR needs
-# before anything executes at all): a maintainer reviews the diff, then runs
-# this with the PR number and the exact commit SHA reviewed. Only users with
-# write access can dispatch a workflow_dispatch run -- GitHub enforces that
-# natively -- and pinning the SHA closes the gap where new, unreviewed
-# commits land between review and running this.
+# So this is comment-triggered: a maintainer reviews the diff, then comments
+# `/sonar` on the PR. Only OWNER/MEMBER/COLLABORATOR authors can trigger it
+# (checked below), and the job resolves the PR's *current* head itself rather
+# than trusting a caller-supplied SHA -- there is no separate "pin the SHA you
+# reviewed" input to keep in sync, at the cost of a small window between
+# commenting and the job starting in which a new push would get scanned
+# instead of what was reviewed.
 #
-# This job still never runs anything from the fork: it downloads the tar
-# archive sonar-fork-coverage.yml built (test suite already executed there,
-# safely, with no secrets) and extracts it with plain `tar`, never a git
-# operation against fork content. The scanner only reads the result
-# statically.
+# Unlike a plain checkout-and-build of the fork's code (e.g. a workflow that
+# checks out the fork head and runs its own build scripts in a job that holds
+# SONAR_TOKEN), this job still never executes anything derived from the fork:
+# it downloads the tar archive sonar-fork-coverage.yml built (test suite
+# already executed there, safely, with no secrets) and extracts it with plain
+# `tar`, never a git operation against fork content. The scanner only reads
+# the result statically.
 #
-# Until a maintainer runs this, the required "SonarCloud Code Analysis"
-# check on a fork PR stays pending -- merge via admin override if a scan
-# isn't warranted (e.g. docs-only changes), rather than faking green.
+# Until a maintainer comments `/sonar`, the required "SonarCloud Code
+# Analysis" check on a fork PR stays pending -- merge via admin override if a
+# scan isn't warranted (e.g. docs-only changes), rather than faking green.
 
 on:
-  workflow_dispatch:
-    inputs:
-      pr_number:
-        description: "PR number to scan"
-        required: true
-        type: string
-      expected_head_sha:
-        description: "Commit SHA you reviewed (see `gh pr view <pr_number> --json headRefOid`) -- fails if the PR has moved past this"
-        required: true
-        type: string
+  issue_comment:
+    types: [created]
 
 permissions: {}
 
 concurrency:
-  group: sonar-fork-scan-${{ inputs.pr_number }}
+  group: sonar-fork-scan-${{ github.event.issue.number }}
   cancel-in-progress: true
 
 jobs:
-  scan:
-    name: Sonar fork scan (manual)
+  acknowledge:
+    # The only thing standing between a fork PR and SONAR_TOKEN, so it gates
+    # the scan job via `needs` rather than repeating this condition there,
+    # where the two copies could drift apart.
+    if: >-
+      github.event.issue.pull_request != null
+      && startsWith(github.event.comment.body, '/sonar')
+      && contains(fromJSON('["OWNER", "MEMBER", "COLLABORATOR"]'), github.event.comment.author_association)
+    name: Acknowledge
     runs-on: ubuntu-latest
     permissions:
-      pull-requests: read # needed by `gh pr view` to look up the PR's current head
+      issues: write
+    steps:
+      - name: React to the trigger comment
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          COMMENT_ID: ${{ github.event.comment.id }}
+        run: gh api -X POST "repos/$GITHUB_REPOSITORY/issues/comments/$COMMENT_ID/reactions" -f content=eyes
+
+  scan:
+    name: Sonar fork scan
+    needs: acknowledge
+    runs-on: ubuntu-latest
+    permissions:
+      pull-requests: read # needed by `gh pr view` to resolve the PR's current head
       actions: read # needed to find and download the matching coverage run's artifact
       statuses: write # needed to post the real result to the PR's head commit ourselves (see below)
     env:
       SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
       GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-      PR_NUMBER: ${{ inputs.pr_number }}
-      EXPECTED_SHA: ${{ inputs.expected_head_sha }}
+      PR_NUMBER: ${{ github.event.issue.number }}
     steps:
-      - name: Verify the PR hasn't moved since review
+      - name: Resolve the PR's current head
         id: pr
         run: |
-          ACTUAL_SHA=$(gh pr view "$PR_NUMBER" --repo "$GITHUB_REPOSITORY" --json headRefOid -q .headRefOid)
-          if [ "$ACTUAL_SHA" != "$EXPECTED_SHA" ]; then
-            echo "::error::PR #$PR_NUMBER head is $ACTUAL_SHA, not the reviewed $EXPECTED_SHA -- re-review before scanning."
-            exit 1
-          fi
-          echo "head_ref=$(gh pr view "$PR_NUMBER" --repo "$GITHUB_REPOSITORY" --json headRefName -q .headRefName)" >> "$GITHUB_OUTPUT"
+          gh pr view "$PR_NUMBER" --repo "$GITHUB_REPOSITORY" \
+            --json headRefOid,headRefName \
+            --jq '"head_sha=\(.headRefOid)\nhead_ref=\(.headRefName)"' \
+            >> "$GITHUB_OUTPUT"
 
       - name: Find the matching coverage run
         id: run
+        env:
+          HEAD_SHA: ${{ steps.pr.outputs.head_sha }}
         run: |
           RUN_ID=$(gh api "repos/$GITHUB_REPOSITORY/actions/workflows/sonar-fork-coverage.yml/runs?event=pull_request&status=success&per_page=20" \
-            --jq "[.workflow_runs[] | select(.head_sha == \"$EXPECTED_SHA\")][0].id")
+            --jq "[.workflow_runs[] | select(.head_sha == \"$HEAD_SHA\")][0].id")
           if [ -z "$RUN_ID" ] || [ "$RUN_ID" = "null" ]; then
-            echo "::error::No successful 'Sonar fork coverage' run found for $EXPECTED_SHA. Push a commit or re-run that workflow first."
+            echo "::error::No successful 'Sonar fork coverage' run found for $HEAD_SHA. Push a commit or re-run that workflow first."
             exit 1
           fi
           echo "id=$RUN_ID" >> "$GITHUB_OUTPUT"
@@ -98,13 +111,12 @@ jobs:
           tar -xzf "$ARCHIVE_DIR/workspace.tar.gz" -C workspace
 
       # SonarCloud's GitHub integration normally posts the
-      # "SonarCloud Code Analysis" status itself, but it attaches to
-      # whatever commit the Actions *run* is associated with -- main's tip,
-      # since this is workflow_dispatch, not the PR's head. It has no way to
-      # know to target the PR from sonar.pullrequest.key alone. So this
-      # waits for the real quality gate result and posts the status to the
-      # actual head SHA itself, rather than relying on that automatic
-      # posting.
+      # "SonarCloud Code Analysis" status itself, but it attaches to whatever
+      # commit the Actions *run* is associated with -- main's tip, since this
+      # is triggered by issue_comment, not the PR's head. It has no way to
+      # know to target the PR from sonar.pullrequest.key alone. So this waits
+      # for the real quality gate result and posts the status to the actual
+      # head SHA itself, rather than relying on that automatic posting.
       - name: SonarQube scan
         id: sonar
         if: env.SONAR_TOKEN != ''
@@ -112,7 +124,7 @@ jobs:
         with:
           args: >
             -Dsonar.projectBaseDir=workspace
-            -Dsonar.pullrequest.key=${{ inputs.pr_number }}
+            -Dsonar.pullrequest.key=${{ env.PR_NUMBER }}
             -Dsonar.pullrequest.branch=${{ steps.pr.outputs.head_ref }}
             -Dsonar.pullrequest.base=main
             -Dsonar.qualitygate.wait=true
@@ -122,6 +134,7 @@ jobs:
         if: always() && env.SONAR_TOKEN != ''
         env:
           SCAN_OUTCOME: ${{ steps.sonar.outcome }}
+          HEAD_SHA: ${{ steps.pr.outputs.head_sha }}
           RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
         run: |
           if [ "$SCAN_OUTCOME" = "success" ]; then
@@ -131,7 +144,7 @@ jobs:
             STATE=failure
             DESC="Quality gate failed or scan errored -- see the SonarCloud dashboard"
           fi
-          gh api --method POST "repos/$GITHUB_REPOSITORY/statuses/$EXPECTED_SHA" \
+          gh api --method POST "repos/$GITHUB_REPOSITORY/statuses/$HEAD_SHA" \
             -f state="$STATE" \
             -f context='SonarCloud Code Analysis' \
             -f description="$DESC" \

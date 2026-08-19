@@ -7,8 +7,8 @@ name: Sonar fork coverage
 # token that `pull_request` gets for fork PRs, and packages it as a plain tar
 # archive artifact.
 #
-# sonar-fork-scan.yml (workflow_dispatch, manually triggered by a maintainer
-# after reviewing the diff) extracts that archive with plain `tar`, never a
+# sonar-fork-scan.yml (triggered by a maintainer commenting `/sonar` on the
+# PR after reviewing the diff) extracts that archive with plain `tar`, never a
 # git operation, so it never runs git fetch/checkout against fork content and
 # never executes anything from the fork -- the archive is only read
 # statically by the Sonar scanner. This workflow must never gain
