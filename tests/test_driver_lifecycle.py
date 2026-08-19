@@ -454,6 +454,7 @@ class _LogRecorder:
         self.debug_messages = []
         self.info_messages = []
         self.warning_messages = []
+        self.error_messages = []
         self.exception_messages = []
 
     def debug(self, message, *args, **kwargs):
@@ -465,13 +466,16 @@ class _LogRecorder:
     def warning(self, message, *args, **kwargs):
         self.warning_messages.append(message)
 
+    def error(self, message, *args, **kwargs):
+        self.error_messages.append(message)
+
     def exception(self, message, *args, **kwargs):
         self.exception_messages.append(message)
 
 
 class _FakeProcess:
     def __init__(self, pid, exe, *, parent=None, parent_error=None, survives_terminate=False):
-        self.info = {"pid": pid, "exe": exe}
+        self.info = {"pid": pid, "name": os.path.basename(exe), "exe": exe}
         self._parent = parent
         self._parent_error = parent_error
         self.survives_terminate = survives_terminate
@@ -504,7 +508,7 @@ class _FakePsutil:
         self.wait_calls = []
 
     def process_iter(self, attrs):
-        assert attrs == ["pid", "exe"]
+        assert attrs == ["pid", "name", "exe"]
         if self.iteration_error is not None:
             raise self.iteration_error
         return iter(self.processes)
@@ -558,6 +562,52 @@ class TestGrpcServerProcessLifecycle:
         assert start_grpc_server()
         assert namespace["GRPC_SERVER_PROCESS"] is process
         assert namespace["SONATA_GRPC_SERVER_PORT"] == 50051
+
+    @pytest.mark.parametrize("poll_result", [1, OSError("invalid process handle")])
+    def test_start_recovers_from_dead_or_invalid_saved_helper(self, poll_result):
+        class UnavailableProcess:
+            def poll(self):
+                if isinstance(poll_result, Exception):
+                    raise poll_result
+                return poll_result
+
+        process = UnavailableProcess()
+        saved_state = SimpleNamespace(
+            SONATA_GRPC_SERVER_PORT=50051,
+            GRPC_SERVER_PROCESS=process,
+        )
+        reaped_paths = []
+        log = _LogRecorder()
+        clear_state = _load_module_function(
+            _GRPC_CLIENT_PATH,
+            "_clear_saved_server_state",
+            {"globalVars": saved_state},
+        )
+        namespace = {
+            "os": os,
+            "globalVars": saved_state,
+            "GRPC_SERVER_PROCESS": None,
+            "SONATA_GRPC_SERVER_PORT": None,
+            "BIN_DIRECTORY": "addon-bin",
+            "VC_REDIST_URL": "https://example.invalid/vc-redist",
+            "_clear_saved_server_state": clear_state,
+            "_reap_stale_grpc_servers": reaped_paths.append,
+            "_vcruntime_missing": lambda: True,
+            "_show_vcruntime_warning": lambda: None,
+            "log": log,
+        }
+        start_grpc_server = _load_module_function(
+            _GRPC_CLIENT_PATH, "start_grpc_server", namespace
+        )
+
+        assert not start_grpc_server()
+        assert reaped_paths == [os.path.join("addon-bin", "sonata-grpc.exe")]
+        assert not hasattr(saved_state, "SONATA_GRPC_SERVER_PORT")
+        assert not hasattr(saved_state, "GRPC_SERVER_PROCESS")
+        if isinstance(poll_result, Exception):
+            assert log.debug_messages == [
+                "Could not inspect the saved Dengjen GRPC helper"
+            ]
 
     def test_reaper_only_stops_helpers_from_this_addon_copy(self, tmp_path):
         expected = str(tmp_path / "addon" / "sonata-grpc.exe")
@@ -702,5 +752,102 @@ class TestGrpcServerProcessLifecycle:
         assert not hasattr(saved_state, "GRPC_SERVER_PROCESS")
         assert log.warning_messages == [
             "Dengjen GRPC helper did not exit during shutdown"
+        ]
+
+    def test_terminate_phase_failures_do_not_block_process_cleanup(self):
+        class Process:
+            terminated = False
+            waited = False
+
+            def poll(self):
+                return None
+
+            def terminate(self):
+                self.terminated = True
+
+            def wait(self, timeout):
+                self.waited = True
+
+        process = Process()
+        saved_state = SimpleNamespace(
+            SONATA_GRPC_SERVER_PORT=50051,
+            GRPC_SERVER_PROCESS=process,
+        )
+        log = _LogRecorder()
+
+        def fail_channel_close():
+            raise RuntimeError("channel close failed")
+
+        def fail_aio_terminate():
+            raise RuntimeError("async engine shutdown failed")
+
+        namespace = {
+            "atexit": SimpleNamespace(register=lambda func: func),
+            "subprocess": subprocess,
+            "close_channel": fail_channel_close,
+            "aio": SimpleNamespace(terminate=fail_aio_terminate),
+            "log": log,
+            "globalVars": saved_state,
+            "GRPC_SERVER_PROCESS": process,
+            "SONATA_GRPC_SERVER_PORT": 50051,
+            "PROCESS_EXIT_TIMEOUT": 3,
+            "_clear_saved_server_state": _load_module_function(
+                _GRPC_CLIENT_PATH,
+                "_clear_saved_server_state",
+                {"globalVars": saved_state},
+            ),
+        }
+        terminate = _load_module_function(_GRPC_CLIENT_PATH, "terminate", namespace)
+
+        terminate()
+
+        assert process.terminated
+        assert process.waited
+        assert namespace["GRPC_SERVER_PROCESS"] is None
+        assert namespace["SONATA_GRPC_SERVER_PORT"] is None
+        assert not hasattr(saved_state, "SONATA_GRPC_SERVER_PORT")
+        assert not hasattr(saved_state, "GRPC_SERVER_PROCESS")
+        assert log.exception_messages == [
+            "Failed to close the Dengjen GRPC channel during shutdown",
+            "Failed to stop the Dengjen asynchronous engine during shutdown",
+        ]
+
+    def test_terminate_poll_failure_is_logged_and_saved_state_is_cleared(self):
+        class InvalidProcess:
+            def poll(self):
+                raise OSError("invalid process handle")
+
+        process = InvalidProcess()
+        saved_state = SimpleNamespace(
+            SONATA_GRPC_SERVER_PORT=50051,
+            GRPC_SERVER_PROCESS=process,
+        )
+        log = _LogRecorder()
+        namespace = {
+            "atexit": SimpleNamespace(register=lambda func: func),
+            "subprocess": subprocess,
+            "close_channel": lambda: None,
+            "aio": SimpleNamespace(terminate=lambda: None),
+            "log": log,
+            "globalVars": saved_state,
+            "GRPC_SERVER_PROCESS": process,
+            "SONATA_GRPC_SERVER_PORT": 50051,
+            "PROCESS_EXIT_TIMEOUT": 3,
+            "_clear_saved_server_state": _load_module_function(
+                _GRPC_CLIENT_PATH,
+                "_clear_saved_server_state",
+                {"globalVars": saved_state},
+            ),
+        }
+        terminate = _load_module_function(_GRPC_CLIENT_PATH, "terminate", namespace)
+
+        terminate()
+
+        assert namespace["GRPC_SERVER_PROCESS"] is None
+        assert namespace["SONATA_GRPC_SERVER_PORT"] is None
+        assert not hasattr(saved_state, "SONATA_GRPC_SERVER_PORT")
+        assert not hasattr(saved_state, "GRPC_SERVER_PROCESS")
+        assert log.exception_messages == [
+            "Failed to stop the Dengjen GRPC helper during shutdown"
         ]
 

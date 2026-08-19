@@ -91,12 +91,16 @@ def _clear_saved_server_state():
 
 
 def _reap_stale_grpc_servers(grpc_server_exe):
-    """Stop helpers left behind by earlier NVDA processes using this add-on copy."""
+    """Stop helpers whose parent no longer owns them, including failed local shutdowns."""
     try:
         expected_exe = os.path.normcase(os.path.realpath(grpc_server_exe))
+        expected_name = os.path.normcase(os.path.basename(expected_exe))
         stale_processes = []
-        for proc in psutil.process_iter(attrs=["pid", "exe"]):
+        for proc in psutil.process_iter(attrs=["pid", "name", "exe"]):
             try:
+                process_name = proc.info.get("name") or ""
+                if os.path.normcase(process_name) != expected_name:
+                    continue
                 process_exe = proc.info.get("exe")
                 if not process_exe:
                     continue
@@ -136,7 +140,14 @@ def start_grpc_server():
     global GRPC_SERVER_PROCESS, SONATA_GRPC_SERVER_PORT
     if hasattr(globalVars, "SONATA_GRPC_SERVER_PORT"):
         saved_process = getattr(globalVars, "GRPC_SERVER_PROCESS", None)
-        if saved_process is not None and saved_process.poll() is None:
+        try:
+            saved_process_is_alive = (
+                saved_process is not None and saved_process.poll() is None
+            )
+        except OSError:
+            saved_process_is_alive = False
+            log.debug("Could not inspect the saved Dengjen GRPC helper", exc_info=True)
+        if saved_process_is_alive:
             SONATA_GRPC_SERVER_PORT = globalVars.SONATA_GRPC_SERVER_PORT
             GRPC_SERVER_PROCESS = saved_process
             return True
@@ -275,6 +286,8 @@ def terminate():
             log.warning("Dengjen GRPC helper did not exit during shutdown")
         except OSError:
             log.debug("Dengjen GRPC helper was already unavailable during shutdown", exc_info=True)
+    except Exception:
+        log.exception("Failed to stop the Dengjen GRPC helper during shutdown")
     finally:
         _clear_saved_server_state()
 
