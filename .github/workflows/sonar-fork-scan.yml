@@ -46,20 +46,22 @@ jobs:
     # The only thing standing between a fork PR and SONAR_TOKEN, so it gates
     # the scan job via `needs` rather than repeating this condition there,
     # where the two copies could drift apart.
+    #
+    # No reaction/comment back here: this repo's default GITHUB_TOKEN
+    # permissions are read-only (org/repo setting), so a job-level
+    # `permissions: issues: write` can't actually widen the token -- any
+    # write call 403s. Rather than carry a permission this repo deliberately
+    # withholds, this job does nothing but gate.
     if: >-
       github.event.issue.pull_request != null
       && startsWith(github.event.comment.body, '/sonar')
       && contains(fromJSON('["OWNER", "MEMBER", "COLLABORATOR"]'), github.event.comment.author_association)
     name: Acknowledge
     runs-on: ubuntu-latest
-    permissions:
-      issues: write
+    permissions: {}
     steps:
-      - name: React to the trigger comment
-        env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          COMMENT_ID: ${{ github.event.comment.id }}
-        run: gh api -X POST "repos/$GITHUB_REPOSITORY/issues/comments/$COMMENT_ID/reactions" -f content=eyes
+      - name: Log the trusted trigger
+        run: echo "::notice::/sonar triggered by ${{ github.event.comment.user.login }} (${{ github.event.comment.author_association }})"
 
   scan:
     name: Sonar fork scan
