@@ -72,7 +72,12 @@ jobs:
           pip install --only-binary :all: -r requirements-test.txt
 
       - name: Run tests
+        run: pytest --cov --cov-report=xml
+        if: runner.os == 'Linux'
+
+      - name: Run tests
         run: pytest
+        if: runner.os == 'Windows'
 
       # Separate invocation, not folded into `pytest` above: testpaths=tests
       # already keeps this out of that run, and tests_contract/'s conftest.py
@@ -95,6 +100,13 @@ jobs:
         run: |
           pip install --only-binary :all: -r requirements-test-gui.txt
           pytest tests_gui/ -v
+
+      - name: Upload coverage artifact
+        if: runner.os == 'Linux' && (github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository)
+        uses: actions/upload-artifact@330a01c490aca151604b8cf639adc76d48f6c5d4 # v5.0.0
+        with:
+          name: coverage-report-python
+          path: coverage.xml
 
   # Stable check name for branch protection: matrix jobs report as
   # "test_matrix (<os>)", so the bare name would never be published.
@@ -215,3 +227,21 @@ jobs:
         echo "" >> "$GITHUB_STEP_SUMMARY"
         echo "Use these values when filling in the [Add-on Store registration form](https://github.com/nvaccess/addon-datastore/issues/new?template=registerAddon.yml)." >> "$GITHUB_STEP_SUMMARY"
 
+
+  upload-coverage-python:
+    needs: test_matrix
+    if: ${{ !cancelled() && needs.test_matrix.result == 'success' && (github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository) }}
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      code-quality: write
+    steps:
+      - name: Download coverage artifact
+        uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4.3.0
+        with:
+          name: coverage-report-python
+      - uses: actions/upload-code-coverage@1c15be36fc3733ba839b1dd643bd9556e4426dc1 # v1
+        with:
+          file: coverage.xml
+          language: Python
+          label: code-coverage-agent
