@@ -507,5 +507,5 @@ msgstr "Échec du chargement de la voix {voice}. La voix précédente est conser
 
 #. Translators: what's new content for the add-on version to be shown in the add-on store
 #: buildVars.py:31
-msgid "The add-on has been renamed to Dengjen Neural Voices at the request of the original author, as a condition of listing in the NVDA Add-on Store. After upgrading you must reselect the synthesizer in NVDA's speech settings; your installed voices, rate, pitch and volume carry over automatically. Remove the old Sonata Neural Voices add-on, which no longer has access to the downloaded voices."
-msgstr "L'extension a été renommée Voix neuronales de Dengjen à la demande de l'auteur original, comme condition pour figurer dans l'Add-on Store de NVDA. Après la mise à jour, vous devez sélectionner à nouveau le synthétiseur dans les paramètres de parole de NVDA ; vos voix installées, le débit, la hauteur et le volume sont conservés automatiquement. Supprimez l'ancienne extension Voix neuronales de Sonata, qui n'a plus accès aux voix téléchargées."
+msgid "Corrected the declared minimum NVDA version to 2026.1. The bundled speech engine has required NVDA's Python 3.13 64-bit runtime since v3.2-beta.1; the add-on previously claimed support for NVDA 2025.1+ and failed to load with an ImportError on those older, incompatible NVDA versions."
+msgstr ""

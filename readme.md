@@ -15,7 +15,7 @@ Piper is a fast, local neural text to speech system that sounds great and is opt
 
 # Requirements
 
-- NVDA 2025.1 or later (tested up to 2026.1).
+- NVDA 2026.1 or later.
 - The [Microsoft Visual C++ 2015-2022 Redistributable (x64)](https://aka.ms/vs/17/release/vc_redist.x64.exe). The speech engine bundled with the add-on is built with MSVC and cannot start without it. If it is missing, the add-on shows a message pointing you to that download; install it and restart NVDA. Most Windows machines already have it.
 
 # Installation

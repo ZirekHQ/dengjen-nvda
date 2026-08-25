@@ -17,7 +17,7 @@ Piper es un sistema de texto a voz rápido, local y neuronal que suena bien y es
 
 # Requisitos
 
-- NVDA 2025.1 o posterior (probado hasta 2026.1).
+- NVDA 2026.1 o posterior.
 - El [Microsoft Visual C++ 2015-2022 Redistributable (x64)](https://aka.ms/vs/17/release/vc_redist.x64.exe). El motor de voz incluido en el complemento está compilado con MSVC y no puede iniciarse sin él. Si falta, el complemento muestra un mensaje con ese enlace de descarga; instálalo y reinicia NVDA. La mayoría de los equipos con Windows ya lo tienen.
 
 # Instalación

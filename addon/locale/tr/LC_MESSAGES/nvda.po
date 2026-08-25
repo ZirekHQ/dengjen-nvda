@@ -503,5 +503,5 @@ msgstr "{voice} sesi yüklenemedi. Önceki ses korunuyor."
 
 #. Translators: what's new content for the add-on version to be shown in the add-on store
 #: buildVars.py:31
-msgid "The add-on has been renamed to Dengjen Neural Voices at the request of the original author, as a condition of listing in the NVDA Add-on Store. After upgrading you must reselect the synthesizer in NVDA's speech settings; your installed voices, rate, pitch and volume carry over automatically. Remove the old Sonata Neural Voices add-on, which no longer has access to the downloaded voices."
-msgstr "Eklentinin adı, özgün yazarın isteği üzerine ve NVDA Eklenti mağazasında yer alma koşulu olarak Dengjen Sinir Ağı Sesleri olarak değiştirildi. Güncellemeden sonra NVDA konuşma ayarlarından sentezleyiciyi yeniden seçmeniz gerekir; kurulu sesleriniz, hız, ses perdesi ve ses seviyesi otomatik olarak korunur. Artık indirilen seslere erişemeyen eski Sonata Sinir Ağı Sesleri eklentisini kaldırın."
+msgid "Corrected the declared minimum NVDA version to 2026.1. The bundled speech engine has required NVDA's Python 3.13 64-bit runtime since v3.2-beta.1; the add-on previously claimed support for NVDA 2025.1+ and failed to load with an ImportError on those older, incompatible NVDA versions."
+msgstr ""

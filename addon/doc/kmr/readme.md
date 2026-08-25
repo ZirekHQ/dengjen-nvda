@@ -18,7 +18,7 @@ Piper pergaleke bilez û herêmî ya neuronî ya nivîs-bo-axaftinê ye ku deng�
 
 # Pêdiviyên pergalê
 
-- NVDA 2025.1 an nûtir (heta 2026.1 hat ceribandin).
+- NVDA 2026.1 an nûtir.
 - [Microsoft Visual C++ 2015-2022 Redistributable (x64)](https://aka.ms/vs/17/release/vc_redist.x64.exe). Motora axaftinê ya ku bi pêvekê re tê, bi MSVC hatiye avakirin û bêyî wê dest pê nake. Ger ew kêm be, pêvek peyamekê nîşan dide ku te ber bi vê daxistinê ve dibe; wê saz bike û NVDA ji nû ve dest pê bike. Li ser piraniya komputerên Windows ew jixwe sazkirî ye.
 
 # Sazkirin

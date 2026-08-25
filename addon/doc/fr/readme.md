@@ -17,7 +17,7 @@ Piper est un système de synthèse de texte à parole rapide, local et neuronal 
 
 # Prérequis
 
-- NVDA 2025.1 ou ultérieur (testé jusqu'à 2026.1).
+- NVDA 2026.1 ou ultérieur.
 - Le [Microsoft Visual C++ 2015-2022 Redistributable (x64)](https://aka.ms/vs/17/release/vc_redist.x64.exe). Le moteur de synthèse fourni avec l'extension est compilé avec MSVC et ne peut pas démarrer sans lui. S'il est absent, l'extension affiche un message renvoyant vers ce téléchargement ; installez-le puis redémarrez NVDA. La plupart des machines Windows le possèdent déjà.
 
 # Installation
