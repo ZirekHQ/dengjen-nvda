@@ -25,15 +25,14 @@ addon_info = AddonInfo(
 		"""Adds fast, local neural text-to-speech voices to NVDA. Provides a synthesizer driver for Piper voice models via the Sonata engine, together with a voice manager for downloading and installing voices."""
 	),
 	# version
-	addon_version="4.0.0",
+	addon_version="4.0.1",
 	# Brief changelog for this version
 	# Translators: what's new content for the add-on version to be shown in the add-on store
 	addon_changelog=_(
-		"The add-on has been renamed to Dengjen Neural Voices at the request of the original author, "
-		"as a condition of listing in the NVDA Add-on Store. "
-		"After upgrading you must reselect the synthesizer in NVDA's speech settings; "
-		"your installed voices, rate, pitch and volume carry over automatically. "
-		"Remove the old Sonata Neural Voices add-on, which no longer has access to the downloaded voices."
+		"Corrected the declared minimum NVDA version to 2026.1. "
+		"The bundled speech engine has required NVDA's Python 3.13 64-bit runtime since v3.2-beta.1; "
+		"the add-on previously claimed support for NVDA 2025.1+ and failed to load with an ImportError "
+		"on those older, incompatible NVDA versions."
 	),
 	# Author(s)
 	addon_author="Musharraf Omer (original) <ibnomer2011@hotmail.com>, Ali Ustek (maintainer) <13117393+austek@users.noreply.github.com>",
@@ -44,7 +43,7 @@ addon_info = AddonInfo(
 	# Documentation file name
 	addon_docFileName="readme.html",
 	# Minimum NVDA version supported (e.g. "2019.3.0", minor version is optional)
-	addon_minimumNVDAVersion="2025.1",
+	addon_minimumNVDAVersion="2026.1",
 	# Last NVDA version supported/tested (e.g. "2024.4.0", ideally more recent than minimum version)
 	addon_lastTestedNVDAVersion="2026.1",
 	# Add-on update channel (default is None, denoting stable releases,

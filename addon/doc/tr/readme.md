@@ -17,7 +17,7 @@ Piper, kulağa doğal gelen ve Raspberry Pi gibi düşük donanımlı cihazlar i
 
 # Gereksinimler
 
-- NVDA 2025.1 veya sonrası (2026.1 sürümüne kadar sınandı).
+- NVDA 2026.1 veya sonrası.
 - [Microsoft Visual C++ 2015-2022 Yeniden Dağıtılabilir Paketi (x64)](https://aka.ms/vs/17/release/vc_redist.x64.exe). Eklentiyle birlikte gelen konuşma motoru MSVC ile derlenmiştir ve bu paket olmadan başlatılamaz. Paket eksikse eklenti sizi bu indirmeye yönlendiren bir ileti gösterir; paketi kurup NVDA'yı yeniden başlatın. Windows çalıştıran çoğu bilgisayarda bu paket zaten kuruludur.
 
 # Kurulum
