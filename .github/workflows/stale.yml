@@ -29,7 +29,7 @@ jobs:
           stale-issue-message: |
             This issue has been waiting on a reproducer for 30 days with no activity, so it's been marked as `stale`.
 
-            If you can still reproduce on the latest [release](https://github.com/austek/dengjen-nvda/releases/latest), please reply with:
+            If you can still reproduce on the latest [release](https://github.com/zirekhq/dengjen-nvda/releases/latest), please reply with:
             - The exact NVDA version and add-on version
             - A minimal reproducer (steps, expected vs. actual behavior)
             - The relevant NVDA log slice
@@ -40,4 +40,4 @@ jobs:
           close-issue-message: |
             Closing as stale — no reproducer was received in 44 days.
 
-            If you hit this on a recent release, please open a fresh issue using the [bug report template](https://github.com/austek/dengjen-nvda/issues/new/choose), which collects the diagnostic info up-front. Thanks for the original report regardless.
+            If you hit this on a recent release, please open a fresh issue using the [bug report template](https://github.com/zirekhq/dengjen-nvda/issues/new/choose), which collects the diagnostic info up-front. Thanks for the original report regardless.

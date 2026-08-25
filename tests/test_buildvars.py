@@ -154,8 +154,8 @@ class TestAddonIdentity:
         assert INFO["addon_summary"] == "Dengjen Neural Voices"
 
     def test_urls_point_at_the_renamed_repo(self):
-        assert INFO["addon_url"] == "https://github.com/austek/dengjen-nvda"
-        assert INFO["addon_sourceURL"] == "https://github.com/austek/dengjen-nvda"
+        assert INFO["addon_url"] == "https://github.com/zirekhq/dengjen-nvda"
+        assert INFO["addon_sourceURL"] == "https://github.com/zirekhq/dengjen-nvda"
 
     def test_original_author_is_credited_first(self):
         assert INFO["addon_author"].startswith("Musharraf Omer (original)")
