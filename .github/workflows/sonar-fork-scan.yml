@@ -68,7 +68,10 @@ jobs:
     permissions: {}
     steps:
       - name: Log the trusted trigger
-        run: echo "::notice::/sonar triggered by ${{ github.event.comment.user.login }} (${{ github.event.comment.author_association }})"
+        env:
+          COMMENT_USER: ${{ github.event.comment.user.login }}
+          COMMENT_ASSOCIATION: ${{ github.event.comment.author_association }}
+        run: echo "::notice::/sonar triggered by $COMMENT_USER ($COMMENT_ASSOCIATION)"
 
   scan:
     name: Sonar fork scan
