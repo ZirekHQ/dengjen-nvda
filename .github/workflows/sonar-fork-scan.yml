@@ -68,7 +68,10 @@ jobs:
     permissions: {}
     steps:
       - name: Log the trusted trigger
-        run: echo "::notice::/sonar triggered by ${{ github.event.comment.user.login }} (${{ github.event.comment.author_association }})"
+        env:
+          COMMENT_USER: ${{ github.event.comment.user.login }}
+          COMMENT_ASSOCIATION: ${{ github.event.comment.author_association }}
+        run: echo "::notice::/sonar triggered by $COMMENT_USER ($COMMENT_ASSOCIATION)"
 
   scan:
     name: Sonar fork scan
@@ -157,4 +160,4 @@ jobs:
             -f state="$STATE" \
             -f context='SonarCloud Code Analysis' \
             -f description="$DESC" \
-            -f target_url="https://sonarcloud.io/dashboard?id=austek_dengjen-nvda&pullRequest=$PR_NUMBER"
+            -f target_url="https://sonarcloud.io/dashboard?id=ZirekHQ_dengjen-nvda&pullRequest=$PR_NUMBER"

@@ -18,3 +18,4 @@ coverage.xml
 .sonar/
 .scannerwork/
 .superpowers/
+uv.lock
