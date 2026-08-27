@@ -1,0 +1,2 @@
+# Crowdin API client used by .github/scripts/checkTranslation.py
+crowdin-api-client==1.24.1
