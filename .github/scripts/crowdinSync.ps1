@@ -5,6 +5,12 @@ $ErrorActionPreference = 'Stop'
 git config user.name "github-actions[bot]"
 git config user.email "github-actions[bot]@users.noreply.github.com"
 
+# main is protected (PRs + status checks required), so remember where we
+# started to detect new commits and publish them via a branch + PR instead
+# of pushing directly.
+$baseBranch = git symbolic-ref --short HEAD
+$baseCommit = git rev-parse HEAD
+
 $rawAddonId = $env:ADDON_ID
 if ([string]::IsNullOrWhiteSpace($rawAddonId)) {
     Write-Error "Failed to get addon ID."
@@ -205,23 +211,42 @@ else {
     Write-Host "DEBUG: No changes in translations to commit."
 }
 
-# Push all generated commits after successful Crowdin synchronization
-
-$pushOutput = git push 2>&1
+# --- STEP 5: PUBLISH NEW COMMITS VIA PULL REQUEST ---
+# $baseBranch (e.g. main) requires PRs + passing status checks, so new
+# commits are pushed to a dedicated branch and opened/updated as a PR
+# instead of being pushed directly.
 
 $repository = $env:GITHUB_REPOSITORY
+$headCommit = git rev-parse HEAD
 
-Write-Host $pushOutput
+if ($headCommit -eq $baseCommit) {
 
-if ($LASTEXITCODE -ne 0) {
-
-    Write-Host "ERROR: Failed to push commits to $repository."
+    Write-Host "DEBUG: No new commits to publish."
 }
-elseif ($pushOutput -match "Everything up-to-date") {
+elseif ([string]::IsNullOrWhiteSpace($env:PR_SYNC_TOKEN)) {
 
-    Write-Host "INFO: No new commits needed to be pushed."
+    Write-Host "WARNING: PR_SYNC_TOKEN is not set; skipping publish. New commits exist only in this run's checkout."
 }
 else {
 
-    Write-Host "SUCCESS: New commits successfully pushed to $repository."
+    $env:GH_TOKEN = $env:PR_SYNC_TOKEN
+    $l10nBranch = "l10n/crowdin-sync"
+
+    git branch -f $l10nBranch HEAD
+    git push --force origin "${l10nBranch}:${l10nBranch}"
+
+    $existingPr = gh pr list --repo $repository --base $baseBranch --head $l10nBranch --state open --json number --jq ".[0].number"
+
+    if ([string]::IsNullOrWhiteSpace($existingPr)) {
+
+        gh pr create --repo $repository --base $baseBranch --head $l10nBranch `
+            --title "l10n: sync translations from Crowdin" `
+            --body "Automated translation sync from Crowdin. Review before merging."
+
+        Write-Host "SUCCESS: Opened a new translation sync PR."
+    }
+    else {
+
+        Write-Host "SUCCESS: Updated existing translation sync PR #$existingPr."
+    }
 }
