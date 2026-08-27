@@ -1,0 +1,69 @@
+name: Crowdin l10n
+
+on:
+  workflow_dispatch:
+  schedule:
+    # Every Monday at 00:00 UTC
+    - cron: '0 0 * * 1'
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  crowdinAuthToken: ${{ secrets.CROWDIN_TOKEN }}
+  GH_TOKEN: ${{ github.token }}
+  CROWDIN_PROJECT_ID: ${{ vars.CROWDIN_PROJECT_ID || 780748 }}
+  L10N_UTIL_CONFIG: ${{ vars.L10N_UTIL_CONFIG || 'addon' }}
+  MIN_PERCENTAGE_TRANSLATED: ${{ vars.MIN_PERCENTAGE_TRANSLATED || 50 }}
+
+jobs:
+  crowdinSync:
+    runs-on: windows-2025
+    permissions:
+      contents: write
+
+    steps:
+      - name: Random startup delay (0-5 minutes)
+        if: github.event_name == 'schedule'
+        shell: pwsh
+        run: |
+          $delaySeconds = Get-Random -Minimum 0 -Maximum 301
+          Write-Host "Sleeping for $delaySeconds seconds..."
+          Start-Sleep -Seconds $delaySeconds
+      - name: Checkout add-on
+        uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5.1.0
+        with:
+          submodules: true
+          persist-credentials: false
+      - name: Configure git remote authentication
+        shell: pwsh
+        run: git remote set-url origin "https://x-access-token:${env:GH_TOKEN}@github.com/${env:GITHUB_REPOSITORY}.git"
+      - name: Set up Python
+        uses: actions/setup-python@ece7cb06caefa5fff74198d8649806c4678c61a1 # v6.3.0
+        with:
+          python-version: "3.13"
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade --only-binary :all: -r requirements-bootstrap.txt
+          pip install --only-binary :all: -r requirements-build.txt
+          pip install --only-binary :all: -r requirements-l10n.txt
+      - name: Install gettext
+        run: |
+          choco install -y gettext
+          # Add gettext to PATH for current and future steps
+          $gettextPath = "C:\Program Files\gettext-iconv\bin"
+          echo "$gettextPath" | Out-File -FilePath $env:GITHUB_PATH -Encoding utf8 -Append
+      - name: Get add-on info
+        id: getAddonInfo
+        shell: pwsh
+        run: python ./.github/scripts/setOutputs.py
+      - name: Download l10nUtil
+        run: |
+          gh release download --repo nvaccess/nvdaL10n --pattern "l10nUtil.exe"
+      - name: Download translations from Crowdin
+        if: ${{ env.crowdinAuthToken }}
+        shell: pwsh
+        env:
+          ADDON_ID: ${{ steps.getAddonInfo.outputs.addonId }}
+        run: ./.github/scripts/crowdinSync.ps1
