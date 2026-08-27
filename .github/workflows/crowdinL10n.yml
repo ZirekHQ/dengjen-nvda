@@ -22,6 +22,7 @@ jobs:
     runs-on: windows-2025
     permissions:
       contents: write
+      pull-requests: write
 
     steps:
       - name: Random startup delay (0-5 minutes)
@@ -37,8 +38,14 @@ jobs:
           submodules: true
           persist-credentials: false
       - name: Configure git remote authentication
+        # main requires PRs, so translations are published via PR (see
+        # crowdinSync.ps1) using a PAT: GITHUB_TOKEN-authored pushes/PRs
+        # don't trigger the required status checks needed to merge.
+        if: ${{ secrets.PR_SYNC_TOKEN }}
         shell: pwsh
-        run: git remote set-url origin "https://x-access-token:${env:GH_TOKEN}@github.com/${env:GITHUB_REPOSITORY}.git"
+        env:
+          PR_SYNC_TOKEN: ${{ secrets.PR_SYNC_TOKEN }}
+        run: git remote set-url origin "https://x-access-token:${env:PR_SYNC_TOKEN}@github.com/${env:GITHUB_REPOSITORY}.git"
       - name: Set up Python
         uses: actions/setup-python@ece7cb06caefa5fff74198d8649806c4678c61a1 # v6.3.0
         with:
@@ -66,4 +73,5 @@ jobs:
         shell: pwsh
         env:
           ADDON_ID: ${{ steps.getAddonInfo.outputs.addonId }}
+          PR_SYNC_TOKEN: ${{ secrets.PR_SYNC_TOKEN }}
         run: ./.github/scripts/crowdinSync.ps1
