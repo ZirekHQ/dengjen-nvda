@@ -379,6 +379,21 @@ def install(*, stub_wx: bool = True) -> None:
     # stand-in) rather than rely on this being usable as-is.
     _aio.ENGINE = types.SimpleNamespace(executor=None, event_loop=MagicMock())
 
+    def _call_threaded(func):
+        # Mirrors the real AsyncEngine.call_threaded: ensure_running() then
+        # submit to ENGINE.executor, swallowing a shut-down executor's
+        # RuntimeError. Relies on the same test-injected executor as direct
+        # ENGINE.executor use (see the comment above).
+        def wrapper(*args, **kwargs):
+            _aio.ensure_running()
+            try:
+                return _aio.ENGINE.executor.submit(func, *args, **kwargs)
+            except RuntimeError:
+                return None
+        return wrapper
+
+    _aio.call_threaded = _call_threaded
+
 
     # -----------------------------------------------------------------------
     # 5. Load real submodules we actually want to test

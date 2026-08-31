@@ -229,7 +229,7 @@ class ImmutableObjectListView(DialogListCtrl):
             self._columns = tuple(columns)
             for col in self._columns:
                 self.AppendColumn(col.title, format=col.alignment_flag, width=col.width)
-            for i in range(len(columns)):
+            for i in range(len(self._columns)):
                 self.SetColumnWidth(i, 100)
 
     def set_objects(

@@ -567,6 +567,14 @@ def install_voice_from_tar_archive(tar_path, voices_dir):
             config = json.loads(tar.extractfile(filenames[config_files[0]]).read().decode("utf-8"))
             voice_key = _voice_key_from_config(config)
         voice_folder_name = Path(voices_dir).joinpath(voice_key)
+        # voice_key can come from _voice_key_from_config(), which is built
+        # from attacker-controlled JSON fields (dataset, audio.quality) with
+        # only literal "-" sanitized; reject anything that would land the
+        # voice folder outside voices_dir (e.g. a path separator or "..").
+        resolved_voices_dir = Path(voices_dir).resolve()
+        resolved_voice_folder = voice_folder_name.resolve()
+        if resolved_voice_folder != resolved_voices_dir and resolved_voices_dir not in resolved_voice_folder.parents:
+            raise ValueError(f"Voice key resolves outside the voices directory: {voice_key!r}")
         voice_folder_name.mkdir(parents=True, exist_ok=True)
         voice_folder_name = os.fspath(voice_folder_name)
         files_to_extract = [*onnx_files, *config_files]
