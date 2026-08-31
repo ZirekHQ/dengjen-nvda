@@ -20,9 +20,11 @@ import io
 import json
 import os
 import shutil
+import ssl
 import tarfile
 from concurrent.futures import Future
 from contextlib import contextmanager
+from http.client import HTTPException
 from unittest.mock import MagicMock
 
 import pytest
@@ -85,16 +87,26 @@ class _FakeMureq:
         self._stream_responses = list(stream_responses or [])
         self.get_urls = []
         self.yield_urls = []
+        self.get_calls = []
+        self.yield_calls = []
 
     def get(self, url, **kwargs):
         self.get_urls.append(url)
-        return self._get_responses.pop(0)
+        self.get_calls.append(kwargs)
+        item = self._get_responses.pop(0)
+        if isinstance(item, Exception):
+            raise item
+        return item
 
     @contextmanager
     def yield_response(self, method, url, **kwargs):
         self.yield_urls.append(url)
+        self.yield_calls.append(kwargs)
         assert self._stream_responses, "no more fake stream responses queued"
-        yield self._stream_responses.pop(0)
+        item = self._stream_responses.pop(0)
+        if isinstance(item, Exception):
+            raise item
+        yield item
 
 
 def _language(code="en_US", family="en"):
@@ -478,6 +490,78 @@ class TestVoicesCache:
         assert json.loads(cache_path.read_text(encoding="utf-8"))["en_US-lessac-medium"]["has_rt_variant"] is True
 
 
+def _cert_verification_error():
+    """An HTTPException as mureq wraps a TLS trust-store failure, i.e. with
+    the original ssl.SSLCertVerificationError preserved as __cause__."""
+    exc = HTTPException("certificate verify failed")
+    exc.__cause__ = ssl.SSLCertVerificationError("unable to get local issuer certificate")
+    return exc
+
+
+class TestCertVerificationFallback:
+    """`_get_with_cert_fallback`/`_yield_response_with_cert_fallback` retry
+    once against the vendored CA bundle when the OS trust store is missing a
+    root CA (issue #132), but must not mask unrelated HTTPExceptions."""
+
+    @pytest.fixture
+    def fallback_context(self, monkeypatch):
+        sentinel = object()
+        monkeypatch.setattr(voice_download, "_fallback_ssl_context", lambda: sentinel)
+        return sentinel
+
+    def test_get_retries_with_fallback_context_on_cert_error(self, monkeypatch, fallback_context):
+        fake_request = _FakeMureq(get_responses=[
+            _cert_verification_error(),
+            _FakeResponse(status=200, json_data={"ok": True}),
+        ])
+        monkeypatch.setattr(voice_download, "request", fake_request)
+
+        result = voice_download._get_with_cert_fallback("https://example.com/voices.json")
+
+        assert result.json() == {"ok": True}
+        assert len(fake_request.get_calls) == 2
+        assert "ssl_context" not in fake_request.get_calls[0]
+        assert fake_request.get_calls[1]["ssl_context"] is fallback_context
+
+    def test_get_does_not_retry_on_unrelated_http_exception(self, monkeypatch):
+        fake_request = _FakeMureq(get_responses=[HTTPException("connection reset")])
+        monkeypatch.setattr(voice_download, "request", fake_request)
+
+        with pytest.raises(HTTPException, match="connection reset"):
+            voice_download._get_with_cert_fallback("https://example.com/voices.json")
+
+        assert len(fake_request.get_calls) == 1
+
+    def test_yield_response_retries_with_fallback_context_on_cert_error(self, monkeypatch, fallback_context):
+        fake_request = _FakeMureq(stream_responses=[
+            _cert_verification_error(),
+            _FakeResponse(status=200, body=b"voice-bytes"),
+        ])
+        monkeypatch.setattr(voice_download, "request", fake_request)
+
+        with voice_download._yield_response_with_cert_fallback("GET", "https://example.com/voice.onnx") as response:
+            assert response.read() == b"voice-bytes"
+
+        assert len(fake_request.yield_calls) == 2
+        assert "ssl_context" not in fake_request.yield_calls[0]
+        assert fake_request.yield_calls[1]["ssl_context"] is fallback_context
+
+    def test_yield_response_does_not_retry_on_unrelated_http_exception(self, monkeypatch):
+        fake_request = _FakeMureq(stream_responses=[HTTPException("connection reset")])
+        monkeypatch.setattr(voice_download, "request", fake_request)
+
+        with pytest.raises(HTTPException, match="connection reset"):
+            with voice_download._yield_response_with_cert_fallback("GET", "https://example.com/voice.onnx"):
+                pass
+
+        assert len(fake_request.yield_calls) == 1
+
+    def test_fallback_ssl_context_loads_the_vendored_cacert_bundle(self):
+        voice_download._fallback_ssl_context.cache_clear()
+        context = voice_download._fallback_ssl_context()
+        assert isinstance(context, ssl.SSLContext)
+
+
 class TestPiperVoiceDownloaderFileTransfer:
     """`_do_download_file` is where redirect/content-type/hash bugs would
     actually surface — HuggingFace serves every file through a redirect."""
@@ -514,15 +598,17 @@ class TestPiperVoiceDownloaderFileTransfer:
         fake_request = _FakeMureq(stream_responses=[redirect] * voice_download.REDIRECT_LIMIT)
         monkeypatch.setattr(voice_download, "request", fake_request)
         file = self._file(b"x")
+        callback = MagicMock()
         with pytest.raises(RuntimeError, match="Too many redirects"):
-            PiperVoiceDownloader._do_download_file(file, str(tmp_path), MagicMock())
+            PiperVoiceDownloader._do_download_file(file, str(tmp_path), callback)
 
     def test_raises_on_redirect_without_a_location_header(self, tmp_path, monkeypatch):
         fake_request = _FakeMureq(stream_responses=[_FakeResponse(status=302, headers={})])
         monkeypatch.setattr(voice_download, "request", fake_request)
         file = self._file(b"x")
+        callback = MagicMock()
         with pytest.raises(ValueError, match="Redirect without Location header"):
-            PiperVoiceDownloader._do_download_file(file, str(tmp_path), MagicMock())
+            PiperVoiceDownloader._do_download_file(file, str(tmp_path), callback)
 
     def test_raises_on_wrong_content_type(self, tmp_path, monkeypatch):
         fake_request = _FakeMureq(stream_responses=[
@@ -530,15 +616,17 @@ class TestPiperVoiceDownloaderFileTransfer:
         ])
         monkeypatch.setattr(voice_download, "request", fake_request)
         file = self._file(b"x")
+        callback = MagicMock()
         with pytest.raises(RuntimeError, match="Wrong content-type"):
-            PiperVoiceDownloader._do_download_file(file, str(tmp_path), MagicMock())
+            PiperVoiceDownloader._do_download_file(file, str(tmp_path), callback)
 
     def test_raises_on_non_redirect_error_status(self, tmp_path, monkeypatch):
         fake_request = _FakeMureq(stream_responses=[_FakeResponse(status=404)])
         monkeypatch.setattr(voice_download, "request", fake_request)
         file = self._file(b"x")
+        callback = MagicMock()
         with pytest.raises(RuntimeError, match="Download failed"):
-            PiperVoiceDownloader._do_download_file(file, str(tmp_path), MagicMock())
+            PiperVoiceDownloader._do_download_file(file, str(tmp_path), callback)
 
     def test_download_voice_files_collects_a_result_per_file(self, tmp_path, monkeypatch):
         bodies = [b"one", b"two"]
@@ -642,8 +730,9 @@ class TestPiperVoiceDownloaderDoneCallback:
 class TestPiperRTVoiceDownloader:
     def test_construction_requires_an_rt_variant(self):
         voice = _piper_voice(has_rt_variant=False)
+        callback = MagicMock()
         with pytest.raises(ValueError):
-            PiperRTVoiceDownloader(voice, success_callback=MagicMock())
+            PiperRTVoiceDownloader(voice, success_callback=callback)
 
     def test_do_download_archive_streams_to_a_file(self, tmp_path, monkeypatch):
         body = b"archive-bytes"

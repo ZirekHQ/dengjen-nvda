@@ -9,15 +9,16 @@ import math
 import os
 import re
 import shutil
+import ssl
 import tarfile
 import tempfile
 import typing
 import urllib.parse
-from contextlib import contextmanager
+from contextlib import ExitStack, contextmanager
 from dataclasses import dataclass
 from enum import Enum, auto
 from fnmatch import fnmatch
-from functools import partial
+from functools import lru_cache, partial
 from hashlib import md5
 from http.client import HTTPException
 from io import BytesIO
@@ -56,6 +57,7 @@ THREAD_POOL_EXECUTOR = ThreadPoolExecutor()
 REDIRECT_STATUSES = (301, 302, 303, 307, 308)
 REDIRECT_LIMIT = 5
 DOWNLOAD_CHUNK_SIZE = 4096
+CACERT_PATH = os.path.join(helpers.LIB_DIRECTORY, "cacert.pem")
 
 
 class PiperVoiceQualityLevel(Enum):
@@ -186,11 +188,50 @@ class PiperVoice:
         return f"{RT_VOICE_DOWNLOAD_URL_PREFIX}/{rt_voice_key}.tar.gz"
 
 
+@lru_cache(maxsize=1)
+def _fallback_ssl_context():
+    return ssl.create_default_context(cafile=CACERT_PATH)
+
+
+def _is_os_trust_store_gap(exc):
+    # mureq wraps every socket-level IOError, including TLS failures, in
+    # HTTPException; the original exception survives as __cause__. OpenSSL
+    # (unlike WinHTTP/browsers) does no AIA chasing, so a Windows install
+    # whose local root store is missing a root CA fails verification even
+    # for a legitimately-signed server.
+    return isinstance(exc.__cause__, ssl.SSLCertVerificationError)
+
+
+def _get_with_cert_fallback(url, **kwargs):
+    try:
+        return request.get(url, **kwargs)
+    except HTTPException as e:
+        if not _is_os_trust_store_gap(e):
+            raise
+        log.debug("OS trust store missing a root CA; retrying with the vendored CA bundle", exc_info=True)
+        return request.get(url, ssl_context=_fallback_ssl_context(), **kwargs)
+
+
+@contextmanager
+def _yield_response_with_cert_fallback(method, url, **kwargs):
+    with ExitStack() as stack:
+        try:
+            response = stack.enter_context(request.yield_response(method, url, **kwargs))
+        except HTTPException as e:
+            if not _is_os_trust_store_gap(e):
+                raise
+            log.debug("OS trust store missing a root CA; retrying with the vendored CA bundle", exc_info=True)
+            response = stack.enter_context(
+                request.yield_response(method, url, ssl_context=_fallback_ssl_context(), **kwargs)
+            )
+        yield response
+
+
 @contextmanager
 def _follow_redirects(url, label):
     # mureq does not follow redirects, and HuggingFace serves every file as one.
     for _redirect in range(REDIRECT_LIMIT):
-        with request.yield_response('GET', url) as response:
+        with _yield_response_with_cert_fallback('GET', url) as response:
             if response.status in REDIRECT_STATUSES:
                 location = response.getheader("Location")
                 if not location:
@@ -559,10 +600,10 @@ def _get_voices_from_cache():
 
 
 def _refresh_voices_cache():
-    std_resp = request.get(PIPER_VOICE_LIST_URL)
+    std_resp = _get_with_cert_fallback(PIPER_VOICE_LIST_URL)
     std_resp.raise_for_status()
     std_voices = std_resp.json()
-    rt_resp = request.get(RT_VOICE_LIST_URL)
+    rt_resp = _get_with_cert_fallback(RT_VOICE_LIST_URL)
     rt_resp.raise_for_status()
     rt_voice_names = {
         vdata["base"]
