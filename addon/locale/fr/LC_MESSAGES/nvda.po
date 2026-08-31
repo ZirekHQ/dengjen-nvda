@@ -394,7 +394,7 @@ msgstr "Gestionnaire de &voix Dengjen..."
 #. Translators: Dengjen's voice manager menu item help
 #: addon\globalPlugins\dengjen_tts_global_plugin\__init__.py:51
 msgid "Open the voice manager to preview, install or download dengjen voices"
-msgstr "Ouvrir le gestionnaire de voix pour prévisualiser, installer ou télécharger des voix dengjen"
+msgstr "Ouvrir le gestionnaire de voix pour prévisualiser, installer ou télécharger des voix Dengjen"
 
 #: addon\globalPlugins\dengjen_tts_global_plugin\__init__.py:67
 msgid "No Dengjen voice was found.\n"
