@@ -129,7 +129,12 @@ class AsyncEngine:
 
     def create_task(self, coro):
         self.ensure_running()
-        return self._event_loop.call_soon_threadsafe(self._event_loop.create_task, coro)
+        with self._lifecycle_lock:
+            loop = self._event_loop
+            if loop is None or not loop.is_running():
+                coro.close()
+                raise RuntimeError("AsyncEngine event loop is not running")
+            return asyncio.run_coroutine_threadsafe(coro, loop)
 
     def cancel_task(self, task):
         if self._event_loop is not None and self._event_loop.is_running():

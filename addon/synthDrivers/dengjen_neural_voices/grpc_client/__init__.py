@@ -148,7 +148,8 @@ def start_grpc_server():
 @aio.asyncio_coroutine_to_concurrent_future
 async def initialize():
     global CHANNEL, SONATA_GRPC_SERVICE, SONATA_GRPC_SERVER_PORT
-    start_grpc_server()
+    if not start_grpc_server():
+        raise RuntimeError("Failed to start the Dengjen GRPC server")
     if CHANNEL is not None:
         try:
             # grpc.aio binds a channel to the loop that created it, so a channel

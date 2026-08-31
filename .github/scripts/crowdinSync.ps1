@@ -18,6 +18,14 @@ if ([string]::IsNullOrWhiteSpace($rawAddonId)) {
 }
 $addonId = $rawAddonId.Trim()
 
+$rawMinPercentageTranslated = $env:MIN_PERCENTAGE_TRANSLATED
+$minPercentageTranslated = 0.0
+if (-not [double]::TryParse($rawMinPercentageTranslated, [ref]$minPercentageTranslated) -or
+    $minPercentageTranslated -lt 0 -or $minPercentageTranslated -gt 100) {
+    Write-Error "MIN_PERCENTAGE_TRANSLATED must be a number between 0 and 100 (got '$rawMinPercentageTranslated')."
+    exit 1
+}
+
 # --- STEP 1: PREPARATION AND SOURCE UPDATE ---
 
 $xliffFile = "./$addonId.xliff"
@@ -113,7 +121,7 @@ foreach ($dir in Get-ChildItem -Path "_addonL10n/$addonId" -Directory) {
     # --- 3.1 PO FILE PROCESSING ---
     $poImported = $false
     $scorePo = 0.0
-    $threshold = $env:MIN_PERCENTAGE_TRANSLATED
+    $threshold = $minPercentageTranslated
 
     if (Test-Path $remotePo) {
 
@@ -170,7 +178,7 @@ foreach ($dir in Get-ChildItem -Path "_addonL10n/$addonId" -Directory) {
 
     Write-Host "DEBUG: XLIFF Score -> $scoreXliff"
 
-    $threshold = $env:MIN_PERCENTAGE_TRANSLATED
+    $threshold = $minPercentageTranslated
     $docImported = $false
 
     if ($scoreXliff -ge $threshold) {

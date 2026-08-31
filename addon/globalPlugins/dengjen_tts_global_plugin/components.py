@@ -120,7 +120,7 @@ class SnakDialog(SimpleDialog):
     @contextlib.contextmanager
     def ShowBriefly(self):
         try:
-            wx.CallAfter(self.ShowModal)
+            wx.CallAfter(self.Show)
             yield
         finally:
             wx.CallAfter(self.Close)
@@ -226,17 +226,17 @@ class ImmutableObjectListView(DialogListCtrl):
     def set_columns(self, columns):
         with self.__unsafe_modify():
             self.ClearAll()
-            self._columns = columns
+            self._columns = tuple(columns)
             for col in self._columns:
                 self.AppendColumn(col.title, format=col.alignment_flag, width=col.width)
-            for i in range(len(columns)):
+            for i in range(len(self._columns)):
                 self.SetColumnWidth(i, 100)
 
     def set_objects(
         self, objects: ObjectCollection, focus_item: int = 0, set_focus=True
     ):
         """Clear the list view and insert the objects."""
-        self._objects = objects
+        self._objects = tuple(objects)
         self.set_columns(self._columns)
         string_converters = [c.string_converter for c in self._columns]
         with self.__unsafe_modify():
@@ -272,6 +272,10 @@ class ImmutableObjectListView(DialogListCtrl):
     def InsertItem(self, *args, **kwargs):
         self.prevent_mutations()
         return super().InsertItem(*args, **kwargs)
+
+    def SetItem(self, *args, **kwargs):
+        self.prevent_mutations()
+        return super().SetItem(*args, **kwargs)
 
     def DeleteItem(self, item):
         self.prevent_mutations()

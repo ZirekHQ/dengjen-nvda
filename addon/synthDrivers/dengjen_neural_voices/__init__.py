@@ -3,7 +3,7 @@
 # Copyright (c) 2023 Musharraf Omer
 # This file is covered by the GNU General Public License.
 
-from asyncio.exceptions import CancelledError
+from asyncio.exceptions import CancelledError as AsyncioCancelledError
 from collections import OrderedDict
 from contextlib import suppress
 
@@ -135,11 +135,11 @@ async def _process_speech_sequence(speech_seq):
     for callable in speech_seq:
         try:
             await callable()
-        except Exception as e:
-            if isinstance(e, CancelledError):
-                log.debug("Canceld speech task {callable}", exc_info=True)
-            else:
-                log.exception(f"Failed to execute speech task {callable}", exc_info=True)
+        except (AsyncioCancelledError, CancelledError):
+            log.debug(f"Canceled speech task {callable}", exc_info=True)
+            break
+        except Exception:
+            log.exception(f"Failed to execute speech task {callable}", exc_info=True)
             break
 
 
@@ -251,6 +251,7 @@ class SynthDriver(synthDriverHandler.SynthDriver):
         for player in self._players.values():
             player.close()
         self._players.clear()
+        self._player = None
 
     def speak(self, speechSequence):
         with self.tts.create_synthesis_context():

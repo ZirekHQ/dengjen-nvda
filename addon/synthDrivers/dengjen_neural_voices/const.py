@@ -28,7 +28,7 @@ DENGJEN_VOICES_BASE_DIR = os.path.join(globalVars.appArgs.configPath, "dengjen")
 DENGJEN_VOICES_DIR = os.path.join(
     DENGJEN_VOICES_BASE_DIR, "voices", "piper"
 )
-BATCH_SIZE = max(os.cpu_count() // 2, 2)
+BATCH_SIZE = max((os.cpu_count() or 2) // 2, 2)
 FALLBACK_SPEAKER_NAME = "default"
 DEFAULT_RATE = 50
 DEFAULT_VOLUME = 100

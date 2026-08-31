@@ -296,6 +296,27 @@ class TestOnlinePanelControls:
         assert panel._preview_active is False
         assert "Preview" in panel.preview_btn.GetLabel()
 
+    def test_preview_button_resets_state_when_the_engine_is_shut_down(
+        self, panel, voice_manager, monkeypatch, online_voices
+    ):
+        # aio.call_threaded swallows a shut-down executor's RuntimeError and
+        # returns None; on_preview must recover from that instead of calling
+        # add_done_callback on it.
+        class _RejectingExecutor:
+            def submit(self, fn, *args, **kwargs):
+                raise RuntimeError("executor is shut down")
+
+        monkeypatch.setattr(voice_manager.aio.ENGINE, "executor", _RejectingExecutor())
+        calls = []
+        monkeypatch.setattr(voice_manager, "play_remote_mp3", calls.append)
+        selected_voice = online_voices[0]
+        panel.voices_list.set_objects([selected_voice])
+        panel.voices_list.set_focused_item(0)
+        _fire_button(panel, panel.preview_btn)
+        assert calls == []
+        assert panel._preview_active is False
+        assert "Preview" in panel.preview_btn.GetLabel()
+
     def test_download_std_button_reaches_on_download(
         self, panel, voice_manager, monkeypatch, online_voices
     ):

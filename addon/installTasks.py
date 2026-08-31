@@ -109,17 +109,42 @@ def onUninstall():
         force_kill_sonata_grpc_server(psutil)
 
 
+def _is_sonata_grpc_process(proc, grpc_server_exe):
+    """Best-effort match: a process can exit or become inaccessible between
+    enumeration and inspection, so any lookup failure here just means "not
+    a match" rather than aborting the whole uninstall."""
+    try:
+        name = proc.name()
+    except Exception:
+        return False
+    if not name or "sonata-grpc" not in name.lower():
+        return False
+    try:
+        exe = proc.exe()
+    except Exception:
+        return False
+    if not exe:
+        return False
+    try:
+        return os.path.samefile(exe, grpc_server_exe)
+    except (OSError, TypeError):
+        return False
+
+
 def force_kill_sonata_grpc_server(psutil):
     log.debug("Trying to force kill GRPC server process")
-    grpc_server_processes = list(filter(
-        lambda p: "sonata-grpc" in p.name().lower(),
-        psutil.process_iter(attrs=["name", "exe"])
-    ))
     grpc_server_exe = os.path.join(BIN_DIR, "sonata-grpc.exe")
+    grpc_server_processes = [
+        proc
+        for proc in psutil.process_iter(attrs=["name", "exe"])
+        if _is_sonata_grpc_process(proc, grpc_server_exe)
+    ]
     for proc in grpc_server_processes:
-        if os.path.samefile(proc.exe(), grpc_server_exe):
+        try:
             proc.kill()
             log.debug(f"Killed process with pid {proc.pid}")
+        except Exception:
+            log.debug(f"Failed to kill process with pid {proc.pid}", exc_info=True)
     psutil.wait_procs(
         grpc_server_processes,
         timeout=5,
