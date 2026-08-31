@@ -87,7 +87,7 @@ Por encima de 50, los deslizadores llegan hasta el doble del valor por defecto d
 
 Las voces actualmente disponibles están entrenadas usando conjuntos de datos para TTS gratuitos que, generalmente, son de baja calidad (en su mayoría audiolibros bajo dominio público o grabaciones de calidad para investigación).
 
-Agregando que, estos conjuntos de datos no son precisos, por lo que algunas voces pueden presentar una pronunciación incorrecta o extraña. Ambos problemas podrían resolverse utilizando mejores conjuntos de datos para el entrenamiento.
+Además, estos conjuntos de datos no son exhaustivos, por lo que algunas voces pueden presentar una pronunciación incorrecta o extraña. Ambos problemas podrían resolverse utilizando mejores conjuntos de datos para el entrenamiento.
 
 Con suerte, el desarrollador de `Piper` y algunos desarrolladores de la comunidad de personas ciegas y con deficiencia visual están trabajando en entrenar mejores voces.
 

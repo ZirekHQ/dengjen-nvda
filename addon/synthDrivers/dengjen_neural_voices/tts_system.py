@@ -266,8 +266,10 @@ class DengjenTextToSpeechSystem:
     def create_synthesis_context(self):
         """Reset speech params after each utterance."""
         old_speech_options = self.speech_options.copy()
-        yield
-        self.speech_options = old_speech_options
+        try:
+            yield
+        finally:
+            self.speech_options = old_speech_options
 
     def shutdown(self):
         # No-op by design: the gRPC engine process outlives any single TTS

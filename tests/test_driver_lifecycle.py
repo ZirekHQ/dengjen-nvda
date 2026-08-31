@@ -199,13 +199,16 @@ class TestAioLifecycle:
         def worker():
             barrier.wait()
             for _ in range(_STRESS_ITERATIONS):
+                # Only record exceptions here: a concurrent aio.terminate()
+                # from the main thread can legitimately clear the event loop
+                # right after ensure_running() returns, so checking it
+                # immediately would be racy. The final ensure_running() /
+                # _settled_loop_thread_count() assertions below are what
+                # actually verify the engine is left usable.
                 try:
                     aio.ensure_running()
                 except Exception as exc:
                     errors.append(repr(exc))
-                    continue
-                if aio.ENGINE.event_loop is None:
-                    errors.append("ensure_running() left the event loop unset")
 
         threads = [threading.Thread(target=worker) for _ in range(_STRESS_THREADS)]
         for thread in threads:

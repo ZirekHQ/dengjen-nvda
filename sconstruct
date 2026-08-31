@@ -35,7 +35,7 @@ def validateVersionNumber(key: str, val: str, _):
 	if val == "0.0.0":
 		return
 	versionNumber = val.split(".")
-	if len(versionNumber) < 3:
+	if len(versionNumber) != 3:
 		raise ValueError(f"{key} must have three parts (major.minor.patch)")
 	if not all([part.isnumeric() for part in versionNumber]):
 		raise ValueError(f"{key} (major.minor.patch) must be integers")
@@ -51,7 +51,7 @@ docsDir: Final = addonDir / "doc"
 
 
 vars = Variables()
-vars.Add("version", "The version of this build", buildVars.addon_info["addon_version"])
+vars.Add("version", "The version of this build", buildVars.addon_info["addon_version"], validateVersionNumber)
 vars.Add("versionNumber", "Version number of the form major.minor.patch", "0.0.0", validateVersionNumber)
 vars.Add(BoolVariable("dev", "Whether this is a daily development version", False))
 vars.Add("channel", "Update channel for this build", buildVars.addon_info["addon_updateChannel"])

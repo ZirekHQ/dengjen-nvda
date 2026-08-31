@@ -114,6 +114,7 @@ class InstalledDengjenVoicesPanel(SizedPanel):
         if self.__already_populated.is_set():
             return
         self.update_voices_list()
+        self.__already_populated.set()
 
     def invalidate_cache(self):
         self.__already_populated.clear()
@@ -421,7 +422,12 @@ class OnlineDengjenVoicesPanel(SizedPanel):
         self._preview_active = True
         # Translators: label of the preview button while audio is playing
         self.preview_btn.SetLabel(_("&Stop preview"))
-        future = aio.ENGINE.executor.submit(play_remote_mp3, mp3url)
+        future = aio.call_threaded(play_remote_mp3)(mp3url)
+        if future is None:
+            self._preview_active = False
+            # Translators: label of a button
+            self.preview_btn.SetLabel(_("&Preview"))
+            return
         future.add_done_callback(
             lambda f: wx.CallAfter(self._on_preview_done, f)
         )

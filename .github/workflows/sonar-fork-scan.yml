@@ -136,6 +136,7 @@ jobs:
         with:
           args: >
             -Dsonar.projectBaseDir=workspace
+            -Dsonar.host.url=https://sonarcloud.io
             -Dsonar.pullrequest.key=${{ env.PR_NUMBER }}
             -Dsonar.pullrequest.branch=${{ steps.pr.outputs.head_ref }}
             -Dsonar.pullrequest.base=main

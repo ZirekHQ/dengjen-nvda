@@ -293,7 +293,15 @@ class _BaseVoiceDownloader:
         THREAD_POOL_EXECUTOR.submit(self._download_work).add_done_callback(partial(self._done_callback_wrapper, self.done_callback))
 
     def done_callback(self, result):
+        # add_done_callback (and so _done_callback_wrapper) runs on the
+        # worker thread that completed the future; wx is not thread-safe, so
+        # the whole completion flow -- including the progress dialog and
+        # _install() -- has to move to the main thread.
+        wx.CallAfter(self._on_download_complete, result)
+
+    def _on_download_complete(self, result):
         has_error = isinstance(result, Exception)
+        install_error = None
         if not has_error:
             self.progress_dialog.Update(
                 0,
@@ -302,8 +310,9 @@ class _BaseVoiceDownloader:
             )
             try:
                 self._install(result)
-            except _VoiceInstallError:
+            except _VoiceInstallError as exc:
                 has_error = True
+                install_error = exc
 
         self.progress_dialog.Hide()
         self.progress_dialog.Destroy()
@@ -321,15 +330,15 @@ class _BaseVoiceDownloader:
             if retval == wx.YES:
                 core.restart()
         else:
-            wx.CallAfter(
-                gui.messageBox,
+            gui.messageBox(
                 self._failure_message(),
                 _("Download failed"),
                 style=wx.ICON_ERROR,
                 parent=gui.mainFrame,
             )
-            log.exception(
-                f"Failed to download voice.\nException: {result}"
+            error = install_error if install_error is not None else result
+            log.error(
+                f"Failed to download voice.\nException: {error}", exc_info=error
             )
 
     @staticmethod
@@ -538,38 +547,39 @@ def _voice_key_from_config(config):
 
 
 def install_voice_from_tar_archive(tar_path, voices_dir):
-    tar = tarfile.open(tar_path)
-    filenames = {f.name: f for f in tar.getmembers()}
-    onnx_files = list(filter(
-        lambda pth: fnmatch(pth, "*.onnx"),
-        filenames
-    ))
-    config_files = list(filter(
-        lambda pth: fnmatch(pth, "*.json"),
-        filenames
-    ))
-    if not (onnx_files and config_files):
-        raise FileNotFoundError("Required files not found in archive")
-    if len(onnx_files) == 1:
-        voice_key = _voice_key_from_filename(Path(onnx_files[0]).stem)
-    else:
-        voice_key = _voice_key_from_filename(Path(tar_path).stem[:-4])
-    if voice_key is None:
-        config = json.loads(tar.extractfile(filenames[config_files[0]]).read().decode("utf-8"))
-        voice_key = _voice_key_from_config(config)
-    voice_folder_name = Path(voices_dir).joinpath(voice_key)
-    voice_folder_name.mkdir(parents=True, exist_ok=True)
-    voice_folder_name = os.fspath(voice_folder_name)
-    files_to_extract = [*onnx_files, *config_files]
-    if "MODEL_CARD" in filenames:
-        files_to_extract.append("MODEL_CARD")
-    for file in files_to_extract:
-        tar.extract(
-            filenames[file],
-            path=voice_folder_name,
-            set_attrs=False,
-        )
-    return voice_key
+    with tarfile.open(tar_path) as tar:
+        filenames = {f.name: f for f in tar.getmembers()}
+        onnx_files = list(filter(
+            lambda pth: fnmatch(pth, "*.onnx"),
+            filenames
+        ))
+        config_files = list(filter(
+            lambda pth: fnmatch(pth, "*.json"),
+            filenames
+        ))
+        if not (onnx_files and config_files):
+            raise FileNotFoundError("Required files not found in archive")
+        if len(onnx_files) == 1:
+            voice_key = _voice_key_from_filename(Path(onnx_files[0]).stem)
+        else:
+            voice_key = _voice_key_from_filename(Path(tar_path).stem[:-4])
+        if voice_key is None:
+            config = json.loads(tar.extractfile(filenames[config_files[0]]).read().decode("utf-8"))
+            voice_key = _voice_key_from_config(config)
+        voice_folder_name = Path(voices_dir).joinpath(voice_key)
+        voice_folder_name.mkdir(parents=True, exist_ok=True)
+        voice_folder_name = os.fspath(voice_folder_name)
+        files_to_extract = [*onnx_files, *config_files]
+        if "MODEL_CARD" in filenames:
+            files_to_extract.append("MODEL_CARD")
+        for file in files_to_extract:
+            tar.extract(
+                filenames[file],
+                path=voice_folder_name,
+                set_attrs=False,
+                filter="data",
+            )
+        return voice_key
 
 
 def _select_not_installed_voices(voices):
