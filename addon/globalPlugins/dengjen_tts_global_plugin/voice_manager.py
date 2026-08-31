@@ -297,6 +297,9 @@ class InstalledDengjenVoicesPanel(SizedPanel):
 
 
 class OnlineDengjenVoicesPanel(SizedPanel):
+    # Translators: label of a button
+    _PREVIEW_LABEL = _("&Preview")
+
     def __init__(self, parent):
         super().__init__(parent, -1)
         self.__already_populated = threading.Event()
@@ -326,8 +329,7 @@ class OnlineDengjenVoicesPanel(SizedPanel):
         preview_box.SetSizerType("horizontal")
         wx.StaticText(preview_box, -1, _("Speaker"))
         self.speaker_choice = wx.Choice(preview_box, -1, choices=[])
-        # Translators: label of a button
-        self.preview_btn = wx.Button(preview_box, -1, _("&Preview"))
+        self.preview_btn = wx.Button(preview_box, -1, self._PREVIEW_LABEL)
         self._preview_active = False
         dl_buttons_panel = SizedPanel(self.buttons_panel, -1)
         dl_buttons_panel.SetSizerType("horizontal")
@@ -425,8 +427,7 @@ class OnlineDengjenVoicesPanel(SizedPanel):
         future = aio.call_threaded(play_remote_mp3)(mp3url)
         if future is None:
             self._preview_active = False
-            # Translators: label of a button
-            self.preview_btn.SetLabel(_("&Preview"))
+            self.preview_btn.SetLabel(self._PREVIEW_LABEL)
             return
         future.add_done_callback(
             lambda f: wx.CallAfter(self._on_preview_done, f)
@@ -434,8 +435,7 @@ class OnlineDengjenVoicesPanel(SizedPanel):
 
     def _on_preview_done(self, future):
         self._preview_active = False
-        # Translators: label of a button
-        self.preview_btn.SetLabel(_("&Preview"))
+        self.preview_btn.SetLabel(self._PREVIEW_LABEL)
         exc = future.exception()
         if exc is not None:
             log.exception(
