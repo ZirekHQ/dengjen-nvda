@@ -112,7 +112,7 @@ class BreakTask:
         await run_in_executor(self.player.sync)
 
 
-def SpeakerSetting():
+def speaker_setting():
     """Factory function for creating speaker setting."""
     return DriverSetting(
         "speaker",
@@ -155,7 +155,7 @@ class SynthDriver(synthDriverHandler.SynthDriver):
     supportedSettings = (
         SynthDriver.VoiceSetting(),
         SynthDriver.VariantSetting(),
-        SpeakerSetting(),
+        speaker_setting(),
         SynthDriver.RateSetting(),
         SynthDriver.RateBoostSetting(),
         SynthDriver.VolumeSetting(),

@@ -69,8 +69,14 @@ with import_bundled_library():
     from .grpc_protos import sonata_grpc_pb2 as msgs
 
 
+# All of the module-level state below is normally only touched from the
+# single dedicated asyncio loop/thread that aio.AsyncEngine owns. The
+# exception is `terminate()`, which is atexit-registered and so can run on
+# whichever thread triggers interpreter shutdown; its accesses are
+# best-effort cleanup on process exit, not protected by a lock.
 SONATA_GRPC_SERVER_PORT = None
 GRPC_SERVER_PROCESS = None
+SERVER_LOG_HANDLE = None
 CHANNEL = None
 SONATA_GRPC_SERVICE = None
 SERVER_CHECK_TIMEOUT = 15
@@ -82,7 +88,7 @@ CHANNEL_CLOSE_TIMEOUT = 5
 
 
 def start_grpc_server():
-    global GRPC_SERVER_PROCESS, SONATA_GRPC_SERVER_PORT
+    global GRPC_SERVER_PROCESS, SONATA_GRPC_SERVER_PORT, SERVER_LOG_HANDLE
     if hasattr(globalVars, "SONATA_GRPC_SERVER_PORT"):
         SONATA_GRPC_SERVER_PORT = globalVars.SONATA_GRPC_SERVER_PORT
         GRPC_SERVER_PROCESS = globalVars.GRPC_SERVER_PROCESS
@@ -112,7 +118,7 @@ def start_grpc_server():
     try:
         server_log_file = os.path.join(DENGJEN_VOICES_BASE_DIR, "logs", "sonata-grpc.log")
         Path(server_log_file).parent.mkdir(parents=True, exist_ok=True)
-        server_stdout = open(server_log_file, "wb")
+        server_stdout = SERVER_LOG_HANDLE = open(server_log_file, "wb")
     except OSError:
         log.exception("Failed to open server log file for writing", exc_info=True)
         server_stdout = subprocess.DEVNULL
@@ -130,6 +136,9 @@ def start_grpc_server():
             "Failed to start Dengjen GRPC server. The synth will not be available.",
             exc_info=True
         )
+        if SERVER_LOG_HANDLE is not None:
+            SERVER_LOG_HANDLE.close()
+            SERVER_LOG_HANDLE = None
         return False
     globalVars.SONATA_GRPC_SERVER_PORT = SONATA_GRPC_SERVER_PORT
     globalVars.GRPC_SERVER_PROCESS = GRPC_SERVER_PROCESS
@@ -184,13 +193,18 @@ def close_channel():
 
 @atexit.register
 def terminate():
-    global GRPC_SERVER_PROCESS, SONATA_GRPC_SERVER_PORT
+    global GRPC_SERVER_PROCESS, SONATA_GRPC_SERVER_PORT, SERVER_LOG_HANDLE
     SONATA_GRPC_SERVER_PORT = None
-    close_channel()
-    aio.terminate()
-    if GRPC_SERVER_PROCESS is not None:
-        GRPC_SERVER_PROCESS.terminate()
+    try:
+        close_channel()
+        aio.terminate()
+        if GRPC_SERVER_PROCESS is not None:
+            GRPC_SERVER_PROCESS.terminate()
+    finally:
         GRPC_SERVER_PROCESS = None
+        if SERVER_LOG_HANDLE is not None:
+            SERVER_LOG_HANDLE.close()
+            SERVER_LOG_HANDLE = None
 
 
 @aio.asyncio_coroutine_to_concurrent_future
@@ -236,7 +250,7 @@ async def speak(
     voice_id, text, rate=None, volume=None, pitch=None, appended_silence_ms=None, streaming=False
 ):
     speech_args = None
-    if any([rate, volume, pitch, appended_silence_ms]):
+    if any(v is not None for v in (rate, volume, pitch, appended_silence_ms)):
         speech_args = msgs.SpeechArgs(
             rate=rate,
             volume=volume,
