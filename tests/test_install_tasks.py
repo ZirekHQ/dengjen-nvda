@@ -22,19 +22,28 @@ GRPC_EXE = os.path.join(install_tasks.BIN_DIR, "sonata-grpc.exe")
 
 
 class _FakeProcess:
-    def __init__(self, name, exe, pid=1):
+    def __init__(self, name, exe, pid=1, name_error=None, exe_error=None, kill_error=None):
         self._name = name
         self._exe = exe
         self.pid = pid
         self.killed = False
+        self._name_error = name_error
+        self._exe_error = exe_error
+        self._kill_error = kill_error
 
     def name(self):
+        if self._name_error is not None:
+            raise self._name_error
         return self._name
 
     def exe(self):
+        if self._exe_error is not None:
+            raise self._exe_error
         return self._exe
 
     def kill(self):
+        if self._kill_error is not None:
+            raise self._kill_error
         self.killed = True
 
 
@@ -123,3 +132,39 @@ class TestForceKillSonataGrpcServer:
         psutil = _FakePsutil([])
         install_tasks.force_kill_sonata_grpc_server(psutil)
         assert psutil.waited_for == []
+
+    def test_skips_a_process_whose_name_cannot_be_inspected(self, samefile_by_path):
+        unreadable = _FakeProcess("sonata-grpc.exe", GRPC_EXE, pid=1, name_error=Exception("gone"))
+        ours = _FakeProcess("sonata-grpc.exe", GRPC_EXE, pid=2)
+        psutil = _FakePsutil([unreadable, ours])
+        install_tasks.force_kill_sonata_grpc_server(psutil)
+        assert not unreadable.killed
+        assert ours.killed
+
+    def test_skips_a_process_whose_exe_cannot_be_inspected(self, samefile_by_path):
+        unreadable = _FakeProcess("sonata-grpc.exe", GRPC_EXE, pid=1, exe_error=Exception("gone"))
+        ours = _FakeProcess("sonata-grpc.exe", GRPC_EXE, pid=2)
+        psutil = _FakePsutil([unreadable, ours])
+        install_tasks.force_kill_sonata_grpc_server(psutil)
+        assert not unreadable.killed
+        assert ours.killed
+
+    def test_skips_a_process_whose_exe_path_no_longer_exists(self, monkeypatch):
+        monkeypatch.setattr(
+            os.path,
+            "samefile",
+            lambda a, b: (_ for _ in ()).throw(FileNotFoundError()),
+        )
+        proc = _FakeProcess("sonata-grpc.exe", GRPC_EXE)
+        psutil = _FakePsutil([proc])
+        install_tasks.force_kill_sonata_grpc_server(psutil)
+        assert not proc.killed
+
+    def test_one_process_failing_to_die_does_not_stop_the_others(self, samefile_by_path):
+        stubborn = _FakeProcess("sonata-grpc.exe", GRPC_EXE, pid=1, kill_error=Exception("access denied"))
+        ours = _FakeProcess("sonata-grpc.exe", GRPC_EXE, pid=2)
+        psutil = _FakePsutil([stubborn, ours])
+        install_tasks.force_kill_sonata_grpc_server(psutil)
+        assert not stubborn.killed
+        assert ours.killed
+        assert psutil.waited_for == [stubborn, ours]

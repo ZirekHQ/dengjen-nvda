@@ -21,6 +21,7 @@ separate instance of the same module under a private name so the fake TTS
 stand-ins used here don't interfere with the on-disk fixtures above.
 """
 
+import asyncio
 import os
 
 import config
@@ -232,6 +233,64 @@ class TestLifecycle:
         real_player.close.assert_called_once()
         extra_player.close.assert_called_once()
         assert driver._players == {}
+
+
+class TestProcessSpeechSequence:
+    """_process_speech_sequence's own per-task error/cancellation handling
+    (addon/synthDrivers/dengjen_neural_voices/__init__.py)."""
+
+    def test_runs_every_task_in_order(self):
+        ran = []
+
+        def make_task(n):
+            async def task():
+                ran.append(n)
+            return task
+
+        asyncio.run(
+            driver_module._process_speech_sequence([make_task(i) for i in range(3)])
+        )
+        assert ran == [0, 1, 2]
+
+    def test_stops_and_debug_logs_on_cancellation(self, monkeypatch):
+        ran = []
+
+        async def cancels():
+            raise asyncio.CancelledError()
+
+        async def never_runs():
+            ran.append("should not run")
+
+        debug_mock = MagicMock()
+        monkeypatch.setattr(driver_module.log, "debug", debug_mock)
+
+        asyncio.run(driver_module._process_speech_sequence([cancels, never_runs]))
+
+        assert ran == []
+        debug_mock.assert_called_once()
+        assert "Canceled" in debug_mock.call_args.args[0]
+
+    def test_stops_and_exception_logs_on_a_task_error(self, monkeypatch):
+        ran = []
+
+        async def blows_up():
+            raise ValueError("boom")
+
+        async def never_runs():
+            ran.append("should not run")
+
+        exception_mock = MagicMock()
+        monkeypatch.setattr(driver_module.log, "exception", exception_mock)
+        # nvda_stubs aliases the module's CancelledError to the builtin
+        # Exception (so a plain raise can stand in for a real cancellation
+        # elsewhere); narrow it back to the real type here so a ValueError
+        # can actually reach the generic-exception branch under test.
+        monkeypatch.setattr(driver_module, "CancelledError", asyncio.CancelledError)
+
+        asyncio.run(driver_module._process_speech_sequence([blows_up, never_runs]))
+
+        assert ran == []
+        exception_mock.assert_called_once()
 
 
 class TestSettings:
