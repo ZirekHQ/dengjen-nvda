@@ -1,0 +1,95 @@
+reviews:
+  path_filters:
+    # Compiled binaries & C-extensions
+    - "!**/*.exe"
+    - "!**/*.pyd"
+    - "!**/*.dll"
+    - "!**/*.so"
+    - "!**/*.dylib"
+    - "!**/*.pyc"
+    - "!**/__pycache__/**"
+    # Vendored 3rd party runtime dependencies
+    - "!addon/synthDrivers/dengjen_neural_voices/lib/**"
+    - "!addon/synthDrivers/dengjen_neural_voices/bin/**"
+    # Packaged releases & Lockfiles
+    - "!packaged_addon/**"
+    - "!uv.lock"
+    # Localization catalogs (optional to reduce noise)
+    - "!addon/locale/**"
+
+  # General repository-wide instructions
+  instructions: |
+    - This is an NVDA screen-reader add-on: Python 3.13, Windows-only runtime (gRPC server, vendored native wheels).
+    - Focus strictly on correctness, thread/asyncio safety, and resource lifecycle (subprocess, socket, and file handles).
+    - Avoid nitpicking style, naming conventions, or formatting unless it impacts a public/NVDA-facing API.
+    - Flag any silent exception swallowing, especially around gRPC calls, subprocess spawning, and speech task processing that could leave NVDA silently mute.
+    - Never suggest edits to vendored code under `lib/`; vendored wheels are refreshed only via `update_grpc.py`, `update_miniaudio.py`, `update_cffi.py`.
+    - Keep comments concise: explain the root cause and provide a targeted code fix.
+
+  # Path-specific instructions
+  path_instructions:
+    # 1. Synth Driver: speech sequence -> task pipeline
+    - path: "addon/synthDrivers/dengjen_neural_voices/synthDriver*.py"
+      instructions: |
+        - Verify SynthDriver.speak() correctly transforms every speech-sequence command into a SpeechTask/BreakTask/IndexReachedTask/DoneSpeakingTask; a dropped command means NVDA silently skips speech.
+        - Treat empty/falsy args to speak() (empty strings, zero-length sequences) as valid input, not error conditions — do not add truthiness checks that would drop legitimate zero/empty values.
+        - Confirm tasks are only ever consumed on the shared asyncio loop; no blocking calls should be introduced on that loop.
+
+    # 2. Async engine & event loop
+    - path: "addon/synthDrivers/dengjen_neural_voices/aio.py"
+      instructions: |
+        - AsyncEngine is a singleton driving a dedicated background thread, event loop, and thread pool; verify any new coroutine scheduling goes through its public submission API rather than touching the loop directly.
+        - Check that exceptions raised inside scheduled coroutines/futures are surfaced (logged or propagated), not silently dropped by a bare except.
+        - Verify shutdown/teardown paths actually stop the loop and join the thread; a leaked thread keeps NVDA from exiting cleanly.
+
+    # 3. gRPC client & subprocess management
+    - path: "addon/synthDrivers/dengjen_neural_voices/grpc_client/**"
+      instructions: |
+        - The sonata-grpc.exe subprocess is spawned detached on a free port; verify port selection has no race and the process handle/stdout/stderr are closed or piped without leaking file descriptors.
+        - Confirm the vcruntime140_1.dll presence check happens before every spawn attempt, with a clear user-facing error if missing, not a raw crash.
+        - Ensure gRPC channel/connection objects are closed on error paths, not just the happy path.
+
+    # 4. Text-to-speech system & speech task processing
+    - path: "addon/synthDrivers/dengjen_neural_voices/tts_system*.py"
+      instructions: |
+        - Verify voice/pitch/rate state mutations are consistent with what is actually sent to the gRPC layer on the next synthesis call (no stale state reuse).
+        - Check that process_speech() correctly feeds raw PCM into the sample-rate-keyed WavePlayer instance matching the active voice; a mismatched sample rate produces audible distortion, not an exception.
+
+    # 5. Config & migration
+    - path: "addon/synthDrivers/dengjen_neural_voices/{_config.py,voice_migration.py}"
+      instructions: |
+        - DengjenConfig persists per-voice settings; verify new config fields have safe defaults so existing user profiles do not break on upgrade.
+        - Migration from legacy Sonata settings must be idempotent and only run once; verify it does not silently overwrite a user's already-migrated config on subsequent runs.
+
+    # 6. Tray-menu voice manager GUI
+    - path: "addon/globalPlugins/dengjen_tts_global_plugin/**"
+      instructions: |
+        - This module imports directly from the synth driver package; flag any import that would create a circular dependency or reach into synth-driver internals not intended as a public surface.
+        - Never suggest ShowModal() in reachable GUI code paths; NVDA/CI expects non-blocking dialog construction.
+        - gui.messageBox returns wx.YES/wx.NO/wx.OK/wx.CANCEL — flag any comparison against wx.ID_* constants as a bug.
+
+    # 7. Build & SCons
+    - path: "{sconstruct,buildVars.py,site_scons/**}"
+      instructions: |
+        - addon_version must remain strict 3-part semver; flag any change that would break that format.
+        - Prefer changes routed through buildVars.py over direct edits to sconstruct unless the build graph itself must change.
+
+    # 8. Tests
+    - path: "tests/**"
+      instructions: |
+        - This is the stub/unit suite (runs on Linux and Windows); NVDA base classes must be stubbed as plain empty classes, never MagicMock() — subclassing a mock makes class bodies no-ops and silently disables the test.
+
+    - path: "tests_gui/**"
+      instructions: |
+        - Flag any use of ShowModal() (causes CI deadlock timeouts) — construct, assert, then Destroy() instead.
+        - wx swallows event-handler exceptions; tests must assert observable side effects, not pytest.raises around a wx event call.
+        - Key events require explicit SetId(window.GetId()) or wx silently drops the event — flag key-event tests missing this.
+        - Tab-order tests must use Navigate(), not wx.UIActionSimulator.
+
+    - path: "tests_contract/**"
+      instructions: |
+        - This suite talks to a real gRPC server (Windows only); flag any assertion that would pass against a mocked/stubbed server response instead of exercising the real wire format.
+
+    - path: "tests_e2e/**"
+      instructions: |
+        - This suite drives full NVDA automation via nvda-addon-testkit (Windows CI only); flag tests with hardcoded timing assumptions likely to flake in CI.
