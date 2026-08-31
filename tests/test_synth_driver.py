@@ -239,18 +239,30 @@ class TestProcessSpeechSequence:
     """_process_speech_sequence's own per-task error/cancellation handling
     (addon/synthDrivers/dengjen_neural_voices/__init__.py)."""
 
-    def test_runs_every_task_in_order(self):
+    def test_runs_every_task_in_order_one_at_a_time(self):
         ran = []
+        active = 0
+        max_active = 0
 
         def make_task(n):
             async def task():
+                nonlocal active, max_active
+                active += 1
+                max_active = max(max_active, active)
+                await asyncio.sleep(0)
                 ran.append(n)
+                active -= 1
             return task
 
         asyncio.run(
             driver_module._process_speech_sequence([make_task(i) for i in range(3)])
         )
         assert ran == [0, 1, 2]
+        # Each task must fully finish before the next starts -- if the loop
+        # ever switched to firing tasks concurrently (e.g. via create_task
+        # without awaiting immediately), more than one would be active at
+        # once here.
+        assert max_active == 1
 
     def test_stops_and_debug_logs_on_cancellation(self, monkeypatch):
         ran = []
