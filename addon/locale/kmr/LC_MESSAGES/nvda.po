@@ -1,450 +1,236 @@
-# Translation of the 'dengjen_neural_voices' NVDA add-on into Kurdish (Kurmanji).
-# Copyright (C) 2024 Musharraf Omer, 2026 Ali Ustek and contributors.
-# This file is distributed under the same license as the 'dengjen_neural_voices' package.
-# Initial draft; corrections from native speakers are welcome.
-#
 msgid ""
 msgstr ""
-"Project-Id-Version: 'dengjen_neural_voices' '3.2.0'\n"
+"Project-Id-Version: nvdaaddons\n"
 "Report-Msgid-Bugs-To: 'nvda-translations@groups.io'\n"
-"POT-Creation-Date: 2026-07-31 00:00+0000\n"
-"PO-Revision-Date: 2026-07-31 00:00+0000\n"
+"POT-Creation-Date: 2026-08-27 08:45+0000\n"
+"PO-Revision-Date: 2026-08-28 06:29\n"
 "Last-Translator: \n"
-"Language-Team: \n"
-"Language: kmr\n"
+"Language-Team: Kurmanji (Kurdish)\n"
+"Language: kmr_TR\n"
 "MIME-Version: 1.0\n"
 "Content-Type: text/plain; charset=UTF-8\n"
 "Content-Transfer-Encoding: 8bit\n"
 "Plural-Forms: nplurals=2; plural=(n != 1);\n"
-
-#. Translators: label of a menu item
-#: addon\globalPlugins\dengjen_tts_global_plugin\__init__.py:46
-msgid "Dengjen &voice manager..."
-msgstr "&Rêveberê dengên Dengjen..."
-
-#. Translators: Dengjen's voice manager menu item help
-#: addon\globalPlugins\dengjen_tts_global_plugin\__init__.py:48
-msgid "Open the voice manager to preview, install or download dengjen voices"
-msgstr "Ji bo pêşdîtin, sazkirin an daxistina dengên Dengjen rêveberê dengan veke"
-
-#. Translators: message telling the user that no voice is installed
-#: addon\globalPlugins\dengjen_tts_global_plugin\__init__.py:63
-msgid ""
-"No Dengjen voice was found.\n"
-"You can preview and download voices from the voice manager.\n"
-"Do you want to open the voice manager now?"
-msgstr ""
-"Tu dengê Dengjen nehat dîtin.\n"
-"Tu dikarî dengan ji rêveberê dengan pêşdîtin û daxînî.\n"
-"Ma tu dixwazî rêveberê dengan niha vekî?"
-
-#. Translators: title of a message telling the user that no Dengjen voice was found
-#. Add-on summary/title, usually the user visible name of the add-on
-#. Translators: Summary/title for this add-on
-#. to be shown on installation and add-on information found in add-on store
-#: addon\globalPlugins\dengjen_tts_global_plugin\__init__.py:69
-#: buildVars.py:21
-msgid "Dengjen Neural Voices"
-msgstr "Dengên Neuronî yên Dengjen"
+"X-Crowdin-Project: nvdaaddons\n"
+"X-Crowdin-Project-ID: 780748\n"
+"X-Crowdin-Language: kmr\n"
+"X-Crowdin-File: dengjen_neural_voices.pot\n"
+"X-Crowdin-File-ID: 661\n"
 
 #. Translators: the label of the OK button in a dialog
-#: addon\globalPlugins\dengjen_tts_global_plugin\components.py:86
+#: addon\globalPlugins\dengjen_tts_global_plugin\components.py:89
 msgid "OK"
 msgstr "Temam"
 
 #. Translators: the label of the cancel button in a dialog
-#: addon\globalPlugins\dengjen_tts_global_plugin\components.py:89
+#: addon\globalPlugins\dengjen_tts_global_plugin\components.py:92
 msgid "Cancel"
 msgstr "Betal"
 
 #. Translators: message of a progress dialog
-#: addon\globalPlugins\dengjen_tts_global_plugin\voice_download.py:193
-#: addon\globalPlugins\dengjen_tts_global_plugin\voice_download.py:353
+#: addon\globalPlugins\dengjen_tts_global_plugin\voice_download.py:241
+#, python-brace-format
 msgid "Downloaded: {progress}%"
 msgstr "Hat daxistin: {progress}%"
 
+#. Translators: message of a progress dialog
+#: addon\globalPlugins\dengjen_tts_global_plugin\voice_download.py:248
+msgid "Retrieving download information..."
+msgstr "Agahiyên daxistinê tên anîn..."
+
 #. Translators: message shown in the voice download progress dialog
-#: addon\globalPlugins\dengjen_tts_global_plugin\voice_download.py:202
-#: addon\globalPlugins\dengjen_tts_global_plugin\voice_download.py:362
+#: addon\globalPlugins\dengjen_tts_global_plugin\voice_download.py:260
 msgid "Installing voice"
 msgstr "Deng tê sazkirin"
 
-#. Translators: content of a message box
-#: addon\globalPlugins\dengjen_tts_global_plugin\voice_download.py:230
-msgid ""
-"Successfully downloaded voice  {voice}.\n"
-"To use this voice, you need to restart NVDA.\n"
-"Do you want to restart NVDA now?"
-msgstr ""
-"Dengê {voice} bi serkeftî hat daxistin.\n"
-"Ji bo bikaranîna vî dengî divê tu NVDA ji nû ve dest pê bikî.\n"
-"Ma tu dixwazî NVDA niha ji nû ve dest pê bikî?"
-
 #. Translators: title of a message box
-#: addon\globalPlugins\dengjen_tts_global_plugin\voice_download.py:238
-#: addon\globalPlugins\dengjen_tts_global_plugin\voice_download.py:385
+#: addon\globalPlugins\dengjen_tts_global_plugin\voice_download.py:276
 msgid "Voice downloaded"
 msgstr "Deng hat daxistin"
 
-#: addon\globalPlugins\dengjen_tts_global_plugin\voice_download.py:247
-msgid ""
-"Cannot download voice {voice}.\n"
-"Please check your connection and try again."
-msgstr ""
-"Dengê {voice} nayê daxistin.\n"
-"Ji kerema xwe girêdana xwe kontrol bike û dîsa biceribîne."
-
-#: addon\globalPlugins\dengjen_tts_global_plugin\voice_download.py:250
-#: addon\globalPlugins\dengjen_tts_global_plugin\voice_download.py:397
+#: addon\globalPlugins\dengjen_tts_global_plugin\voice_download.py:286
 msgid "Download failed"
 msgstr "Daxistin bi ser neket"
 
 #. Translators: title of a progress dialog
-#: addon\globalPlugins\dengjen_tts_global_plugin\voice_download.py:261
+#: addon\globalPlugins\dengjen_tts_global_plugin\voice_download.py:326
+#, python-brace-format
 msgid "Downloading voice {voice}"
 msgstr "Dengê {voice} tê daxistin"
 
-#. Translators: message of a progress dialog
-#: addon\globalPlugins\dengjen_tts_global_plugin\voice_download.py:265
-#: addon\globalPlugins\dengjen_tts_global_plugin\voice_download.py:412
-msgid "Retrieving download information..."
-msgstr "Agahiyên daxistinê tên anîn..."
-
-#. Translators: message shown in progress dialog
-#: addon\globalPlugins\dengjen_tts_global_plugin\voice_download.py:277
-#: addon\globalPlugins\dengjen_tts_global_plugin\voice_download.py:423
-msgid "Downloading file: {file}"
-msgstr "Pel tê daxistin: {file}"
-
-#. Translators: content of a message box
-#: addon\globalPlugins\dengjen_tts_global_plugin\voice_download.py:377
-msgid ""
-"Successfully downloaded fast variant of the voice  {voice}.\n"
+#: addon\globalPlugins\dengjen_tts_global_plugin\voice_download.py:331
+#, python-brace-format
+msgid "Successfully downloaded voice  {voice}.\n"
 "To use this voice, you need to restart NVDA.\n"
 "Do you want to restart NVDA now?"
-msgstr ""
-"Guhertoya bilez a dengê {voice} bi serkeftî hat daxistin.\n"
+msgstr "Dengê {voice} bi serkeftî hat daxistin.\n"
 "Ji bo bikaranîna vî dengî divê tu NVDA ji nû ve dest pê bikî.\n"
 "Ma tu dixwazî NVDA niha ji nû ve dest pê bikî?"
 
-#: addon\globalPlugins\dengjen_tts_global_plugin\voice_download.py:394
-msgid ""
-"Cannot download fast variant of the voice {voice}.\n"
+#: addon\globalPlugins\dengjen_tts_global_plugin\voice_download.py:338
+#, python-brace-format
+msgid "Cannot download voice {voice}.\n"
 "Please check your connection and try again."
-msgstr ""
-"Guhertoya bilez a dengê {voice} nayê daxistin.\n"
+msgstr "Dengê {voice} nayê daxistin.\n"
 "Ji kerema xwe girêdana xwe kontrol bike û dîsa biceribîne."
 
+#. Translators: message shown in progress dialog
+#: addon\globalPlugins\dengjen_tts_global_plugin\voice_download.py:350
+#: addon\globalPlugins\dengjen_tts_global_plugin\voice_download.py:427
+#, python-brace-format
+msgid "Downloading file: {file}"
+msgstr "Pel tê daxistin: {file}"
+
 #. Translators: title of a progress dialog
-#: addon\globalPlugins\dengjen_tts_global_plugin\voice_download.py:408
+#: addon\globalPlugins\dengjen_tts_global_plugin\voice_download.py:404
+#, python-brace-format
 msgid "Downloading fast variant of the voice {voice}"
 msgstr "Guhertoya bilez a dengê {voice} tê daxistin"
 
+#: addon\globalPlugins\dengjen_tts_global_plugin\voice_download.py:409
+#, python-brace-format
+msgid "Successfully downloaded fast variant of the voice  {voice}.\n"
+"To use this voice, you need to restart NVDA.\n"
+"Do you want to restart NVDA now?"
+msgstr "Guhertoya bilez a dengê {voice} bi serkeftî hat daxistin.\n"
+"Ji bo bikaranîna vî dengî divê tu NVDA ji nû ve dest pê bikî.\n"
+"Ma tu dixwazî NVDA niha ji nû ve dest pê bikî?"
+
+#: addon\globalPlugins\dengjen_tts_global_plugin\voice_download.py:416
+#, python-brace-format
+msgid "Cannot download fast variant of the voice {voice}.\n"
+"Please check your connection and try again."
+msgstr "Guhertoya bilez a dengê {voice} nayê daxistin.\n"
+"Ji kerema xwe girêdana xwe kontrol bike û dîsa biceribîne."
+
 #. Add controls
 #. Translators: label for a list of installed voices
-#: addon\globalPlugins\dengjen_tts_global_plugin\voice_manager.py:42
+#: addon\globalPlugins\dengjen_tts_global_plugin\voice_manager.py:47
 msgid "Installed voices"
 msgstr "Dengên sazkirî"
 
 #. Translators: list view column title
-#: addon\globalPlugins\dengjen_tts_global_plugin\voice_manager.py:48
-#: addon\globalPlugins\dengjen_tts_global_plugin\voice_manager.py:245
+#: addon\globalPlugins\dengjen_tts_global_plugin\voice_manager.py:53
+#: addon\globalPlugins\dengjen_tts_global_plugin\voice_manager.py:311
 msgid "Name"
 msgstr "Nav"
 
 #. Translators: list view column title
-#: addon\globalPlugins\dengjen_tts_global_plugin\voice_manager.py:51
-#: addon\globalPlugins\dengjen_tts_global_plugin\voice_manager.py:247
+#: addon\globalPlugins\dengjen_tts_global_plugin\voice_manager.py:56
+#: addon\globalPlugins\dengjen_tts_global_plugin\voice_manager.py:313
 msgid "Quality"
 msgstr "Kalîte"
 
+#. Translators: list view column title
 #. Build controls
 #. Translators: label of a choice
-#. Translators: list view column title
-#: addon\globalPlugins\dengjen_tts_global_plugin\voice_manager.py:54
-#: addon\globalPlugins\dengjen_tts_global_plugin\voice_manager.py:240
+#: addon\globalPlugins\dengjen_tts_global_plugin\voice_manager.py:59
+#: addon\globalPlugins\dengjen_tts_global_plugin\voice_manager.py:306
 msgid "Language"
 msgstr "Ziman"
 
 #. Translators: label for a button for showing voice model card
-#: addon\globalPlugins\dengjen_tts_global_plugin\voice_manager.py:60
+#: addon\globalPlugins\dengjen_tts_global_plugin\voice_manager.py:65
 msgid "&Voice model card..."
 msgstr "&Karta modela dengî..."
 
 #. Translators: label for a button for removing a voice
-#: addon\globalPlugins\dengjen_tts_global_plugin\voice_manager.py:62
+#: addon\globalPlugins\dengjen_tts_global_plugin\voice_manager.py:67
 msgid "&Remove voice..."
 msgstr "Dengî &rake..."
 
 #. Translators: the main label of the install button
-#: addon\globalPlugins\dengjen_tts_global_plugin\voice_manager.py:67
+#: addon\globalPlugins\dengjen_tts_global_plugin\voice_manager.py:72
 msgid "&Install from local file"
 msgstr "&Ji pelê herêmî saz bike"
 
-#. Translators: the note for this button
-#: addon\globalPlugins\dengjen_tts_global_plugin\voice_manager.py:69
-msgid ""
-"Install a voice from a local archive.\n"
+#: addon\globalPlugins\dengjen_tts_global_plugin\voice_manager.py:75
+msgid "Install a voice from a local archive.\n"
 "The archive contains the voice model and configuration.\n"
 "The archive should have a (.tar.gz) file extension."
-msgstr ""
-"Dengekî ji arşîveke herêmî saz bike.\n"
+msgstr "Dengekî ji arşîveke herêmî saz bike.\n"
 "Arşîv modela dengî û mîhengan dihewîne.\n"
 "Divê dirêjahiya pelê arşîvê (.tar.gz) be."
-
-#. ! Intentionally untranslatable
-#. Translators: title of a message box showing voice model card
-#: addon\globalPlugins\dengjen_tts_global_plugin\voice_manager.py:116
-msgid "Model card"
-msgstr "Karta modelê"
-
-#. Translators: content of a message box
-#: addon\globalPlugins\dengjen_tts_global_plugin\voice_manager.py:122
-msgid "Model card information is unavailable for this voice"
-msgstr "Ji bo vî dengî agahiya karta modelê tune ye"
-
-#. Translators: title of a message box
-#: addon\globalPlugins\dengjen_tts_global_plugin\voice_manager.py:124
-msgid "Not found"
-msgstr "Nehat dîtin"
-
-#. Translators: message in a message box
-#: addon\globalPlugins\dengjen_tts_global_plugin\voice_manager.py:141
-msgid "You cannot remove the currently active voice!"
-msgstr "Tu nikarî dengê ku niha çalak e rakî!"
-
-#. Translators: title of a message box
-#: addon\globalPlugins\dengjen_tts_global_plugin\voice_manager.py:143
-#: addon\globalPlugins\dengjen_tts_global_plugin\voice_manager.py:304
-msgid "Error"
-msgstr "Çewtî"
-
-#. Translators: message in a message box
-#: addon\globalPlugins\dengjen_tts_global_plugin\voice_manager.py:149
-msgid ""
-"Do you want to remove this voice?\n"
-"Voice: {name}"
-msgstr ""
-"Ma tu dixwazî vî dengî rakî?\n"
-"Deng: {name}"
-
-#. Translators: title of a message box
-#: addon\globalPlugins\dengjen_tts_global_plugin\voice_manager.py:154
-msgid "Remove voice?"
-msgstr "Deng were rakirin?"
-
-#. Translators: message in a message box
-#: addon\globalPlugins\dengjen_tts_global_plugin\voice_manager.py:164
-msgid ""
-"Failed to remove voice.\n"
-"See NVDA's log for more details."
-msgstr ""
-"Deng nehat rakirin.\n"
-"Ji bo hûrgiliyan li tomara NVDA binêre."
-
-#. Translators: title of a message box
-#: addon\globalPlugins\dengjen_tts_global_plugin\voice_manager.py:166
-msgid "Failed"
-msgstr "Bi ser neket"
-
-#. Translators: message in a message box
-#: addon\globalPlugins\dengjen_tts_global_plugin\voice_manager.py:172
-msgid "Voice removed successfully."
-msgstr "Deng bi serkeftî hat rakirin."
-
-#. Translators: title of a message box
-#: addon\globalPlugins\dengjen_tts_global_plugin\voice_manager.py:174
-msgid "Done"
-msgstr "Qediya"
-
-#. Translators: title for a dialog for opening a file
-#: addon\globalPlugins\dengjen_tts_global_plugin\voice_manager.py:183
-msgid "Choose voice archive file "
-msgstr "Pelê arşîva dengî hilbijêre "
-
-#. Translators: file dialog filter for tar archives
-#: addon\globalPlugins\dengjen_tts_global_plugin\voice_manager.py:187
-msgid "Tar archives (*.tar.gz, *.tgz)"
-msgstr "Arşîvên tar (*.tar.gz, *.tgz)"
-
-#. Translators: file dialog filter for all files
-#: addon\globalPlugins\dengjen_tts_global_plugin\voice_manager.py:189
-msgid "All files"
-msgstr "Hemû pel"
-
-#. Translators: message telling the user that installing the voice has failed
-#: addon\globalPlugins\dengjen_tts_global_plugin\voice_manager.py:212
-msgid ""
-"Failed to install voice from archive.\n"
-"\n"
-"{detail}\n"
-"\n"
-"See NVDA's log for more details."
-msgstr ""
-"Deng ji arşîvê nehat sazkirin.\n"
-"\n"
-"{detail}\n"
-"\n"
-"Ji bo hûrgiliyan li tomara NVDA binêre."
-
-#: addon\globalPlugins\dengjen_tts_global_plugin\voice_manager.py:216
-msgid "Voice installation failed"
-msgstr "Sazkirina dengî bi ser neket"
-
-#. Translators: message telling the user that installing the voice is successful
-#: addon\globalPlugins\dengjen_tts_global_plugin\voice_manager.py:223
-msgid "Voice {voice} has been installed successfully."
-msgstr "Dengê {voice} bi serkeftî hat sazkirin."
-
-#: addon\globalPlugins\dengjen_tts_global_plugin\voice_manager.py:226
-msgid "Voice installed successfully"
-msgstr "Deng bi serkeftî hat sazkirin"
-
-#: addon\globalPlugins\dengjen_tts_global_plugin\voice_manager.py:242
-msgid "Available voices"
-msgstr "Dengên berdest"
-
-#. Translators: header of a group of controls for previewing the voice
-#: addon\globalPlugins\dengjen_tts_global_plugin\voice_manager.py:258
-msgid "Preview"
-msgstr "Pêşdîtin"
-
-#. Translators: Label for a setting in synth settings ring.
-#: addon\globalPlugins\dengjen_tts_global_plugin\voice_manager.py:260
-#: addon\synthDrivers\dengjen_neural_voices\__init__.py:126
-msgid "Speaker"
-msgstr "Axêver"
-
-#. Translators: label of a button
-#: addon\globalPlugins\dengjen_tts_global_plugin\voice_manager.py:263
-#: addon\globalPlugins\dengjen_tts_global_plugin\voice_manager.py:370
-msgid "&Preview"
-msgstr "&Pêşdîtin"
-
-#. Translators: label of a button to download the standard variant of the voice
-#: addon\globalPlugins\dengjen_tts_global_plugin\voice_manager.py:268
-msgid "&Download standard variant"
-msgstr "Guhertoya &standard daxîne"
-
-# Draft translation added by the fork maintainer; review welcome.
-# Accelerator moved to D: B collided with the "&Bigire" dialog button.
-#. Translators: label of a button to download the fast variant of voice
-#: addon\globalPlugins\dengjen_tts_global_plugin\voice_manager.py:270
-msgid "Download &fast variant"
-msgstr "Guhertoya bilez &daxîne"
-
-#. Translators: label of a button to refresh the voices list
-#: addon\globalPlugins\dengjen_tts_global_plugin\voice_manager.py:272
-msgid "&Refresh voices list"
-msgstr "Lîsteya dengan &nû bike"
-
-#. Translators: message in a dialog
-#: addon\globalPlugins\dengjen_tts_global_plugin\voice_manager.py:292
-msgid "Retrieving voices list. Please wait..."
-msgstr "Lîsteya dengan tê anîn. Ji kerema xwe li bendê bimîne..."
-
-#: addon\globalPlugins\dengjen_tts_global_plugin\voice_manager.py:303
-msgid ""
-"Could not retrieve voice list.\n"
-"Please check your connection and try again."
-msgstr ""
-"Lîsteya dengan nehat anîn.\n"
-"Ji kerema xwe girêdana xwe kontrol bike û dîsa biceribîne."
-
-#. Translators: label of the preview button while audio is playing
-#: addon\globalPlugins\dengjen_tts_global_plugin\voice_manager.py:361
-msgid "&Stop preview"
-msgstr "Pêşdîtinê &raweste"
-
-#. Translators: error shown when voice preview fails to play
-#: addon\globalPlugins\dengjen_tts_global_plugin\voice_manager.py:378
-msgid ""
-"Could not play voice preview.\n"
-"Check your connection and try again."
-msgstr ""
-"Pêşdîtina dengî nehat lêdan.\n"
-"Girêdana xwe kontrol bike û dîsa biceribîne."
-
-#. Translators: title of an error message box
-#: addon\globalPlugins\dengjen_tts_global_plugin\voice_manager.py:380
-msgid "Preview failed"
-msgstr "Pêşdîtin bi ser neket"
-
-#. Translators: title of voice manager dialog
-#: addon\globalPlugins\dengjen_tts_global_plugin\voice_manager.py:437
-msgid "Dengjen voice manager"
-msgstr "Rêveberê dengên Dengjen"
-
-#. Translators: label of a tab in a tab control
-#: addon\globalPlugins\dengjen_tts_global_plugin\voice_manager.py:448
-msgid "Installed"
-msgstr "Sazkirî"
-
-#. Translators: label of a tab in a tab control
-#: addon\globalPlugins\dengjen_tts_global_plugin\voice_manager.py:453
-msgid "Download"
-msgstr "Daxistin"
-
-#. Translators: the label of the close button in a dialog
-#: addon\globalPlugins\dengjen_tts_global_plugin\voice_manager.py:469
-msgid "&Close"
-msgstr "&Bigire"
-
-#. Translators: Label for a setting in voice settings dialog.
-#: addon\synthDrivers\dengjen_neural_voices\__init__.py:123
-msgid "&Speaker"
-msgstr "&Axêver"
-
-#: addon\synthDrivers\dengjen_neural_voices\__init__.py:166
-msgid "&Noise scale"
-msgstr "Pîvana &xişînê"
-
-#: addon\synthDrivers\dengjen_neural_voices\__init__.py:167
-msgid "&Length scale"
-msgstr "Pîvana &dirêjahiyê"
-
-#: addon\synthDrivers\dengjen_neural_voices\__init__.py:168
-msgid "Noise &w"
-msgstr "Xişîn &w"
-
-# Draft translation added by the fork maintainer; review welcome.
-#. Add-on description
-#. Translators: Long description to be shown for this add-on on add-on information from add-on store
-#: buildVars.py:24
-msgid ""
-"Adds fast, local neural text-to-speech voices to NVDA. Provides a "
-"synthesizer driver for Piper voice models via the Sonata engine, together "
-"with a voice manager for downloading and installing voices."
-msgstr ""
-"Dengên metin-bo-deng ên neuronî yên bilez û herêmî li NVDA-yê zêde dike. Ji "
-"bo modelên dengî yên Piper bi rêya motora Sonata ajokarek sentezker, û ji bo "
-"daxistin û sazkirina dengan rêveberek dengan pêşkêş dike."
 
 #. Translators: the main label of the button for importing pre-rename voices
 #: addon\globalPlugins\dengjen_tts_global_plugin\voice_manager.py:84
 msgid "Import voices from &Sonata"
 msgstr "Dengan ji &Sonata veguhezîne"
 
-#. Translators: the note for the button for importing pre-rename voices
-#: addon\globalPlugins\dengjen_tts_global_plugin\voice_manager.py:86
-msgid ""
-"Copy voices you downloaded with the Sonata Neural Voices add-on.\n"
+#: addon\globalPlugins\dengjen_tts_global_plugin\voice_manager.py:87
+msgid "Copy voices you downloaded with the Sonata Neural Voices add-on.\n"
 "The originals are left in place, so Sonata keeps working."
-msgstr ""
-"Dengên ku te bi pêveka Dengên Neuronî yên Sonata daxistine kopî bike.\n"
+msgstr "Dengên ku te bi pêveka Dengên Neuronî yên Sonata daxistine kopî bike.\n"
 "Yên orîjînal li cihê xwe dimînin, loma Sonata hê jî dixebite."
 
-#. Translators: message in a message box; {voices} is a list of voice names
-#: addon\globalPlugins\dengjen_tts_global_plugin\voice_manager.py:206
-msgid ""
-"Copy the following voices from the Sonata Neural Voices add-on?\n"
-"{voices}\n"
-"\n"
+#. ! Intentionally untranslatable
+#. Translators: title of a message box showing voice model card
+#: addon\globalPlugins\dengjen_tts_global_plugin\voice_manager.py:138
+msgid "Model card"
+msgstr "Karta modelê"
+
+#. Translators: content of a message box
+#: addon\globalPlugins\dengjen_tts_global_plugin\voice_manager.py:144
+msgid "Model card information is unavailable for this voice"
+msgstr "Ji bo vî dengî agahiya karta modelê tune ye"
+
+#. Translators: title of a message box
+#: addon\globalPlugins\dengjen_tts_global_plugin\voice_manager.py:146
+msgid "Not found"
+msgstr "Nehat dîtin"
+
+#. Translators: message in a message box
+#: addon\globalPlugins\dengjen_tts_global_plugin\voice_manager.py:161
+msgid "You cannot remove the currently active voice!"
+msgstr "Tu nikarî dengê ku niha çalak e rakî!"
+
+#. Translators: title of a message box
+#: addon\globalPlugins\dengjen_tts_global_plugin\voice_manager.py:163
+#: addon\globalPlugins\dengjen_tts_global_plugin\voice_manager.py:373
+msgid "Error"
+msgstr "Çewtî"
+
+#: addon\globalPlugins\dengjen_tts_global_plugin\voice_manager.py:170
+#, python-brace-format
+msgid "Do you want to remove this voice?\n"
+"Voice: {name}"
+msgstr "Ma tu dixwazî vî dengî rakî?\n"
+"Deng: {name}"
+
+#. Translators: title of a message box
+#: addon\globalPlugins\dengjen_tts_global_plugin\voice_manager.py:174
+msgid "Remove voice?"
+msgstr "Deng were rakirin?"
+
+#. Translators: message in a message box
+#: addon\globalPlugins\dengjen_tts_global_plugin\voice_manager.py:184
+msgid "Failed to remove voice.\n"
+"See NVDA's log for more details."
+msgstr "Deng nehat rakirin.\n"
+"Ji bo hûrgiliyan li tomara NVDA binêre."
+
+#. Translators: title of a message box
+#: addon\globalPlugins\dengjen_tts_global_plugin\voice_manager.py:186
+msgid "Failed"
+msgstr "Bi ser neket"
+
+#. Translators: message in a message box
+#: addon\globalPlugins\dengjen_tts_global_plugin\voice_manager.py:192
+msgid "Voice removed successfully."
+msgstr "Deng bi serkeftî hat rakirin."
+
+#. Translators: title of a message box
+#: addon\globalPlugins\dengjen_tts_global_plugin\voice_manager.py:194
+msgid "Done"
+msgstr "Qediya"
+
+#: addon\globalPlugins\dengjen_tts_global_plugin\voice_manager.py:207
+#, python-brace-format
+msgid "Copy the following voices from the Sonata Neural Voices add-on?\n"
+"{voices}\n\n"
 "The originals are left in place, so Sonata keeps working. This needs as much free disk space as the voices take up."
-msgstr ""
-"Dengên li jêr ji pêveka Dengên Neuronî yên Sonata bên kopîkirin?\n"
-"{voices}\n"
-"\n"
+msgstr "Dengên li jêr ji pêveka Dengên Neuronî yên Sonata bên kopîkirin?\n"
+"{voices}\n\n"
 "Yên orîjînal li cihê xwe dimînin, loma Sonata hê jî dixebite. Divê bi qasî cihê ku deng digirin, cihê vala yê dîskê hebe."
 
 #. Translators: title of a message box
@@ -452,19 +238,13 @@ msgstr ""
 msgid "Import voices from Sonata?"
 msgstr "Deng ji Sonata bên veguhaztin?"
 
-#. Translators: message telling the user that importing voices has failed
-#: addon\globalPlugins\dengjen_tts_global_plugin\voice_manager.py:224
-msgid ""
-"Failed to import voices.\n"
-"\n"
-"{detail}\n"
-"\n"
+#: addon\globalPlugins\dengjen_tts_global_plugin\voice_manager.py:225
+#, python-brace-format
+msgid "Failed to import voices.\n\n"
+"{detail}\n\n"
 "See NVDA's log for more details."
-msgstr ""
-"Deng nehatin veguhaztin.\n"
-"\n"
-"{detail}\n"
-"\n"
+msgstr "Deng nehatin veguhaztin.\n\n"
+"{detail}\n\n"
 "Ji bo hûrgiliyan li tomara NVDA binêre."
 
 #. Translators: title of a message box
@@ -474,11 +254,10 @@ msgstr "Veguhaztin bi ser neket"
 
 #. Translators: message telling the user which voices were imported
 #: addon\globalPlugins\dengjen_tts_global_plugin\voice_manager.py:236
-msgid ""
-"The following voices were imported:\n"
+#, python-brace-format
+msgid "The following voices were imported:\n"
 "{voices}"
-msgstr ""
-"Dengên li jêr hatin veguhaztin:\n"
+msgstr "Dengên li jêr hatin veguhaztin:\n"
 "{voices}"
 
 #. Translators: title of a message box
@@ -486,8 +265,187 @@ msgstr ""
 msgid "Voices imported"
 msgstr "Deng hatin veguhaztin"
 
-#. Translators: shown after installing when the pre-rename add-on is still present
-#: addon\installTasks.py:77
+#. Translators: title for a dialog for opening a file
+#: addon\globalPlugins\dengjen_tts_global_plugin\voice_manager.py:249
+msgid "Choose voice archive file "
+msgstr "Pelê arşîva dengî hilbijêre "
+
+#. Translators: file dialog filter for tar archives
+#: addon\globalPlugins\dengjen_tts_global_plugin\voice_manager.py:253
+msgid "Tar archives (*.tar.gz, *.tgz)"
+msgstr "Arşîvên tar (*.tar.gz, *.tgz)"
+
+#. Translators: file dialog filter for all files
+#: addon\globalPlugins\dengjen_tts_global_plugin\voice_manager.py:255
+msgid "All files"
+msgstr "Hemû pel"
+
+#: addon\globalPlugins\dengjen_tts_global_plugin\voice_manager.py:279
+#, python-brace-format
+msgid "Failed to install voice from archive.\n\n"
+"{detail}\n\n"
+"See NVDA's log for more details."
+msgstr "Deng ji arşîvê nehat sazkirin.\n\n"
+"{detail}\n\n"
+"Ji bo hûrgiliyan li tomara NVDA binêre."
+
+#: addon\globalPlugins\dengjen_tts_global_plugin\voice_manager.py:282
+msgid "Voice installation failed"
+msgstr "Sazkirina dengî bi ser neket"
+
+#: addon\globalPlugins\dengjen_tts_global_plugin\voice_manager.py:290
+#, python-brace-format
+msgid "Voice {voice} has been installed successfully."
+msgstr "Dengê {voice} bi serkeftî hat sazkirin."
+
+#: addon\globalPlugins\dengjen_tts_global_plugin\voice_manager.py:292
+msgid "Voice installed successfully"
+msgstr "Deng bi serkeftî hat sazkirin"
+
+#: addon\globalPlugins\dengjen_tts_global_plugin\voice_manager.py:308
+msgid "Available voices"
+msgstr "Dengên berdest"
+
+#. Translators: header of a group of controls for previewing the voice
+#: addon\globalPlugins\dengjen_tts_global_plugin\voice_manager.py:324
+msgid "Preview"
+msgstr "Pêşdîtin"
+
+#. Translators: Label for a setting in synth settings ring.
+#: addon\globalPlugins\dengjen_tts_global_plugin\voice_manager.py:326
+#: addon\synthDrivers\dengjen_neural_voices\__init__.py:123
+msgid "Speaker"
+msgstr "Axêver"
+
+#. Translators: label of a button
+#: addon\globalPlugins\dengjen_tts_global_plugin\voice_manager.py:329
+#: addon\globalPlugins\dengjen_tts_global_plugin\voice_manager.py:432
+msgid "&Preview"
+msgstr "&Pêşdîtin"
+
+#. Translators: label of a button to download the standard variant of the voice
+#: addon\globalPlugins\dengjen_tts_global_plugin\voice_manager.py:334
+msgid "&Download standard variant"
+msgstr "Guhertoya &standard daxîne"
+
+#. Translators: label of a button to download the fast variant of voice
+#: addon\globalPlugins\dengjen_tts_global_plugin\voice_manager.py:336
+msgid "Download &fast variant"
+msgstr "Guhertoya bilez &daxîne"
+
+#. Translators: label of a button to refresh the voices list
+#: addon\globalPlugins\dengjen_tts_global_plugin\voice_manager.py:338
+msgid "&Refresh voices list"
+msgstr "Lîsteya dengan &nû bike"
+
+#. Translators: message in a dialog
+#: addon\globalPlugins\dengjen_tts_global_plugin\voice_manager.py:357
+msgid "Retrieving voices list. Please wait..."
+msgstr "Lîsteya dengan tê anîn. Ji kerema xwe li bendê bimîne..."
+
+#: addon\globalPlugins\dengjen_tts_global_plugin\voice_manager.py:372
+msgid "Could not retrieve voice list.\n"
+"Please check your connection and try again."
+msgstr "Lîsteya dengan nehat anîn.\n"
+"Ji kerema xwe girêdana xwe kontrol bike û dîsa biceribîne."
+
+#. Translators: label of the preview button while audio is playing
+#: addon\globalPlugins\dengjen_tts_global_plugin\voice_manager.py:423
+msgid "&Stop preview"
+msgstr "Pêşdîtinê &raweste"
+
+#. Translators: error shown when voice preview fails to play
+#: addon\globalPlugins\dengjen_tts_global_plugin\voice_manager.py:440
+msgid "Could not play voice preview.\n"
+"Check your connection and try again."
+msgstr "Pêşdîtina dengî nehat lêdan.\n"
+"Girêdana xwe kontrol bike û dîsa biceribîne."
+
+#. Translators: title of an error message box
+#: addon\globalPlugins\dengjen_tts_global_plugin\voice_manager.py:442
+msgid "Preview failed"
+msgstr "Pêşdîtin bi ser neket"
+
+#. Translators: title of voice manager dialog
+#: addon\globalPlugins\dengjen_tts_global_plugin\voice_manager.py:493
+msgid "Dengjen voice manager"
+msgstr "Rêveberê dengên Dengjen"
+
+#. Translators: label of a tab in a tab control
+#: addon\globalPlugins\dengjen_tts_global_plugin\voice_manager.py:504
+msgid "Installed"
+msgstr "Sazkirî"
+
+#. Translators: label of a tab in a tab control
+#: addon\globalPlugins\dengjen_tts_global_plugin\voice_manager.py:509
+msgid "Download"
+msgstr "Daxistin"
+
+#. Translators: the label of the close button in a dialog
+#: addon\globalPlugins\dengjen_tts_global_plugin\voice_manager.py:525
+msgid "&Close"
+msgstr "&Bigire"
+
+#. Translators: label of a menu item
+#: addon\globalPlugins\dengjen_tts_global_plugin\__init__.py:49
+msgid "Dengjen &voice manager..."
+msgstr "&Rêveberê dengên Dengjen..."
+
+#. Translators: Dengjen's voice manager menu item help
+#: addon\globalPlugins\dengjen_tts_global_plugin\__init__.py:51
+msgid "Open the voice manager to preview, install or download dengjen voices"
+msgstr "Ji bo pêşdîtin, sazkirin an daxistina dengên Dengjen rêveberê dengan veke"
+
+#: addon\globalPlugins\dengjen_tts_global_plugin\__init__.py:67
+msgid "No Dengjen voice was found.\n"
+"You can preview and download voices from the voice manager.\n"
+"Do you want to open the voice manager now?"
+msgstr "Tu dengê Dengjen nehat dîtin.\n"
+"Tu dikarî dengan ji rêveberê dengan pêşdîtin û daxînî.\n"
+"Ma tu dixwazî rêveberê dengan niha vekî?"
+
+#. Translators: title of a message telling the user that no Dengjen voice was found
+#. Add-on summary/title, usually the user visible name of the add-on
+#. Translators: Summary/title for this add-on
+#. to be shown on installation and add-on information found in add-on store
+#: addon\globalPlugins\dengjen_tts_global_plugin\__init__.py:72 buildVars.py:21
+msgid "Dengjen Neural Voices"
+msgstr "Dengên Neuronî yên Dengjen"
+
+#. Translators: Label for a setting in voice settings dialog.
+#: addon\synthDrivers\dengjen_neural_voices\__init__.py:120
+msgid "&Speaker"
+msgstr "&Axêver"
+
+#: addon\synthDrivers\dengjen_neural_voices\__init__.py:163
+msgid "&Noise scale"
+msgstr "Pîvana &xişînê"
+
+#: addon\synthDrivers\dengjen_neural_voices\__init__.py:164
+msgid "&Length scale"
+msgstr "Pîvana &dirêjahiyê"
+
+#: addon\synthDrivers\dengjen_neural_voices\__init__.py:165
+msgid "Noise &w"
+msgstr "Xişîn &w"
+
+#. Translators: reported when NVDA fails to switch to a Dengjen
+#. voice, e.g. because the voice's model file is corrupted or
+#. incomplete. The previous voice remains in use.
+#: addon\synthDrivers\dengjen_neural_voices\__init__.py:440
+#, python-brace-format
+msgid "Failed to load voice {voice}. Keeping the previous voice."
+msgstr "Dengê {voice} nehat barkirin. Dengê berê tê bikaranîn."
+
+#: buildVars.py:25
+msgid "Adds fast, local neural text-to-speech voices to NVDA. Provides a synthesizer driver for Piper voice models via the Sonata engine, together with a voice manager for downloading and installing voices."
+msgstr "Dengên metin-bo-deng ên neuronî yên bilez û herêmî li NVDA-yê zêde dike. Ji bo modelên dengî yên Piper bi rêya motora Sonata ajokarek sentezker, û ji bo daxistin û sazkirina dengan rêveberek dengan pêşkêş dike."
+
+#: buildVars.py:32
+msgid "Corrected the declared minimum NVDA version to 2026.1. The bundled speech engine has required NVDA's Python 3.13 64-bit runtime since v3.2-beta.1; the add-on previously claimed support for NVDA 2025.1+ and failed to load with an ImportError on those older, incompatible NVDA versions."
+msgstr "Guhertoya herî kêm a NVDA ya diyarkirî bo 2026.1 rast kir. Motora axaftinê ya pêvekirî ji v3.2-beta.1 vir ve pêdivî bi Python 3.13 64-bit runtime ya NVDA heye; pêvek berê îdia dikir ku piştgiriya NVDA 2025.1+ dike û bi ImportError li ser wan guhertoyên NVDA yên kevntir û nelihevhatî bar nekir."
+
+#: addon\installTasks.py:78
 msgid "The Sonata Neural Voices add-on is still installed, so your downloaded voices have been left where they are and Sonata keeps working. To use them with Dengjen Neural Voices, open the Dengjen voice manager and choose \"Import voices from Sonata\". Removing the Sonata Neural Voices add-on also avoids two synthesizers appearing in your speech settings."
 msgstr "Pêveka Dengên Neuronî yên Sonata hê jî sazkirî ye, loma dengên ku te daxistine li cihê xwe hatin hiştin û Sonata hê jî dixebite. Ji bo bikaranîna wan bi Dengên Neuronî yên Dengjen re, rêveberê dengên Dengjen veke û \"Dengan ji Sonata veguhezîne\" hilbijêre. Rakirina pêveka Dengên Neuronî yên Sonata her wiha nahêle ku du sentezker di mîhengên axaftinê yên te de xuya bibin."
 
@@ -496,12 +454,3 @@ msgstr "Pêveka Dengên Neuronî yên Sonata hê jî sazkirî ye, loma dengên k
 msgid "Old add-on still installed"
 msgstr "Pêveka kevn hê jî sazkirî ye"
 
-#. Translators: reported when NVDA fails to switch to a Dengjen
-#: addon\synthDrivers\dengjen_neural_voices\__init__.py:454
-msgid "Failed to load voice {voice}. Keeping the previous voice."
-msgstr "Dengê {voice} nehat barkirin. Dengê berê tê bikaranîn."
-
-#. Translators: what's new content for the add-on version to be shown in the add-on store
-#: buildVars.py:31
-msgid "Corrected the declared minimum NVDA version to 2026.1. The bundled speech engine has required NVDA's Python 3.13 64-bit runtime since v3.2-beta.1; the add-on previously claimed support for NVDA 2025.1+ and failed to load with an ImportError on those older, incompatible NVDA versions."
-msgstr ""
