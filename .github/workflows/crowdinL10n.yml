@@ -12,7 +12,7 @@ concurrency:
 
 env:
   crowdinAuthToken: ${{ secrets.CROWDIN_TOKEN }}
-  hasPrSyncToken: ${{ secrets.PR_SYNC_TOKEN }}
+  hasPrSyncToken: ${{ secrets.PR_SYNC_TOKEN != '' }}
   GH_TOKEN: ${{ github.token }}
   CROWDIN_PROJECT_ID: ${{ vars.CROWDIN_PROJECT_ID || 780748 }}
   L10N_UTIL_CONFIG: ${{ vars.L10N_UTIL_CONFIG || 'addon' }}
@@ -42,7 +42,7 @@ jobs:
         # main requires PRs, so translations are published via PR (see
         # crowdinSync.ps1) using a PAT: GITHUB_TOKEN-authored pushes/PRs
         # don't trigger the required status checks needed to merge.
-        if: ${{ env.hasPrSyncToken }}
+        if: env.hasPrSyncToken == 'true'
         shell: pwsh
         env:
           PR_SYNC_TOKEN: ${{ secrets.PR_SYNC_TOKEN }}

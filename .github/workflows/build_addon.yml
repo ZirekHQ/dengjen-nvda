@@ -206,12 +206,14 @@ jobs:
         TAG=${GITHUB_REF#refs/tags/}
         REPO="${GITHUB_REPOSITORY}"
         DOWNLOAD_URL="https://github.com/${REPO}/releases/download/${TAG}/${ADDON_FILE}"
-        echo "## NVDA Add-on Store submission values" >> "$GITHUB_STEP_SUMMARY"
-        echo "" >> "$GITHUB_STEP_SUMMARY"
-        echo "| Field | Value |" >> "$GITHUB_STEP_SUMMARY"
-        echo "|---|---|" >> "$GITHUB_STEP_SUMMARY"
-        echo "| **Download URL** | \`${DOWNLOAD_URL}\` |" >> "$GITHUB_STEP_SUMMARY"
-        echo "| **SHA256** | \`${SHA256}\` |" >> "$GITHUB_STEP_SUMMARY"
-        echo "" >> "$GITHUB_STEP_SUMMARY"
-        echo "Use these values when filling in the [Add-on Store registration form](https://github.com/nvaccess/addon-datastore/issues/new?template=registerAddon.yml)." >> "$GITHUB_STEP_SUMMARY"
+        {
+          echo "## NVDA Add-on Store submission values"
+          echo ""
+          echo "| Field | Value |"
+          echo "|---|---|"
+          echo "| **Download URL** | \`${DOWNLOAD_URL}\` |"
+          echo "| **SHA256** | \`${SHA256}\` |"
+          echo ""
+          echo "Use these values when filling in the [Add-on Store registration form](https://github.com/nvaccess/addon-datastore/issues/new?template=registerAddon.yml)."
+        } >> "$GITHUB_STEP_SUMMARY"
 
