@@ -1,0 +1,7 @@
+= dengjen-nvda
+
+Dengjen Neural Voices -- fast, local neural text-to-speech voices for NVDA.
+Maintenance continuation of mush42/sonata-nvda.
+
+Docs spike: this component is aggregated into the org-wide
+https://zirekhq.github.io[ZirekHQ documentation site].
