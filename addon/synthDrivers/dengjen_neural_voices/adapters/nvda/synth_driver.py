@@ -416,6 +416,15 @@ class SynthDriver(NvdaSynthDriver):
             setattr(voice, name, max(0.1, round(self._percentToParam(value, 0.0, default * spec["multiplier"]), 2)))
         setattr(self, factor_attr, value)
 
+    def _reapply_scale_settings(self):
+        # Re-pushes each scale setting's current value to the newly selected
+        # voice/variant. `_set_scale_factor` writes to `tts.speech_options.voice`
+        # as a side effect, so this calls it explicitly instead of relying on
+        # `self.x = self.x` property round-trips (flagged by static analysis
+        # as a no-op self-assignment).
+        for name in self._SCALE_SETTINGS:
+            self._set_scale_factor(name, self._get_scale_factor(name))
+
     def _get_noise_scale(self):
         return self._get_scale_factor("noise_scale")
 
@@ -464,9 +473,7 @@ class SynthDriver(NvdaSynthDriver):
         self._set_variant(variant)
 
         # Reset params
-        self.noise_scale = self.noise_scale
-        self.length_scale = self.length_scale
-        self.noise_w = self.noise_w
+        self._reapply_scale_settings()
 
         if speaker is not None:
             self._set_speaker(speaker)
