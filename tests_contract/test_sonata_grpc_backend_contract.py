@@ -9,11 +9,13 @@ SynthDriver.
 """
 
 import os
+import shutil
 import sys
 import tempfile
 import types
 import urllib.request
 
+import espeakng_loader
 import pytest
 
 if sys.platform != "win32":
@@ -29,9 +31,19 @@ if sys.platform != "win32":
 # aio.py) needs globalVars, logHandler, wx and gui.settingsDialogs -- not
 # domain/tts_system.py's or SynthDriver's much larger NVDA surface, because
 # dengjen_neural_voices/__init__.py is never allowed to run for real below.
+#
+# start_grpc_server() derives SONATA_ESPEAKNG_DATA_DIRECTORY as
+# `<globalVars.appDir>/synthDrivers`; without real espeak-ng phonemization
+# data there, sonata-grpc.exe aborts with "Failed to initialize eSpeak-ng".
+# Build a real app directory whose synthDrivers subfolder holds the same
+# espeak-ng-data espeakng_loader vendors for test_grpc_contract.py.
+_APP_DIR = tempfile.mkdtemp()
+_SYNTH_DRIVERS_DIR = os.path.join(_APP_DIR, "synthDrivers")
+shutil.copytree(espeakng_loader.get_data_path(), os.path.join(_SYNTH_DRIVERS_DIR, "espeak-ng-data"))
+
 sys.modules.setdefault(
     "globalVars",
-    types.SimpleNamespace(appArgs=types.SimpleNamespace(configPath=tempfile.mkdtemp()), appDir=os.getcwd()),
+    types.SimpleNamespace(appArgs=types.SimpleNamespace(configPath=tempfile.mkdtemp()), appDir=_APP_DIR),
 )
 sys.modules.setdefault("logHandler", types.SimpleNamespace(log=types.SimpleNamespace(
     info=lambda *a, **k: None, error=lambda *a, **k: None,
@@ -58,6 +70,7 @@ _dengjen_pkg = types.ModuleType("dengjen_neural_voices")
 _dengjen_pkg.__path__ = [_SYNTH_PKG_DIR]
 sys.modules.setdefault("dengjen_neural_voices", _dengjen_pkg)
 
+from dengjen_neural_voices import aio
 from dengjen_neural_voices.adapters.sonata_grpc import SonataGrpcBackend
 
 VOICE_KEY = "vi_VN-vivos-x_low"
@@ -65,6 +78,7 @@ VOICE_FILES_BASE_URL = (
     "https://huggingface.co/rhasspy/piper-voices/resolve/v1.0.0/vi/vi_VN/vivos/x_low"
 )
 DOWNLOAD_TIMEOUT = 60
+CALL_TIMEOUT = 30
 
 
 def _download(url, target_path):
@@ -101,8 +115,12 @@ class TestSonataGrpcBackendContract:
         assert loaded.backend_voice_id
         assert loaded.sample_rate > 0
 
-        import asyncio
-
+        # The gRPC channel was created inside backend.initialize() on
+        # aio.ENGINE's own dedicated loop. Driving synthesize() from a fresh
+        # asyncio.run() would cross event loops; production code never does
+        # that (process_speech() in synth_driver.py uses this same decorator
+        # to stay on aio.ENGINE's loop), so this test must too.
+        @aio.asyncio_coroutine_to_concurrent_future
         async def _collect():
             chunks = []
             async for chunk in backend.synthesize(
@@ -111,6 +129,6 @@ class TestSonataGrpcBackendContract:
                 chunks.append(chunk)
             return chunks
 
-        chunks = asyncio.run(_collect())
+        chunks = _collect().result(timeout=CALL_TIMEOUT)
         assert chunks, "expected at least one audio chunk from synthesize()"
         assert sum(len(c) for c in chunks) > 0
