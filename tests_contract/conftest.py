@@ -32,7 +32,7 @@ _SYNTH_PKG_DIR = os.path.join(REPO_ROOT, "addon", "synthDrivers", "dengjen_neura
 
 LIB_DIRECTORY = os.path.join(_SYNTH_PKG_DIR, "lib")
 BIN_DIRECTORY = os.path.join(_SYNTH_PKG_DIR, "bin")
-GRPC_CLIENT_DIR = os.path.join(_SYNTH_PKG_DIR, "grpc_client")
+GRPC_CLIENT_DIR = os.path.join(_SYNTH_PKG_DIR, "adapters", "sonata_grpc")
 GRPC_SERVER_EXE = os.path.join(BIN_DIRECTORY, "sonata-grpc.exe")
 
 # Same vendored `grpc` the addon itself uses at runtime (see
