@@ -396,6 +396,28 @@ class TestSettings:
         driver.noise_w = 75
         assert fake_backend.set_synth_options_calls == []
 
+    def test_switching_variant_reapplies_scale_settings(self, driver, fake_backend):
+        # A variant is a distinct voice object with its own default scales,
+        # so a direct variant change (NVDA's VariantSetting, independent of
+        # a voice change) must still push the user's current setting onto it.
+        driver.noise_scale = 75
+        fake_backend.set_synth_options_calls.clear()
+        driver.variant = driver.variant
+        calls = [kwargs for _, kwargs in fake_backend.set_synth_options_calls]
+        assert any("noise_scale" in kwargs for kwargs in calls)
+
+    def test_switching_variant_reapplies_noise_w_even_when_the_cached_value_is_unchanged(self, driver, fake_backend):
+        # noise_w's skip_if_unchanged guard exists for the direct-set path
+        # (avoid a redundant call when the user re-enters the same value);
+        # a variant-switch reapply must bypass it, since the cached factor
+        # trivially equals itself but the new voice object has never been
+        # told about it.
+        driver.noise_w = 75
+        fake_backend.set_synth_options_calls.clear()
+        driver.variant = driver.variant
+        calls = [kwargs for _, kwargs in fake_backend.set_synth_options_calls]
+        assert any("noise_w" in kwargs for kwargs in calls)
+
 
 _failure_driver_module = load_module_from_path(
     "dengjen_neural_voices.adapters.nvda._init_under_test",

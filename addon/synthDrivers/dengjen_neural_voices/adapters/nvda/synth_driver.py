@@ -403,10 +403,10 @@ class SynthDriver(NvdaSynthDriver):
             return factor
         return 50
 
-    def _set_scale_factor(self, name, value):
+    def _set_scale_factor(self, name, value, force=False):
         spec = self._SCALE_SETTINGS[name]
         factor_attr = spec["factor_attr"]
-        if spec["skip_if_unchanged"] and getattr(self, factor_attr, None) == value:
+        if not force and spec["skip_if_unchanged"] and getattr(self, factor_attr, None) == value:
             return
         voice = self.tts.speech_options.voice
         default = getattr(voice.default_scales, name)
@@ -421,9 +421,11 @@ class SynthDriver(NvdaSynthDriver):
         # voice/variant. `_set_scale_factor` writes to `tts.speech_options.voice`
         # as a side effect, so this calls it explicitly instead of relying on
         # `self.x = self.x` property round-trips (flagged by static analysis
-        # as a no-op self-assignment).
+        # as a no-op self-assignment). force=True bypasses skip_if_unchanged:
+        # the cached factor always equals itself here, but the new voice/variant
+        # still needs the value written since it wasn't the one it came from.
         for name in self._SCALE_SETTINGS:
-            self._set_scale_factor(name, self._get_scale_factor(name))
+            self._set_scale_factor(name, self._get_scale_factor(name), force=True)
 
     def _get_noise_scale(self):
         return self._get_scale_factor("noise_scale")
@@ -472,9 +474,6 @@ class SynthDriver(NvdaSynthDriver):
             speaker = None
         self._set_variant(variant)
 
-        # Reset params
-        self._reapply_scale_settings()
-
         if speaker is not None:
             self._set_speaker(speaker)
         # Update gui if shown
@@ -509,6 +508,10 @@ class SynthDriver(NvdaSynthDriver):
         DengjenConfig.setdefault(self.voice, {})["variant"] = value
         voice = self.tts.speech_options.voice
         self._player = self._get_or_create_player(voice.sample_rate)
+        # The new variant is a distinct voice object with its own defaults;
+        # push the user's current scale settings onto it (covers both a
+        # direct variant change and a voice change, which routes here too).
+        self._reapply_scale_settings()
 
     def _getAvailableVariants(self):
         std_key, rt_key = DengjenTextToSpeechSystem.get_voice_variants(self.__voice)
