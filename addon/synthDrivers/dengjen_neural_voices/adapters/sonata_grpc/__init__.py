@@ -349,7 +349,7 @@ class SonataGrpcBackend:
 
     async def synthesize(self, backend_voice_id, text, rate, volume, pitch, sentence_silence_ms, streaming):
         try:
-            async for wav_samples in speak(
+            async for ret in speak(
                 voice_id=backend_voice_id,
                 text=text,
                 rate=rate,
@@ -358,6 +358,6 @@ class SonataGrpcBackend:
                 appended_silence_ms=sentence_silence_ms,
                 streaming=streaming,
             ):
-                yield wav_samples
+                yield ret.wav_samples
         except Exception as exc:
             raise SynthesisError(str(exc)) from exc
