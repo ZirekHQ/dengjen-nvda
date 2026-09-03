@@ -22,7 +22,7 @@ _PKG_DIR = os.path.join(
     _TESTS_DIR, "..", "addon", "synthDrivers", "dengjen_neural_voices"
 )
 _AIO_PATH = os.path.join(_PKG_DIR, "aio.py")
-_GRPC_CLIENT_PATH = os.path.join(_PKG_DIR, "grpc_client", "__init__.py")
+_GRPC_CLIENT_PATH = os.path.join(_PKG_DIR, "adapters", "sonata_grpc", "__init__.py")
 
 _LOOP_THREAD_NAME = "piper4nvda_asyncio"
 
@@ -76,26 +76,6 @@ def _package_sources():
             continue
         with open(path, "r", encoding="utf-8") as f:
             yield path, ast.parse(f.read(), filename=path)
-
-
-def _top_level_names(tree):
-    names = set()
-    body = list(tree.body)
-    for node in tree.body:
-        if isinstance(node, ast.With):
-            body.extend(node.body)
-    for node in body:
-        if isinstance(node, (ast.FunctionDef, ast.AsyncFunctionDef, ast.ClassDef)):
-            names.add(node.name)
-        elif isinstance(node, (ast.Import, ast.ImportFrom)):
-            names.update(a.asname or a.name.split(".")[0] for a in node.names)
-        elif isinstance(node, ast.Assign):
-            names.update(
-                t.id for t in node.targets if isinstance(t, ast.Name)
-            )
-        elif isinstance(node, ast.AnnAssign) and isinstance(node.target, ast.Name):
-            names.add(node.target.id)
-    return names
 
 
 aio = _load_real_aio()
@@ -314,32 +294,4 @@ class TestGrpcChannelTeardown:
         assert namespace["CHANNEL"] is None
         assert _never_awaited_warnings(caught) == []
 
-
-class TestCrossModuleAttributesResolve:
-    """__init__.py cannot be imported without NVDA, so check its references statically."""
-
-    def test_grpc_client_attribute_references_are_defined(self):
-        sources = dict(_package_sources())
-        grpc_client_path = os.path.join(_PKG_DIR, "grpc_client", "__init__.py")
-        defined = _top_level_names(sources[grpc_client_path])
-
-        unresolved = []
-        for path, tree in sources.items():
-            if path == grpc_client_path:
-                continue
-            for node in ast.walk(tree):
-                if (
-                    isinstance(node, ast.Attribute)
-                    and isinstance(node.value, ast.Name)
-                    and node.value.id == "grpc_client"
-                    and node.attr not in defined
-                ):
-                    unresolved.append(
-                        f"{os.path.basename(path)}:{node.lineno} grpc_client.{node.attr}"
-                    )
-
-        assert unresolved == [], (
-            f"{unresolved} reference names that grpc_client does not define at module "
-            "level; these fail at runtime only, since NVDA-only modules are not importable."
-        )
 

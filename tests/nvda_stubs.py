@@ -15,7 +15,9 @@ then drifts. Strategy, unchanged from before:
 2. Stub all NVDA-internal packages (config, languageHandler, ...).
 3. Register `dengjen_neural_voices` in sys.modules WITHOUT running its
    __init__.py (which imports grpc_client at module level).
-4. Stub the intra-package submodules with platform deps (grpc_client, aio).
+4. Stub the intra-package submodules with platform deps (aio). The real
+   adapters.sonata_grpc needs no stub of its own: grpc and aio, its risky
+   dependencies, are already stubbed here, so it imports for real.
 5. Load the real submodules under test (const, helpers, tts_system).
 6. With stub_wx=True, register `dengjen_tts_global_plugin` as a hollow
    package too. With stub_wx=False, leave it alone -- tests_gui/ imports it
@@ -337,33 +339,6 @@ def install(*, stub_wx: bool = True) -> None:
     # -----------------------------------------------------------------------
     # 4. Stub intra-package submodules that have platform/runtime dependencies
     # -----------------------------------------------------------------------
-
-    # grpc_client — talks to a real gRPC server; stub completely
-    class _FakeVoiceInfo:
-        voice_id = "test-voice-id"
-        supports_streaming_output = False
-        class audio:
-            sample_rate = 22050
-        class synth_options:
-            length_scale = 1.0
-            noise_scale = 0.667
-            noise_w = 0.8
-            speaker = "default"
-        speakers = {}
-
-    _grpc_client = _stub_module("dengjen_neural_voices.grpc_client")
-    _grpc_client.initialize = MagicMock(return_value=_make_ready_future(None))
-    _grpc_client.check_grpc_server = MagicMock(return_value=_make_ready_future("1.0.0"))
-    _grpc_client.load_voice = MagicMock(return_value=_make_ready_future(_FakeVoiceInfo()))
-    _grpc_client.speak = MagicMock(return_value=iter([]))
-    _grpc_client.get_synth_options = MagicMock(
-        return_value=_make_ready_future(_FakeVoiceInfo.synth_options())
-    )
-    _grpc_client.set_synth_options = MagicMock(return_value=_make_ready_future(None))
-    _grpc_client.SONATA_GRPC_SERVER_PORT = 50051
-    _grpc_client.SERVER_CHECK_TIMEOUT = 15
-    _grpc_client.STARTUP_TIMEOUT = 20
-    _grpc_client.CALL_TIMEOUT = 10
 
     # aio — starts real threads/event loops; stub completely
     _aio = _stub_module("dengjen_neural_voices.aio")
