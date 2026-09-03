@@ -385,6 +385,13 @@ def install(*, stub_wx: bool = True) -> None:
         package="dengjen_neural_voices.domain",
     )
 
+    # The `dengjen_neural_voices` package stub built in step 3 never runs the
+    # real __init__.py, so its public re-exports (used by
+    # dengjen_tts_global_plugin's `from dengjen_neural_voices import
+    # DengjenTextToSpeechSystem, DENGJEN_VOICES_DIR`, exercised for real in
+    # tests_gui/) have to be set here by hand, from the module just loaded.
+    _pkg.DengjenTextToSpeechSystem = sys.modules["dengjen_neural_voices.domain.tts_system"].DengjenTextToSpeechSystem
+    _pkg.DENGJEN_VOICES_DIR = sys.modules["dengjen_neural_voices.domain.tts_system"].DENGJEN_VOICES_DIR
 
     # -----------------------------------------------------------------------
     # 6. Register `dengjen_tts_global_plugin` as a package WITHOUT running its
