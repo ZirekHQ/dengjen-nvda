@@ -309,7 +309,10 @@ class SonataGrpcBackend:
             raise BackendUnavailableError(str(exc)) from exc
 
     def shutdown(self):
-        terminate()
+        try:
+            terminate()
+        except Exception as exc:
+            raise BackendUnavailableError(str(exc)) from exc
 
     def load_voice(self, config_path):
         try:
