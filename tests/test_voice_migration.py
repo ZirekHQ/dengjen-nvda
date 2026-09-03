@@ -18,8 +18,14 @@ from unittest.mock import MagicMock
 
 import pytest
 
-import dengjen_neural_voices.tts_system as tts_system
+from dengjen_neural_voices.domain import tts_system
 import dengjen_neural_voices.voice_migration as voice_migration
+from tests.fake_tts_backend import FakeTTSBackend
+
+# These tests only assert on voice keys and on-disk migration side effects,
+# never on backend interaction, so one shared fake satisfies the now-required
+# parameter without any per-test setup.
+_backend = FakeTTSBackend()
 
 
 @pytest.fixture
@@ -222,7 +228,7 @@ class TestMigrationRunsOnVoiceEnumeration:
 
     def test_enumerating_voices_migrates_the_old_directory(self, config_dir):
         _write_voice(config_dir / "sonata")
-        voices = tts_system.DengjenTextToSpeechSystem.load_piper_voices_from_nvda_config_dir()
+        voices = tts_system.DengjenTextToSpeechSystem.load_piper_voices_from_nvda_config_dir(_backend)
         assert [v.key for v in voices] == ["en_US-amy-medium"]
         assert not (config_dir / "sonata").exists()
 
@@ -237,10 +243,10 @@ class TestMigrationRunsOnVoiceEnumeration:
 
             locked.setattr(voice_migration.os, "rename", _in_use)
             assert (
-                tts_system.DengjenTextToSpeechSystem.load_piper_voices_from_nvda_config_dir()
+                tts_system.DengjenTextToSpeechSystem.load_piper_voices_from_nvda_config_dir(_backend)
                 == []
             )
             assert os.path.isdir(config_dir / "dengjen" / "voices" / "piper")
 
-        voices = tts_system.DengjenTextToSpeechSystem.load_piper_voices_from_nvda_config_dir()
+        voices = tts_system.DengjenTextToSpeechSystem.load_piper_voices_from_nvda_config_dir(_backend)
         assert [v.key for v in voices] == ["en_US-amy-medium"]

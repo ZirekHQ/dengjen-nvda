@@ -11,11 +11,17 @@ import os
 from tests.conftest import GLOBAL_PLUGIN_PKG_DIR, load_module_from_path
 
 import addonHandler
-import dengjen_neural_voices.tts_system as tts_system
+from dengjen_neural_voices.domain import tts_system
+from tests.fake_tts_backend import FakeTTSBackend
 
 # In production this runs in the package __init__.py before anything using
 # `_(...)` is imported. We load the module directly, so it happens here.
 addonHandler.initTranslation()
+
+# These tests never dispatch to the backend (no .load() call site here goes
+# beyond DengjenVoice.from_path), so one shared fake satisfies the now-required
+# parameter without any per-test setup.
+_backend = FakeTTSBackend()
 
 logic = load_module_from_path(
     "dengjen_tts_global_plugin._voice_manager_logic_under_test",
@@ -34,7 +40,7 @@ DengjenVoice = tts_system.DengjenVoice
 
 def _installed(key):
     """A real DengjenVoice, as load_piper_voices_from_nvda_config_dir yields."""
-    return DengjenVoice.from_path(os.path.join(os.sep, "voices", key))
+    return DengjenVoice.from_path(os.path.join(os.sep, "voices", key), _backend)
 
 
 def _language(code, name_english, country_english="Country"):
