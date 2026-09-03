@@ -104,16 +104,13 @@ class TestSonataGrpcBackendContract:
         import asyncio
 
         async def _collect():
-            frames = []
-            async for frame in backend.synthesize(
+            chunks = []
+            async for chunk in backend.synthesize(
                 loaded.backend_voice_id, "xin chào", None, None, None, None, False
             ):
-                frames.append(frame)
-            return frames
+                chunks.append(chunk)
+            return chunks
 
-        # synthesize() yields the raw SynthesisResult/WaveSamples protobuf
-        # response messages (each exposing a `.wav_samples` bytes field),
-        # not bare bytes -- same shape SynthDriver's SpeechTask consumes.
-        frames = asyncio.run(_collect())
-        assert frames, "expected at least one audio frame from synthesize()"
-        assert sum(len(f.wav_samples) for f in frames) > 0
+        chunks = asyncio.run(_collect())
+        assert chunks, "expected at least one audio chunk from synthesize()"
+        assert sum(len(c) for c in chunks) > 0
