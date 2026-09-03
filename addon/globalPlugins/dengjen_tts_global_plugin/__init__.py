@@ -26,7 +26,7 @@ try:
     from dengjen_neural_voices import helpers
     from dengjen_neural_voices import aio
     from dengjen_neural_voices import voice_migration
-    from dengjen_neural_voices.tts_system import (
+    from dengjen_neural_voices.domain.tts_system import (
         DengjenTextToSpeechSystem,
         DENGJEN_VOICES_DIR,
     )
