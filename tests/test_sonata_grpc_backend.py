@@ -96,3 +96,33 @@ def test_synthesize_wraps_a_failure_as_synthesis_error():
         asyncio.run(_run())
     finally:
         mod.speak = orig
+
+
+def test_synthesize_yields_wav_samples_bytes_not_the_raw_message():
+    """Regression test: synthesize() briefly re-yielded the raw protobuf
+    message instead of unwrapping .wav_samples (caught and fixed during this
+    branch's own work). speak() yields message-shaped objects, not bytes, so
+    a fixture asserting bytes-in/bytes-out here would pass even if
+    synthesize() forgot to extract .wav_samples."""
+    import asyncio
+    import types
+
+    async def _fake_speak(**kwargs):
+        yield types.SimpleNamespace(wav_samples=b"abc")
+        yield types.SimpleNamespace(wav_samples=b"def")
+
+    async def _run():
+        return [
+            chunk
+            async for chunk in backend.synthesize("v1", "hi", None, None, None, None, False)
+        ]
+
+    import dengjen_neural_voices.adapters.sonata_grpc as mod
+    orig = mod.speak
+    mod.speak = _fake_speak
+    try:
+        chunks = asyncio.run(_run())
+    finally:
+        mod.speak = orig
+
+    assert chunks == [b"abc", b"def"]
