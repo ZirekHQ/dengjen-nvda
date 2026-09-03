@@ -30,6 +30,7 @@ from unittest.mock import MagicMock
 import pytest
 
 from tests.conftest import GLOBAL_PLUGIN_PKG_DIR, load_module_from_path
+from dengjen_neural_voices.domain import tts_system
 
 import addonHandler
 
@@ -400,7 +401,7 @@ class TestSelectNotInstalledVoices:
             monkeypatch.setattr(
                 voice_download.DengjenTextToSpeechSystem,
                 "load_piper_voices_from_nvda_config_dir",
-                classmethod(lambda cls: fake_voices),
+                classmethod(lambda cls, backend: fake_voices),
             )
         return _set
 
@@ -430,6 +431,17 @@ class TestSelectNotInstalledVoices:
         voices = {"en_US-lessac-medium": self._voice_dict(has_rt_variant=False)}
         result = voice_download._select_not_installed_voices(voices)
         assert len(result) == 1
+
+    def test_calls_the_real_backend_threaded_call_without_raising(self, tmp_path, monkeypatch):
+        # Regression test for a TypeError: load_piper_voices_from_nvda_config_dir
+        # requires a backend argument, and this caller (voice_download.py:594)
+        # was missing it. Deliberately does NOT monkeypatch
+        # load_piper_voices_from_nvda_config_dir itself, so it exercises the
+        # real call, including the real SonataGrpcBackend() construction.
+        monkeypatch.setattr(tts_system, "DENGJEN_VOICES_DIR", str(tmp_path / "voices"))
+        voices = {"en_US-lessac-medium": self._voice_dict(has_rt_variant=False)}
+        result = voice_download._select_not_installed_voices(voices)
+        assert len(result) == 1
         assert result[0]["standard_variant_installed"] is False
         assert result[0]["fast_variant_installed"] is False
 
@@ -451,7 +463,7 @@ class TestVoicesCache:
         monkeypatch.setattr(
             voice_download.DengjenTextToSpeechSystem,
             "load_piper_voices_from_nvda_config_dir",
-            classmethod(lambda cls: []),
+            classmethod(lambda cls, backend: []),
         )
         result = voice_download.get_available_voices(force_online=False)
         assert result == []
@@ -478,7 +490,7 @@ class TestVoicesCache:
         monkeypatch.setattr(
             voice_download.DengjenTextToSpeechSystem,
             "load_piper_voices_from_nvda_config_dir",
-            classmethod(lambda cls: []),
+            classmethod(lambda cls, backend: []),
         )
         result = voice_download.get_available_voices(force_online=True)
         assert [v.key for v in result] == ["en_US-lessac-medium"]

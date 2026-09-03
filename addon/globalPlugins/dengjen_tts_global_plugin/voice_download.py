@@ -32,7 +32,7 @@ from logHandler import log
 
 addonHandler.initTranslation()
 
-from . import DengjenTextToSpeechSystem, helpers, DENGJEN_VOICES_DIR
+from . import DengjenTextToSpeechSystem, helpers, DENGJEN_VOICES_DIR, SonataGrpcBackend
 
 with helpers.import_bundled_library():
     import mureq as request
@@ -591,7 +591,7 @@ def install_voice_from_tar_archive(tar_path, voices_dir):
 
 
 def _select_not_installed_voices(voices):
-    installed_voices = DengjenTextToSpeechSystem.load_piper_voices_from_nvda_config_dir()
+    installed_voices = DengjenTextToSpeechSystem.load_piper_voices_from_nvda_config_dir(SonataGrpcBackend())
     installed_voice_keys = {voice.key for voice in installed_voices}
     not_installed = []
     for (key, value) in voices.items():

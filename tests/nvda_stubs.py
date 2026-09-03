@@ -394,13 +394,15 @@ def install(*, stub_wx: bool = True) -> None:
     #    so that GUI layer is out of scope here. Only expose the names
     #    __init__.py itself re-exports from dengjen_neural_voices, since
     #    voice_download.py reaches them via `from . import DengjenTextToSpeechSystem,
-    #    helpers, DENGJEN_VOICES_DIR`.
+    #    helpers, DENGJEN_VOICES_DIR, SonataGrpcBackend`.
     # -----------------------------------------------------------------------
 
     if _GLOBAL_PLUGIN_DIR not in sys.path:
         sys.path.insert(0, _GLOBAL_PLUGIN_DIR)
 
     if stub_wx:
+        import dengjen_neural_voices.adapters.sonata_grpc as _sonata_grpc
+
         _gui_plugin_pkg = types.ModuleType("dengjen_tts_global_plugin")
         _gui_plugin_pkg.__path__ = [_GLOBAL_PLUGIN_PKG_DIR]
         _gui_plugin_pkg.__package__ = "dengjen_tts_global_plugin"
@@ -409,4 +411,5 @@ def install(*, stub_wx: bool = True) -> None:
         _gui_plugin_pkg.helpers = sys.modules["dengjen_neural_voices.helpers"]
         _gui_plugin_pkg.voice_migration = sys.modules["dengjen_neural_voices.voice_migration"]
         _gui_plugin_pkg.aio = _aio
+        _gui_plugin_pkg.SonataGrpcBackend = _sonata_grpc.SonataGrpcBackend
         sys.modules["dengjen_tts_global_plugin"] = _gui_plugin_pkg

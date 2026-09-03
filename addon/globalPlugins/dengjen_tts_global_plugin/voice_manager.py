@@ -23,7 +23,7 @@ from logHandler import log
 
 addonHandler.initTranslation()
 
-from . import DengjenTextToSpeechSystem, DENGJEN_VOICES_DIR
+from . import DengjenTextToSpeechSystem, DENGJEN_VOICES_DIR, SonataGrpcBackend
 from . import voice_migration
 from . import voice_download
 from . import aio
@@ -95,7 +95,7 @@ class InstalledDengjenVoicesPanel(SizedPanel):
         self.Bind(wx.EVT_BUTTON, self._on_import_voices, self.import_voices_button)
 
     def update_voices_list(self, set_focus=False, invalidate_synth_voices_cache=False):
-        voices = list(DengjenTextToSpeechSystem.load_piper_voices_from_nvda_config_dir())
+        voices = list(DengjenTextToSpeechSystem.load_piper_voices_from_nvda_config_dir(SonataGrpcBackend()))
         state = logic.installed_list_state(
             voices, synthDriverHandler.getSynth().name
         )
