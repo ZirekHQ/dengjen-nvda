@@ -40,7 +40,7 @@ from ...aio import (
 )
 from ..._config import DengjenConfig
 from ...helpers import update_displaied_params_on_voice_change
-from ...ports.tts_backend import BackendUnavailableError, VoiceLoadError
+from ...ports.tts_backend import BackendUnavailableError
 from ...domain.tts_system import (
     DengjenTextToSpeechSystem,
     SpeakerNotFoundError,
