@@ -27,14 +27,20 @@ _CATALOGUES = sorted(
 )
 _LOCALES = [path.split(os.sep)[-3] for path in _CATALOGUES]
 
-# The globs xgettext harvests msgids from -- buildVars.i18nSources, which the
-# SCons build reads. Only one directory level deep, so vendored lib/ and the
-# generated protos stay out.
+# The globs xgettext harvests msgids from -- kept in sync with
+# buildVars.pythonSources/i18nSources, which the SCons build reads. Bounded
+# to the flat layout plus exactly one extra level for the clean-architecture
+# subpackages (domain/, ports/, adapters/*/), so vendored lib/ and the
+# generated grpc_protos/ stay out.
 _I18N_SOURCES = sorted(
     path
     for pattern in (
         "addon/globalPlugins/*/*.py",
         "addon/synthDrivers/*/*.py",
+        "addon/synthDrivers/*/domain/*.py",
+        "addon/synthDrivers/*/ports/*.py",
+        "addon/synthDrivers/*/adapters/*.py",
+        "addon/synthDrivers/*/adapters/*/*.py",
         "addon/installTasks.py",
         "buildVars.py",
     )
