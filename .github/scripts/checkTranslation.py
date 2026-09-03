@@ -1,6 +1,6 @@
 # Copyright (C) 2026 NV Access Limited, Abdel
 # This file is covered by the GNU General Public License.
-# See the file COPYING for more details.
+# See the file LICENSE for more details.
 
 import sys
 import os
