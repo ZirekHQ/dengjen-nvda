@@ -23,6 +23,8 @@ _PKG_DIR = os.path.join(
 )
 _AIO_PATH = os.path.join(_PKG_DIR, "aio.py")
 _GRPC_CLIENT_PATH = os.path.join(_PKG_DIR, "adapters", "sonata_grpc", "__init__.py")
+_SHIM_INIT_PATH = os.path.join(_PKG_DIR, "__init__.py")
+_SYNTH_DRIVER_PATH = os.path.join(_PKG_DIR, "adapters", "nvda", "synth_driver.py")
 
 _LOOP_THREAD_NAME = "piper4nvda_asyncio"
 
@@ -293,5 +295,49 @@ class TestGrpcChannelTeardown:
         assert not channel.close_awaited
         assert namespace["CHANNEL"] is None
         assert _never_awaited_warnings(caught) == []
+
+
+class TestSynthDriverShimReexport:
+    """Guards the package __init__.py NVDA's driver discovery depends on:
+    synthDriverHandler.getSynth imports this package and reads `SynthDriver`
+    at the top level, so `from .adapters.nvda.synth_driver import
+    SynthDriver` there is load-bearing, not decorative. A narrow AST check,
+    since the real modules can't be imported without NVDA/Windows-only deps.
+    """
+
+    def test_shim_reexports_synth_driver_from_its_real_module(self):
+        with open(_SHIM_INIT_PATH, "r", encoding="utf-8") as f:
+            shim_source = f.read()
+        shim_tree = ast.parse(shim_source, filename=_SHIM_INIT_PATH)
+
+        import_nodes = [
+            node for node in ast.walk(shim_tree)
+            if isinstance(node, ast.ImportFrom)
+            and node.level == 1
+            and node.module == "adapters.nvda.synth_driver"
+        ]
+        assert import_nodes, (
+            "expected `from .adapters.nvda.synth_driver import SynthDriver` "
+            f"in {_SHIM_INIT_PATH}"
+        )
+        imported_names = {alias.name for node in import_nodes for alias in node.names}
+        assert "SynthDriver" in imported_names, (
+            f"{_SHIM_INIT_PATH} does not import SynthDriver from "
+            "adapters.nvda.synth_driver"
+        )
+
+        assert os.path.exists(_SYNTH_DRIVER_PATH), (
+            f"import target missing: {_SYNTH_DRIVER_PATH}"
+        )
+        with open(_SYNTH_DRIVER_PATH, "r", encoding="utf-8") as f:
+            target_source = f.read()
+        target_tree = ast.parse(target_source, filename=_SYNTH_DRIVER_PATH)
+        defined_names = {
+            node.name for node in ast.walk(target_tree)
+            if isinstance(node, (ast.ClassDef, ast.FunctionDef, ast.AsyncFunctionDef))
+        }
+        assert "SynthDriver" in defined_names, (
+            f"{_SYNTH_DRIVER_PATH} no longer defines SynthDriver"
+        )
 
 
