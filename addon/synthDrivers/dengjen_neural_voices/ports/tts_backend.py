@@ -33,7 +33,7 @@ class LoadedVoice:
     backend_voice_id: str
     supports_streaming_output: bool
     sample_rate: int
-    speakers: Mapping[str, str]
+    speakers: Mapping[int, str]
     defaults: SynthOptions
 
 
