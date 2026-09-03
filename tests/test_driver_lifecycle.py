@@ -22,7 +22,9 @@ _PKG_DIR = os.path.join(
     _TESTS_DIR, "..", "addon", "synthDrivers", "dengjen_neural_voices"
 )
 _AIO_PATH = os.path.join(_PKG_DIR, "aio.py")
-_GRPC_CLIENT_PATH = os.path.join(_PKG_DIR, "grpc_client", "__init__.py")
+_GRPC_CLIENT_PATH = os.path.join(_PKG_DIR, "adapters", "sonata_grpc", "__init__.py")
+_SHIM_INIT_PATH = os.path.join(_PKG_DIR, "__init__.py")
+_SYNTH_DRIVER_PATH = os.path.join(_PKG_DIR, "adapters", "nvda", "synth_driver.py")
 
 _LOOP_THREAD_NAME = "piper4nvda_asyncio"
 
@@ -76,26 +78,6 @@ def _package_sources():
             continue
         with open(path, "r", encoding="utf-8") as f:
             yield path, ast.parse(f.read(), filename=path)
-
-
-def _top_level_names(tree):
-    names = set()
-    body = list(tree.body)
-    for node in tree.body:
-        if isinstance(node, ast.With):
-            body.extend(node.body)
-    for node in body:
-        if isinstance(node, (ast.FunctionDef, ast.AsyncFunctionDef, ast.ClassDef)):
-            names.add(node.name)
-        elif isinstance(node, (ast.Import, ast.ImportFrom)):
-            names.update(a.asname or a.name.split(".")[0] for a in node.names)
-        elif isinstance(node, ast.Assign):
-            names.update(
-                t.id for t in node.targets if isinstance(t, ast.Name)
-            )
-        elif isinstance(node, ast.AnnAssign) and isinstance(node.target, ast.Name):
-            names.add(node.target.id)
-    return names
 
 
 aio = _load_real_aio()
@@ -315,31 +297,47 @@ class TestGrpcChannelTeardown:
         assert _never_awaited_warnings(caught) == []
 
 
-class TestCrossModuleAttributesResolve:
-    """__init__.py cannot be imported without NVDA, so check its references statically."""
+class TestSynthDriverShimReexport:
+    """Guards the package __init__.py NVDA's driver discovery depends on:
+    synthDriverHandler.getSynth imports this package and reads `SynthDriver`
+    at the top level, so `from .adapters.nvda.synth_driver import
+    SynthDriver` there is load-bearing, not decorative. A narrow AST check,
+    since the real modules can't be imported without NVDA/Windows-only deps.
+    """
 
-    def test_grpc_client_attribute_references_are_defined(self):
-        sources = dict(_package_sources())
-        grpc_client_path = os.path.join(_PKG_DIR, "grpc_client", "__init__.py")
-        defined = _top_level_names(sources[grpc_client_path])
+    def test_shim_reexports_synth_driver_from_its_real_module(self):
+        with open(_SHIM_INIT_PATH, "r", encoding="utf-8") as f:
+            shim_source = f.read()
+        shim_tree = ast.parse(shim_source, filename=_SHIM_INIT_PATH)
 
-        unresolved = []
-        for path, tree in sources.items():
-            if path == grpc_client_path:
-                continue
-            for node in ast.walk(tree):
-                if (
-                    isinstance(node, ast.Attribute)
-                    and isinstance(node.value, ast.Name)
-                    and node.value.id == "grpc_client"
-                    and node.attr not in defined
-                ):
-                    unresolved.append(
-                        f"{os.path.basename(path)}:{node.lineno} grpc_client.{node.attr}"
-                    )
-
-        assert unresolved == [], (
-            f"{unresolved} reference names that grpc_client does not define at module "
-            "level; these fail at runtime only, since NVDA-only modules are not importable."
+        import_nodes = [
+            node for node in ast.walk(shim_tree)
+            if isinstance(node, ast.ImportFrom)
+            and node.level == 1
+            and node.module == "adapters.nvda.synth_driver"
+        ]
+        assert import_nodes, (
+            "expected `from .adapters.nvda.synth_driver import SynthDriver` "
+            f"in {_SHIM_INIT_PATH}"
         )
+        imported_names = {alias.name for node in import_nodes for alias in node.names}
+        assert "SynthDriver" in imported_names, (
+            f"{_SHIM_INIT_PATH} does not import SynthDriver from "
+            "adapters.nvda.synth_driver"
+        )
+
+        assert os.path.exists(_SYNTH_DRIVER_PATH), (
+            f"import target missing: {_SYNTH_DRIVER_PATH}"
+        )
+        with open(_SYNTH_DRIVER_PATH, "r", encoding="utf-8") as f:
+            target_source = f.read()
+        target_tree = ast.parse(target_source, filename=_SYNTH_DRIVER_PATH)
+        defined_names = {
+            node.name for node in ast.walk(target_tree)
+            if isinstance(node, (ast.ClassDef, ast.FunctionDef, ast.AsyncFunctionDef))
+        }
+        assert "SynthDriver" in defined_names, (
+            f"{_SYNTH_DRIVER_PATH} no longer defines SynthDriver"
+        )
+
 

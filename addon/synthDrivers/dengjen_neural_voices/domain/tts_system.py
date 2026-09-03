@@ -3,6 +3,13 @@
 # Copyright (c) 2023 Musharraf Omer
 # This file is covered by the GNU General Public License.
 
+"""Core TTS domain logic: voices, speech options, providers.
+
+Imports no gRPC and no I/O-heavy NVDA module -- the one accepted exception is
+languageHandler.normalizeLanguage, a pure string-normalization function with
+no runtime/subprocess dependency of its own.
+"""
+
 import copy
 import operator
 import os
@@ -10,14 +17,11 @@ from abc import ABC, abstractmethod
 from contextlib import contextmanager
 from dataclasses import dataclass, field
 from pathlib import Path
-from typing import List, Mapping, Optional, Sequence, Union
+from typing import Mapping, Optional, Sequence
 
-import globalVars
 from languageHandler import normalizeLanguage
 
-from . import aio
-from . import grpc_client
-from .const import (
+from ..const import (
     DEFAULT_PITCH,
     DEFAULT_RATE,
     DEFAULT_VOLUME,
@@ -25,8 +29,8 @@ from .const import (
     IGNORED_PUNCS,
     DENGJEN_VOICES_DIR,
 )
-from .helpers import import_bundled_library, LIB_DIRECTORY
-from .voice_migration import migrate_voices_directory
+from ..voice_migration import migrate_voices_directory
+from ..ports.tts_backend import TTSBackend
 
 
 class VoiceNotFoundError(LookupError):
@@ -58,7 +62,6 @@ class SilenceProvider(AudioProvider):
         self.sample_rate = sample_rate
 
     def generate_audio(self):
-        """Generate silence (16-bit mono at sample rate)."""
         num_samples = int((self.time_ms / 1000.0) * self.sample_rate)
         return bytes(num_samples * 2)
 
@@ -83,12 +86,13 @@ class DengjenVoice:
     language: str
     description: str
     location: str
+    backend: TTSBackend
     properties: Optional[Mapping[str, int]] = field(default_factory=dict)
     remote_id: Optional[str] = None
     supports_streaming_output: bool = False
 
     @classmethod
-    def from_path(cls, path):
+    def from_path(cls, path, backend):
         path = Path(path)
         key = path.name
         try:
@@ -101,6 +105,7 @@ class DengjenVoice:
             language=normalizeLanguage(lang),
             description="",
             location=path,
+            backend=backend,
             properties={"quality": quality.lower()},
         )
 
@@ -110,39 +115,27 @@ class DengjenVoice:
         try:
             self.config_path = next(self.location.glob("*.json"))
         except StopIteration:
-            raise RuntimeError(
-                f"Could not load voice from `{os.fspath(self.location)}`"
-            )
-        voice_info = grpc_client.load_voice(
-            os.fspath(self.config_path)
-        ).result(timeout=grpc_client.CALL_TIMEOUT)
-        self.remote_id = voice_info.voice_id
-        self.supports_streaming_output = voice_info.supports_streaming_output
-        default_synth_options = voice_info.synth_options
+            raise RuntimeError(f"Could not load voice from `{os.fspath(self.location)}`")
+        loaded = self.backend.load_voice(str(self.config_path))
+        self.remote_id = loaded.backend_voice_id
+        self.supports_streaming_output = loaded.supports_streaming_output
         self.default_scales = Scales(
-            length_scale=default_synth_options.length_scale,
-            noise_scale=default_synth_options.noise_scale,
-            noise_w=default_synth_options.noise_w,
+            length_scale=loaded.defaults.length_scale,
+            noise_scale=loaded.defaults.noise_scale,
+            noise_w=loaded.defaults.noise_w,
         )
-        self.sample_rate = voice_info.audio.sample_rate
-        self.speakers = voice_info.speakers
+        self.sample_rate = loaded.sample_rate
+        self.speakers = loaded.speakers
         self.speaker_names = list(self.speakers.values())
         self.is_multi_speaker = bool(self.speakers)
-        if self.is_multi_speaker:
-            self.default_speaker = default_synth_options.speaker
-        else:
-            self.default_speaker = None
+        self.default_speaker = loaded.defaults.speaker if self.is_multi_speaker else None
 
     def _get_synth_option(self, name):
-        options = grpc_client.get_synth_options(self.remote_id).result(
-            timeout=grpc_client.CALL_TIMEOUT
-        )
+        options = self.backend.get_synth_options(self.remote_id)
         return getattr(options, name)
 
     def _set_synth_option(self, **kwargs):
-        grpc_client.set_synth_options(self.remote_id, **kwargs).result(
-            timeout=grpc_client.CALL_TIMEOUT
-        )
+        self.backend.set_synth_options(self.remote_id, **kwargs)
 
     @property
     def speaker(self):
@@ -198,17 +191,12 @@ class DengjenVoice:
     async def synthesize(self, text, rate, volume, pitch, sentence_silence_ms):
         if (len(text) < 10) and (set(text.strip()).issubset(IGNORED_PUNCS)):
             return
-        stream = grpc_client.speak(
-            voice_id=self.remote_id,
-            text=text,
-            rate=rate,
-            volume=volume,
-            pitch=pitch,
-            appended_silence_ms=sentence_silence_ms,
-            streaming=self.supports_streaming_output
+        stream = self.backend.synthesize(
+            self.remote_id, text, rate, volume, pitch, sentence_silence_ms,
+            streaming=self.supports_streaming_output,
         )
-        async for ret in stream:
-            yield ret.wav_samples
+        async for chunk in stream:
+            yield chunk
 
 
 class SpeechOptions:
@@ -239,19 +227,13 @@ class SpeechOptions:
 
     def speak_text(self, text):
         return self.voice.synthesize(
-            text,
-            self.rate,
-            self.volume,
-            self.pitch,
-            self.sentence_silence_ms
+            text, self.rate, self.volume, self.pitch, self.sentence_silence_ms
         )
 
 
 class DengjenTextToSpeechSystem:
 
-    def __init__(
-        self, voices: Sequence[DengjenVoice], speech_options: SpeechOptions = None
-    ):
+    def __init__(self, voices: Sequence[DengjenVoice], speech_options: SpeechOptions = None):
         self.voices = voices
         if speech_options is not None:
             self.speech_options = speech_options
@@ -264,7 +246,6 @@ class DengjenTextToSpeechSystem:
 
     @contextmanager
     def create_synthesis_context(self):
-        """Reset speech params after each utterance."""
         old_speech_options = self.speech_options.copy()
         try:
             yield
@@ -273,28 +254,24 @@ class DengjenTextToSpeechSystem:
 
     def shutdown(self):
         # No-op by design: the gRPC engine process outlives any single TTS
-        # system, so it is torn down by grpc_client's atexit handler instead.
+        # system, so it is torn down by adapters/sonata_grpc's atexit
+        # handler instead.
         pass
 
     @property
     def voice(self) -> str:
-        """Get the current voice key"""
         return self.speech_options.voice.key
 
     @voice.setter
     def voice(self, new_voice: str):
-        """Set the current voice key"""
         for voice in self.voices:
             if voice.key == new_voice:
                 self.speech_options.set_voice(voice)
                 return
-        raise VoiceNotFoundError(
-            f"A voice with the given key `{new_voice}` was not found"
-        )
+        raise VoiceNotFoundError(f"A voice with the given key `{new_voice}` was not found")
 
     @property
     def speaker(self) -> str:
-        """Get the current speaker"""
         return self.speech_options.speaker or FALLBACK_SPEAKER_NAME
 
     @speaker.setter
@@ -310,12 +287,10 @@ class DengjenTextToSpeechSystem:
 
     @property
     def language(self) -> str:
-        """Get the current voice language"""
         return self.speech_options.voice.language
 
     @language.setter
     def language(self, new_language: str):
-        """Set the current voice language"""
         lang = normalizeLanguage(new_language)
         if self.speech_options.voice.language == lang:
             return
@@ -330,44 +305,36 @@ class DengjenTextToSpeechSystem:
         if possible_voices:
             self.speech_options.set_voice(possible_voices[0])
             return
-        raise VoiceNotFoundError(
-            f"A voice with the given language `{new_language}` was not found"
-        )
+        raise VoiceNotFoundError(f"A voice with the given language `{new_language}` was not found")
 
     @property
     def volume(self) -> float:
-        """Get the current volume in [0, 100]"""
         if self.speech_options.volume is None:
             return DEFAULT_VOLUME
         return self.speech_options.volume
 
     @volume.setter
     def volume(self, new_volume: float):
-        """Set the current volume in [0, 100]"""
         self.speech_options.volume = new_volume
 
     @property
     def rate(self) -> float:
-        """Get the current speaking rate in [0, 100]"""
         if self.speech_options.rate is None:
             return DEFAULT_RATE
         return self.speech_options.rate
 
     @rate.setter
     def rate(self, new_rate: float):
-        """Set the current speaking rate in [0, 100]"""
         self.speech_options.rate = new_rate
 
     @property
     def pitch(self) -> float:
-        """Get the current speaking pitch in [0, 100]"""
         if self.speech_options.pitch is None:
             return DEFAULT_PITCH
         return self.speech_options.pitch
 
     @pitch.setter
     def pitch(self, new_pitch: float):
-        """Set the current speaking pitch in [0, 100]"""
         self.speech_options.pitch = new_pitch
 
     def get_voices(self):
@@ -377,9 +344,7 @@ class DengjenTextToSpeechSystem:
         if self.speech_options.voice.is_multi_speaker:
             return self.speech_options.voice.speaker_names
         else:
-            return [
-                FALLBACK_SPEAKER_NAME,
-            ]
+            return [FALLBACK_SPEAKER_NAME]
 
     @staticmethod
     def get_voice_variants(voice_key):
@@ -387,6 +352,7 @@ class DengjenTextToSpeechSystem:
         lang, name, quality = std_key.split("-")
         rt_key = f"{lang}-{name}+RT-{quality}"
         return std_key, rt_key
+
     def create_speech_provider(self, text):
         return SpeechProvider(text, self.speech_options.copy())
 
@@ -394,24 +360,21 @@ class DengjenTextToSpeechSystem:
         return SilenceProvider(time_ms, self.speech_options.voice.sample_rate)
 
     @classmethod
-    def load_piper_voices_from_nvda_config_dir(cls):
+    def load_piper_voices_from_nvda_config_dir(cls, backend):
         migrate_voices_directory()
         Path(DENGJEN_VOICES_DIR).mkdir(parents=True, exist_ok=True)
         return sorted(
-            cls.load_voices_from_directory(DENGJEN_VOICES_DIR),
+            cls.load_voices_from_directory(DENGJEN_VOICES_DIR, backend),
             key=operator.attrgetter("key"),
         )
 
     @classmethod
-    def load_voices_from_directory(
-        cls, voices_directory, *, directory_name_prefix="voice-"
-    ):
+    def load_voices_from_directory(cls, voices_directory, backend, *, directory_name_prefix="voice-"):
         rv = []
         for directory in (d for d in Path(voices_directory).iterdir() if d.is_dir()):
             try:
-                voice = DengjenVoice.from_path(directory)
+                voice = DengjenVoice.from_path(directory, backend)
             except ValueError:
                 continue
             rv.append(voice)
         return rv
-

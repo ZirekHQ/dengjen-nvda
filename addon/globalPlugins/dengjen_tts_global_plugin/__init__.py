@@ -26,10 +26,8 @@ try:
     from dengjen_neural_voices import helpers
     from dengjen_neural_voices import aio
     from dengjen_neural_voices import voice_migration
-    from dengjen_neural_voices.tts_system import (
-        DengjenTextToSpeechSystem,
-        DENGJEN_VOICES_DIR,
-    )
+    from dengjen_neural_voices import DengjenTextToSpeechSystem, DENGJEN_VOICES_DIR
+    from dengjen_neural_voices.adapters.sonata_grpc import SonataGrpcBackend
 finally:
     sys.path.remove(_TTS_MODULE_DIR)
 del _DIR, _ADDON_ROOT, _TTS_MODULE_DIR
@@ -60,7 +58,7 @@ class GlobalPlugin(globalPluginHandler.GlobalPlugin):
     def _perform_voice_check(self):
         if self.__voice_manager_shown:
             return
-        if not any(DengjenTextToSpeechSystem.load_piper_voices_from_nvda_config_dir()):
+        if not any(DengjenTextToSpeechSystem.load_piper_voices_from_nvda_config_dir(SonataGrpcBackend())):
             retval = gui.messageBox(
                 # Translators: message telling the user that no voice is installed
                 _(

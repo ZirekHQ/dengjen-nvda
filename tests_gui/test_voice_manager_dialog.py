@@ -50,7 +50,7 @@ def no_installed_voices(voice_manager, monkeypatch):
     monkeypatch.setattr(
         voice_manager.DengjenTextToSpeechSystem,
         "load_piper_voices_from_nvda_config_dir",
-        classmethod(lambda cls: iter([])),
+        classmethod(lambda cls, backend: iter([])),
     )
 
 

@@ -15,7 +15,9 @@ then drifts. Strategy, unchanged from before:
 2. Stub all NVDA-internal packages (config, languageHandler, ...).
 3. Register `dengjen_neural_voices` in sys.modules WITHOUT running its
    __init__.py (which imports grpc_client at module level).
-4. Stub the intra-package submodules with platform deps (grpc_client, aio).
+4. Stub the intra-package submodules with platform deps (aio). The real
+   adapters.sonata_grpc needs no stub of its own: grpc and aio, its risky
+   dependencies, are already stubbed here, so it imports for real.
 5. Load the real submodules under test (const, helpers, tts_system).
 6. With stub_wx=True, register `dengjen_tts_global_plugin` as a hollow
    package too. With stub_wx=False, leave it alone -- tests_gui/ imports it
@@ -82,10 +84,12 @@ def load_module_from_path(
     return mod
 
 
-def _load_real_module(module_name: str, filename: str) -> types.ModuleType:
+def _load_real_module(
+    module_name: str, filename: str, *, package: str = "dengjen_neural_voices"
+) -> types.ModuleType:
     """Execute a real package submodule (with relative imports)."""
     return load_module_from_path(
-        module_name, os.path.join(_SYNTH_PKG_DIR, filename), "dengjen_neural_voices"
+        module_name, os.path.join(_SYNTH_PKG_DIR, filename), package
     )
 
 
@@ -336,33 +340,6 @@ def install(*, stub_wx: bool = True) -> None:
     # 4. Stub intra-package submodules that have platform/runtime dependencies
     # -----------------------------------------------------------------------
 
-    # grpc_client — talks to a real gRPC server; stub completely
-    class _FakeVoiceInfo:
-        voice_id = "test-voice-id"
-        supports_streaming_output = False
-        class audio:
-            sample_rate = 22050
-        class synth_options:
-            length_scale = 1.0
-            noise_scale = 0.667
-            noise_w = 0.8
-            speaker = "default"
-        speakers = {}
-
-    _grpc_client = _stub_module("dengjen_neural_voices.grpc_client")
-    _grpc_client.initialize = MagicMock(return_value=_make_ready_future(None))
-    _grpc_client.check_grpc_server = MagicMock(return_value=_make_ready_future("1.0.0"))
-    _grpc_client.load_voice = MagicMock(return_value=_make_ready_future(_FakeVoiceInfo()))
-    _grpc_client.speak = MagicMock(return_value=iter([]))
-    _grpc_client.get_synth_options = MagicMock(
-        return_value=_make_ready_future(_FakeVoiceInfo.synth_options())
-    )
-    _grpc_client.set_synth_options = MagicMock(return_value=_make_ready_future(None))
-    _grpc_client.SONATA_GRPC_SERVER_PORT = 50051
-    _grpc_client.SERVER_CHECK_TIMEOUT = 15
-    _grpc_client.STARTUP_TIMEOUT = 20
-    _grpc_client.CALL_TIMEOUT = 10
-
     # aio — starts real threads/event loops; stub completely
     _aio = _stub_module("dengjen_neural_voices.aio")
     _aio.initialize = MagicMock()
@@ -402,8 +379,19 @@ def install(*, stub_wx: bool = True) -> None:
     _load_real_module("dengjen_neural_voices.const", "const.py")
     _load_real_module("dengjen_neural_voices.helpers", "helpers.py")
     _load_real_module("dengjen_neural_voices.voice_migration", "voice_migration.py")
-    _load_real_module("dengjen_neural_voices.tts_system", "tts_system.py")
+    _load_real_module(
+        "dengjen_neural_voices.domain.tts_system",
+        os.path.join("domain", "tts_system.py"),
+        package="dengjen_neural_voices.domain",
+    )
 
+    # The `dengjen_neural_voices` package stub built in step 3 never runs the
+    # real __init__.py, so its public re-exports (used by
+    # dengjen_tts_global_plugin's `from dengjen_neural_voices import
+    # DengjenTextToSpeechSystem, DENGJEN_VOICES_DIR`, exercised for real in
+    # tests_gui/) have to be set here by hand, from the module just loaded.
+    _pkg.DengjenTextToSpeechSystem = sys.modules["dengjen_neural_voices.domain.tts_system"].DengjenTextToSpeechSystem
+    _pkg.DENGJEN_VOICES_DIR = sys.modules["dengjen_neural_voices.domain.tts_system"].DENGJEN_VOICES_DIR
 
     # -----------------------------------------------------------------------
     # 6. Register `dengjen_tts_global_plugin` as a package WITHOUT running its
@@ -413,19 +401,22 @@ def install(*, stub_wx: bool = True) -> None:
     #    so that GUI layer is out of scope here. Only expose the names
     #    __init__.py itself re-exports from dengjen_neural_voices, since
     #    voice_download.py reaches them via `from . import DengjenTextToSpeechSystem,
-    #    helpers, DENGJEN_VOICES_DIR`.
+    #    helpers, DENGJEN_VOICES_DIR, SonataGrpcBackend`.
     # -----------------------------------------------------------------------
 
     if _GLOBAL_PLUGIN_DIR not in sys.path:
         sys.path.insert(0, _GLOBAL_PLUGIN_DIR)
 
     if stub_wx:
+        import dengjen_neural_voices.adapters.sonata_grpc as _sonata_grpc
+
         _gui_plugin_pkg = types.ModuleType("dengjen_tts_global_plugin")
         _gui_plugin_pkg.__path__ = [_GLOBAL_PLUGIN_PKG_DIR]
         _gui_plugin_pkg.__package__ = "dengjen_tts_global_plugin"
-        _gui_plugin_pkg.DengjenTextToSpeechSystem = sys.modules["dengjen_neural_voices.tts_system"].DengjenTextToSpeechSystem
-        _gui_plugin_pkg.DENGJEN_VOICES_DIR = sys.modules["dengjen_neural_voices.tts_system"].DENGJEN_VOICES_DIR
+        _gui_plugin_pkg.DengjenTextToSpeechSystem = sys.modules["dengjen_neural_voices.domain.tts_system"].DengjenTextToSpeechSystem
+        _gui_plugin_pkg.DENGJEN_VOICES_DIR = sys.modules["dengjen_neural_voices.domain.tts_system"].DENGJEN_VOICES_DIR
         _gui_plugin_pkg.helpers = sys.modules["dengjen_neural_voices.helpers"]
         _gui_plugin_pkg.voice_migration = sys.modules["dengjen_neural_voices.voice_migration"]
         _gui_plugin_pkg.aio = _aio
+        _gui_plugin_pkg.SonataGrpcBackend = _sonata_grpc.SonataGrpcBackend
         sys.modules["dengjen_tts_global_plugin"] = _gui_plugin_pkg

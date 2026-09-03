@@ -3,12 +3,12 @@
 Tests for the SynthDriver itself: construction, speech sequence handling,
 flush/cancel ordering, the settings NVDA reads and writes through driver
 properties, and _set_voice's failure handling
-(addon/synthDrivers/dengjen_neural_voices/__init__.py).
+(addon/synthDrivers/dengjen_neural_voices/adapters/nvda/synth_driver.py).
 
 conftest.py registers `dengjen_neural_voices` as a package without running
 its __init__.py, so until now nothing imported or drove the SynthDriver
 class (see issue #65 -- this is where user-reported regressions have
-historically lived). This module executes the real __init__.py under the
+historically lived). This module executes the real synth_driver.py under the
 same stubs used for the rest of the package, replacing the hollow package
 stub, then constructs the driver against a fake on-disk voice.
 
@@ -32,15 +32,16 @@ from unittest.mock import MagicMock
 from logHandler import log
 
 from tests.conftest import SYNTH_PKG_DIR, load_module_from_path
+from tests.fake_tts_backend import FakeTTSBackend
 
-import dengjen_neural_voices.tts_system as tts_system
+from dengjen_neural_voices.domain import tts_system
 from dengjen_neural_voices.const import FALLBACK_SPEAKER_NAME
 from speech.commands import BreakCommand, IndexCommand, LangChangeCommand
 
 driver_module = load_module_from_path(
-    "dengjen_neural_voices",
-    os.path.join(SYNTH_PKG_DIR, "__init__.py"),
-    package="dengjen_neural_voices",
+    "dengjen_neural_voices.adapters.nvda.synth_driver",
+    os.path.join(SYNTH_PKG_DIR, "adapters", "nvda", "synth_driver.py"),
+    package="dengjen_neural_voices.adapters.nvda",
 )
 
 SynthDriver = driver_module.SynthDriver
@@ -96,7 +97,14 @@ def configured_voice(voices_dir):
 
 
 @pytest.fixture
-def driver(configured_voice):
+def fake_backend(monkeypatch):
+    backend = FakeTTSBackend()
+    monkeypatch.setattr(driver_module, "_bootstrap_backend", lambda: backend)
+    return backend
+
+
+@pytest.fixture
+def driver(configured_voice, fake_backend):
     d = SynthDriver()
     yield d
     d.terminate()
@@ -110,7 +118,7 @@ class TestConstruction:
         assert driver.tts.voice == VOICE_KEY
 
     def test_falls_back_to_first_voice_when_configured_voice_is_unknown(
-        self, voices_dir
+        self, voices_dir, fake_backend
     ):
         config.conf["speech"][SECTION].clear()
         config.conf["speech"][SECTION]["voice"] = "does-not-exist"
@@ -133,15 +141,15 @@ class TestConstruction:
         expected_lang = languageHandler.normalizeLanguage(lang).replace("_", "-")
         assert f"({expected_lang})" in display_name
 
-    def test_loads_voices_from_disk_only_once(self, configured_voice, monkeypatch):
+    def test_loads_voices_from_disk_only_once(self, configured_voice, fake_backend, monkeypatch):
         """A previous version called load_piper_voices_from_nvda_config_dir()
         twice back to back in __init__ for no reason."""
         real_load = driver_module.DengjenTextToSpeechSystem.load_piper_voices_from_nvda_config_dir.__func__
         calls = []
 
-        def counting_load(cls):
+        def counting_load(cls, backend):
             calls.append(1)
-            return real_load(cls)
+            return real_load(cls, backend)
 
         monkeypatch.setattr(
             driver_module.DengjenTextToSpeechSystem,
@@ -153,6 +161,23 @@ class TestConstruction:
             assert len(calls) == 1
         finally:
             d.terminate()
+
+    def test_backend_unavailable_leaves_the_driver_without_voices(self, configured_voice, monkeypatch):
+        """A BackendUnavailableError from bootstrap must not raise out of
+        __init__ -- the driver stays constructed but non-functional, same as
+        today's broad except-Exception behavior, so NVDA can still report the
+        synth as failed rather than crash."""
+        from dengjen_neural_voices.ports.tts_backend import BackendUnavailableError
+
+        def _boom():
+            raise BackendUnavailableError("no vcruntime")
+
+        monkeypatch.setattr(driver_module, "_bootstrap_backend", _boom)
+        d = SynthDriver()
+        try:
+            assert d.tts is None
+        finally:
+            d.terminate()  # must not raise even with tts is None
 
 
 class TestBuildSpeechTasks:
@@ -237,7 +262,7 @@ class TestLifecycle:
 
 class TestProcessSpeechSequence:
     """_process_speech_sequence's own per-task error/cancellation handling
-    (addon/synthDrivers/dengjen_neural_voices/__init__.py)."""
+    (addon/synthDrivers/dengjen_neural_voices/adapters/nvda/synth_driver.py)."""
 
     def test_runs_every_task_in_order_one_at_a_time(self):
         ran = []
@@ -336,14 +361,11 @@ class TestSettings:
         driver.noise_scale = 75
         assert driver.noise_scale == 75
 
-    def test_noise_scale_reapplies_an_unchanged_value(self, driver):
-        # voice.noise_scale is a live round trip through grpc_client (stubbed),
-        # not stored state, so assert on whether the stub call fired rather
-        # than on the value read back afterwards.
+    def test_noise_scale_reapplies_an_unchanged_value(self, driver, fake_backend):
         driver.noise_scale = 75
-        driver_module.grpc_client.set_synth_options.reset_mock()
+        fake_backend.set_synth_options_calls.clear()
         driver.noise_scale = 75
-        driver_module.grpc_client.set_synth_options.assert_called_once()
+        assert len(fake_backend.set_synth_options_calls) == 1
 
     def test_length_scale_defaults_to_fifty(self, driver):
         assert driver.length_scale == 50
@@ -352,11 +374,11 @@ class TestSettings:
         driver.length_scale = 75
         assert driver.length_scale == 75
 
-    def test_length_scale_reapplies_an_unchanged_value(self, driver):
+    def test_length_scale_reapplies_an_unchanged_value(self, driver, fake_backend):
         driver.length_scale = 75
-        driver_module.grpc_client.set_synth_options.reset_mock()
+        fake_backend.set_synth_options_calls.clear()
         driver.length_scale = 75
-        driver_module.grpc_client.set_synth_options.assert_called_once()
+        assert len(fake_backend.set_synth_options_calls) == 1
 
     def test_noise_w_defaults_to_fifty(self, driver):
         assert driver.noise_w == 50
@@ -365,20 +387,42 @@ class TestSettings:
         driver.noise_w = 75
         assert driver.noise_w == 75
 
-    def test_noise_w_skips_reapplying_an_unchanged_value(self, driver):
+    def test_noise_w_skips_reapplying_an_unchanged_value(self, driver, fake_backend):
         # Unlike noise_scale/length_scale, noise_w short-circuits when set to
-        # the value it's already at -- confirm the stubbed grpc call is not
-        # made again for the redundant second set.
+        # the value it's already at -- confirm the stubbed backend call is
+        # not made again for the redundant second set.
         driver.noise_w = 75
-        driver_module.grpc_client.set_synth_options.reset_mock()
+        fake_backend.set_synth_options_calls.clear()
         driver.noise_w = 75
-        driver_module.grpc_client.set_synth_options.assert_not_called()
+        assert fake_backend.set_synth_options_calls == []
+
+    def test_switching_variant_reapplies_scale_settings(self, driver, fake_backend):
+        # A variant is a distinct voice object with its own default scales,
+        # so a direct variant change (NVDA's VariantSetting, independent of
+        # a voice change) must still push the user's current setting onto it.
+        driver.noise_scale = 75
+        fake_backend.set_synth_options_calls.clear()
+        driver.variant = driver.variant
+        calls = [kwargs for _, kwargs in fake_backend.set_synth_options_calls]
+        assert any("noise_scale" in kwargs for kwargs in calls)
+
+    def test_switching_variant_reapplies_noise_w_even_when_the_cached_value_is_unchanged(self, driver, fake_backend):
+        # noise_w's skip_if_unchanged guard exists for the direct-set path
+        # (avoid a redundant call when the user re-enters the same value);
+        # a variant-switch reapply must bypass it, since the cached factor
+        # trivially equals itself but the new voice object has never been
+        # told about it.
+        driver.noise_w = 75
+        fake_backend.set_synth_options_calls.clear()
+        driver.variant = driver.variant
+        calls = [kwargs for _, kwargs in fake_backend.set_synth_options_calls]
+        assert any("noise_w" in kwargs for kwargs in calls)
 
 
 _failure_driver_module = load_module_from_path(
-    "dengjen_neural_voices._init_under_test",
-    os.path.join(SYNTH_PKG_DIR, "__init__.py"),
-    package="dengjen_neural_voices",
+    "dengjen_neural_voices.adapters.nvda._init_under_test",
+    os.path.join(SYNTH_PKG_DIR, "adapters", "nvda", "synth_driver.py"),
+    package="dengjen_neural_voices.adapters.nvda",
 )
 _FailureSynthDriver = _failure_driver_module.SynthDriver
 

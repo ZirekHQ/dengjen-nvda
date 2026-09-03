@@ -58,13 +58,20 @@ def _show_vcruntime_warning():
     except Exception:
         log.exception("Failed to show VC++ redistributable warning dialog", exc_info=True)
 
-from ..const import DENGJEN_VOICES_BASE_DIR
-from ..helpers import BIN_DIRECTORY, find_free_port, import_bundled_library
+from ...const import DENGJEN_VOICES_BASE_DIR
+from ...helpers import BIN_DIRECTORY, find_free_port, import_bundled_library
+from ...ports.tts_backend import (
+    BackendUnavailableError,
+    LoadedVoice,
+    SynthesisError,
+    SynthOptions,
+    VoiceLoadError,
+)
 
 
 with import_bundled_library():
     import grpc
-    from .. import aio
+    from ... import aio
     from .grpc_protos.sonata_grpc_pb2_grpc import sonata_grpcStub
     from .grpc_protos import sonata_grpc_pb2 as msgs
 
@@ -277,3 +284,83 @@ async def bench(n=10000):
     for _ in range(n):
         await get_sonata_version()
     return time.perf_counter() - t0
+
+
+class SonataGrpcBackend:
+    """TTSBackend adapter over this module's process-wide gRPC client state.
+
+    A thin facade: the gRPC channel and sonata-grpc.exe subprocess are
+    genuinely process-wide resources (one subprocess for the whole NVDA
+    process, regardless of how many SynthDriver instances come and go), so
+    this class delegates to the module-level functions/globals above rather
+    than duplicating that state per instance.
+    """
+
+    def initialize(self):
+        try:
+            initialize().result(timeout=STARTUP_TIMEOUT)
+        except Exception as exc:
+            raise BackendUnavailableError(str(exc)) from exc
+
+    def check_version(self):
+        try:
+            return check_grpc_server().result(timeout=STARTUP_TIMEOUT)
+        except Exception as exc:
+            raise BackendUnavailableError(str(exc)) from exc
+
+    def shutdown(self):
+        try:
+            terminate()
+        except Exception as exc:
+            raise BackendUnavailableError(str(exc)) from exc
+
+    def load_voice(self, config_path):
+        try:
+            info = load_voice(config_path).result(timeout=CALL_TIMEOUT)
+        except Exception as exc:
+            raise VoiceLoadError(str(exc)) from exc
+        return LoadedVoice(
+            backend_voice_id=info.voice_id,
+            supports_streaming_output=info.supports_streaming_output,
+            sample_rate=info.audio.sample_rate,
+            speakers=dict(info.speakers),
+            defaults=SynthOptions(
+                speaker=info.synth_options.speaker,
+                length_scale=info.synth_options.length_scale,
+                noise_scale=info.synth_options.noise_scale,
+                noise_w=info.synth_options.noise_w,
+            ),
+        )
+
+    def get_synth_options(self, backend_voice_id):
+        try:
+            opts = get_synth_options(backend_voice_id).result(timeout=CALL_TIMEOUT)
+        except Exception as exc:
+            raise VoiceLoadError(str(exc)) from exc
+        return SynthOptions(
+            speaker=opts.speaker,
+            length_scale=opts.length_scale,
+            noise_scale=opts.noise_scale,
+            noise_w=opts.noise_w,
+        )
+
+    def set_synth_options(self, backend_voice_id, **kwargs):
+        try:
+            set_synth_options(backend_voice_id, **kwargs).result(timeout=CALL_TIMEOUT)
+        except Exception as exc:
+            raise VoiceLoadError(str(exc)) from exc
+
+    async def synthesize(self, backend_voice_id, text, rate, volume, pitch, sentence_silence_ms, streaming):
+        try:
+            async for ret in speak(
+                voice_id=backend_voice_id,
+                text=text,
+                rate=rate,
+                volume=volume,
+                pitch=pitch,
+                appended_silence_ms=sentence_silence_ms,
+                streaming=streaming,
+            ):
+                yield ret.wav_samples
+        except Exception as exc:
+            raise SynthesisError(str(exc)) from exc

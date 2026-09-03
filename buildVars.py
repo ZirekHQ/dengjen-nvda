@@ -66,7 +66,16 @@ addon_info = AddonInfo(
 # https://scons.org/doc/production/HTML/scons-user/apd.html
 pythonSources: list[str] = [
     "addon/globalPlugins/*/*.py",
-    "addon/synthDrivers/*/*.*"
+    "addon/synthDrivers/*/*.*",
+    # The clean-architecture subpackages (domain/, ports/, adapters/*/) nest
+    # one level deeper than the flat layout the glob above was written for.
+    # Vendored/generated code (lib/, adapters/sonata_grpc/grpc_protos/) stays
+    # out on purpose -- these globs go exactly one level deeper, not
+    # recursive.
+    "addon/synthDrivers/*/domain/*.py",
+    "addon/synthDrivers/*/ports/*.py",
+    "addon/synthDrivers/*/adapters/*.py",
+    "addon/synthDrivers/*/adapters/*/*.py",
 ]
 
 # Files that contain strings for translation. Usually your python sources
