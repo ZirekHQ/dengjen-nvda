@@ -82,10 +82,12 @@ def load_module_from_path(
     return mod
 
 
-def _load_real_module(module_name: str, filename: str) -> types.ModuleType:
+def _load_real_module(
+    module_name: str, filename: str, *, package: str = "dengjen_neural_voices"
+) -> types.ModuleType:
     """Execute a real package submodule (with relative imports)."""
     return load_module_from_path(
-        module_name, os.path.join(_SYNTH_PKG_DIR, filename), "dengjen_neural_voices"
+        module_name, os.path.join(_SYNTH_PKG_DIR, filename), package
     )
 
 
@@ -402,7 +404,11 @@ def install(*, stub_wx: bool = True) -> None:
     _load_real_module("dengjen_neural_voices.const", "const.py")
     _load_real_module("dengjen_neural_voices.helpers", "helpers.py")
     _load_real_module("dengjen_neural_voices.voice_migration", "voice_migration.py")
-    _load_real_module("dengjen_neural_voices.tts_system", "tts_system.py")
+    _load_real_module(
+        "dengjen_neural_voices.domain.tts_system",
+        os.path.join("domain", "tts_system.py"),
+        package="dengjen_neural_voices.domain",
+    )
 
 
     # -----------------------------------------------------------------------
@@ -423,8 +429,8 @@ def install(*, stub_wx: bool = True) -> None:
         _gui_plugin_pkg = types.ModuleType("dengjen_tts_global_plugin")
         _gui_plugin_pkg.__path__ = [_GLOBAL_PLUGIN_PKG_DIR]
         _gui_plugin_pkg.__package__ = "dengjen_tts_global_plugin"
-        _gui_plugin_pkg.DengjenTextToSpeechSystem = sys.modules["dengjen_neural_voices.tts_system"].DengjenTextToSpeechSystem
-        _gui_plugin_pkg.DENGJEN_VOICES_DIR = sys.modules["dengjen_neural_voices.tts_system"].DENGJEN_VOICES_DIR
+        _gui_plugin_pkg.DengjenTextToSpeechSystem = sys.modules["dengjen_neural_voices.domain.tts_system"].DengjenTextToSpeechSystem
+        _gui_plugin_pkg.DENGJEN_VOICES_DIR = sys.modules["dengjen_neural_voices.domain.tts_system"].DENGJEN_VOICES_DIR
         _gui_plugin_pkg.helpers = sys.modules["dengjen_neural_voices.helpers"]
         _gui_plugin_pkg.voice_migration = sys.modules["dengjen_neural_voices.voice_migration"]
         _gui_plugin_pkg.aio = _aio
