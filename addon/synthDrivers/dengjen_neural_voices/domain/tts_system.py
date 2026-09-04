@@ -1,3 +1,6 @@
+# Copyright (c) 2023 Musharraf Omer
+# This file is covered by the GNU General Public License.
+
 """Core TTS domain logic: voices, speech options, providers.
 
 Imports no gRPC and no I/O-heavy NVDA module -- the one accepted exception is
@@ -266,7 +269,9 @@ class DengjenTextToSpeechSystem:
             self.speech_options = old_speech_options
 
     def shutdown(self):
-
+        # No-op by design: the gRPC engine process outlives any single TTS
+        # system, so it is torn down by adapters/sonata_grpc's atexit
+        # handler instead.
         pass
 
     @property
