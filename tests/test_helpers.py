@@ -1,16 +1,13 @@
-# coding: utf-8
 """
 Tests for helpers.py — port utilities with no NVDA dependency.
 """
 
 import socket
-import pytest
 
-from dengjen_neural_voices.helpers import is_free_port, find_free_port
+from dengjen_neural_voices.helpers import find_free_port, is_free_port
 
 
 class TestIsFreePport:
-
     def test_returns_true_for_free_port(self):
         port = find_free_port()
         assert is_free_port(port)
@@ -24,7 +21,6 @@ class TestIsFreePport:
 
 
 class TestFindFreePort:
-
     def test_returns_integer(self):
         port = find_free_port()
         assert isinstance(port, int)

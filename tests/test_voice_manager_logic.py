@@ -1,4 +1,3 @@
-# coding: utf-8
 """
 Tests for voice_manager_logic.py: the wx-free decisions behind the voice
 manager UI, extracted from voice_manager.py so they can be driven on any
@@ -8,10 +7,10 @@ they subclass real wx types -- and are covered by tests_gui/ on Windows.
 
 import os
 
-from tests.conftest import GLOBAL_PLUGIN_PKG_DIR, load_module_from_path
-
 import addonHandler
 from dengjen_neural_voices.domain import tts_system
+
+from tests.conftest import GLOBAL_PLUGIN_PKG_DIR, load_module_from_path
 from tests.fake_tts_backend import FakeTTSBackend
 
 # In production this runs in the package __init__.py before anything using
@@ -112,9 +111,7 @@ class TestIsActiveVoice:
         )
 
     def test_false_when_another_synth_is_active(self):
-        assert not logic.is_active_voice(
-            "espeak", "en_US-amy", "en_US-amy-medium"
-        )
+        assert not logic.is_active_voice("espeak", "en_US-amy", "en_US-amy-medium")
 
     def test_quality_does_not_affect_the_match(self):
         assert logic.is_active_voice(
@@ -215,36 +212,48 @@ class TestDownloadButtonState:
 
     def test_standard_download_withheld_when_already_installed(self):
         voice = _online(
-            "en_US-amy-medium", "amy", _language("en_US", "English"),
+            "en_US-amy-medium",
+            "amy",
+            _language("en_US", "English"),
             standard_variant_installed=True,
         )
         assert logic.download_button_state(voice).std_enabled is False
 
     def test_fast_download_withheld_when_voice_has_no_rt_variant(self):
         voice = _online(
-            "en_US-amy-medium", "amy", _language("en_US", "English"),
+            "en_US-amy-medium",
+            "amy",
+            _language("en_US", "English"),
             has_rt_variant=False,
         )
         assert logic.download_button_state(voice).rt_enabled is False
 
     def test_fast_download_offered_when_rt_exists_and_is_not_installed(self):
         voice = _online(
-            "en_US-amy-medium", "amy", _language("en_US", "English"),
+            "en_US-amy-medium",
+            "amy",
+            _language("en_US", "English"),
             has_rt_variant=True,
         )
         assert logic.download_button_state(voice).rt_enabled is True
 
     def test_fast_download_withheld_when_rt_already_installed(self):
         voice = _online(
-            "en_US-amy-medium", "amy", _language("en_US", "English"),
-            has_rt_variant=True, fast_variant_installed=True,
+            "en_US-amy-medium",
+            "amy",
+            _language("en_US", "English"),
+            has_rt_variant=True,
+            fast_variant_installed=True,
         )
         assert logic.download_button_state(voice).rt_enabled is False
 
     def test_single_speaker_voice_offers_no_speaker_choice(self):
         voice = _online(
-            "en_US-amy-medium", "amy", _language("en_US", "English"),
-            num_speakers=1, speaker_id_map={"amy": 0},
+            "en_US-amy-medium",
+            "amy",
+            _language("en_US", "English"),
+            num_speakers=1,
+            speaker_id_map={"amy": 0},
         )
         state = logic.download_button_state(voice)
         assert state.speaker_enabled is False
@@ -252,8 +261,11 @@ class TestDownloadButtonState:
 
     def test_multi_speaker_voice_lists_its_speakers_in_map_order(self):
         voice = _online(
-            "en_US-libritts-medium", "libritts", _language("en_US", "English"),
-            num_speakers=3, speaker_id_map={"p3": 0, "p1": 1, "p2": 2},
+            "en_US-libritts-medium",
+            "libritts",
+            _language("en_US", "English"),
+            num_speakers=3,
+            speaker_id_map={"p3": 0, "p1": 1, "p2": 2},
         )
         state = logic.download_button_state(voice)
         assert state.speaker_enabled is True

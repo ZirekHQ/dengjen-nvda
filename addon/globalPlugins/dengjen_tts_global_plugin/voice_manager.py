@@ -1,5 +1,3 @@
-# coding: utf-8
-
 # Copyright (c) 2023 Musharraf Omer
 # This file is covered by the GNU General Public License.
 
@@ -14,28 +12,36 @@ import tempfile
 import threading
 import winsound
 
-import wx
-from wx.adv import CommandLinkButton
 import addonHandler
 import gui
 import synthDriverHandler
+import wx
 from logHandler import log
+from wx.adv import CommandLinkButton
 
 addonHandler.initTranslation()
 
-from . import DengjenTextToSpeechSystem, DENGJEN_VOICES_DIR, SonataGrpcBackend
-from . import voice_migration
-from . import voice_download
-from . import aio
-from . import helpers
-from .components import AsyncSnakDialog, ColumnDefn, ImmutableObjectListView, SimpleDialog, make_sized_static_box
-from .sized_controls import SizedPanel
+from . import (
+    DENGJEN_VOICES_DIR,
+    DengjenTextToSpeechSystem,
+    SonataGrpcBackend,
+    aio,
+    helpers,
+    voice_download,
+    voice_migration,
+)
 from . import voice_manager_logic as logic
-
+from .components import (
+    AsyncSnakDialog,
+    ColumnDefn,
+    ImmutableObjectListView,
+    SimpleDialog,
+    make_sized_static_box,
+)
+from .sized_controls import SizedPanel
 
 with helpers.import_bundled_library():
     import miniaudio
-    from pathlib import Path
 
 
 class InstalledDengjenVoicesPanel(SizedPanel):
@@ -53,7 +59,10 @@ class InstalledDengjenVoicesPanel(SizedPanel):
                 ColumnDefn(_("Name"), "left", 30, self._get_installed_voice_name),
                 ColumnDefn(
                     # Translators: list view column title
-                    _("Quality"), "center", 30, lambda v: v.properties["quality"].title()
+                    _("Quality"),
+                    "center",
+                    30,
+                    lambda v: v.properties["quality"].title(),
                 ),
                 # Translators: list view column title
                 ColumnDefn(_("Language"), "right", 20, operator.attrgetter("language")),
@@ -62,9 +71,13 @@ class InstalledDengjenVoicesPanel(SizedPanel):
         self.buttons_panel = SizedPanel(self, -1)
         self.buttons_panel.SetSizerType("horizontal")
         # Translators: label for a button for showing voice model card
-        self.model_card_button = wx.Button(self.buttons_panel, -1, _("&Voice model card..."))
+        self.model_card_button = wx.Button(
+            self.buttons_panel, -1, _("&Voice model card...")
+        )
         # Translators: label for a button for removing a voice
-        self.remove_voice_button = wx.Button(self.buttons_panel, -1, _("&Remove voice..."))
+        self.remove_voice_button = wx.Button(
+            self.buttons_panel, -1, _("&Remove voice...")
+        )
         add_voice_button = CommandLinkButton(
             self,
             -1,
@@ -75,7 +88,7 @@ class InstalledDengjenVoicesPanel(SizedPanel):
                 "Install a voice from a local archive.\n"
                 "The archive contains the voice model and configuration.\n"
                 "The archive should have a (.tar.gz) file extension."
-            )
+            ),
         )
         self.import_voices_button = CommandLinkButton(
             self,
@@ -86,7 +99,7 @@ class InstalledDengjenVoicesPanel(SizedPanel):
             _(
                 "Copy voices you downloaded with the Sonata Neural Voices add-on.\n"
                 "The originals are left in place, so Sonata keeps working."
-            )
+            ),
         )
         self.import_voices_button.Hide()
         self.Bind(wx.EVT_BUTTON, self.on_model_card, self.model_card_button)
@@ -95,10 +108,12 @@ class InstalledDengjenVoicesPanel(SizedPanel):
         self.Bind(wx.EVT_BUTTON, self._on_import_voices, self.import_voices_button)
 
     def update_voices_list(self, set_focus=False, invalidate_synth_voices_cache=False):
-        voices = list(DengjenTextToSpeechSystem.load_piper_voices_from_nvda_config_dir(SonataGrpcBackend()))
-        state = logic.installed_list_state(
-            voices, synthDriverHandler.getSynth().name
+        voices = list(
+            DengjenTextToSpeechSystem.load_piper_voices_from_nvda_config_dir(
+                SonataGrpcBackend()
+            )
         )
+        state = logic.installed_list_state(voices, synthDriverHandler.getSynth().name)
         self.import_voices_button.Show(bool(voice_migration.importable_voice_keys()))
         self.Layout()
         self.buttons_panel.Enable(state.buttons_enabled)
@@ -134,10 +149,10 @@ class InstalledDengjenVoicesPanel(SizedPanel):
             content = logic.sanitize_model_card(content)
             gui.messageBox(
                 content,
-                #! Intentionally untranslatable 
+                # NOTE: Intentionally untranslatable
                 # Translators: title of a message box showing voice model card
                 _("Model card"),
-                style=wx.ICON_INFORMATION
+                style=wx.ICON_INFORMATION,
             )
         else:
             gui.messageBox(
@@ -145,7 +160,7 @@ class InstalledDengjenVoicesPanel(SizedPanel):
                 _("Model card information is unavailable for this voice"),
                 # Translators: title of a message box
                 _("Not found"),
-                style=wx.ICON_WARNING
+                style=wx.ICON_WARNING,
             )
 
     def on_remove_voice(self, event):
@@ -162,18 +177,17 @@ class InstalledDengjenVoicesPanel(SizedPanel):
                 _("You cannot remove the currently active voice!"),
                 # Translators: title of a message box
                 _("Error"),
-                style=wx.ICON_ERROR
+                style=wx.ICON_ERROR,
             )
             return
         retval = gui.messageBox(
             # Translators: message in a message box
-            _(
-                "Do you want to remove this voice?\n"
-                "Voice: {name}"
-            ).format(name=selected.key),
+            _("Do you want to remove this voice?\nVoice: {name}").format(
+                name=selected.key
+            ),
             # Translators: title of a message box
             _("Remove voice?"),
-            style=wx.YES_NO|wx.ICON_WARNING
+            style=wx.YES_NO | wx.ICON_WARNING,
         )
         if retval == wx.YES:
             try:
@@ -185,7 +199,7 @@ class InstalledDengjenVoicesPanel(SizedPanel):
                     _("Failed to remove voice.\nSee NVDA's log for more details."),
                     # Translators: title of a message box
                     _("Failed"),
-                    style=wx.ICON_WARNING
+                    style=wx.ICON_WARNING,
                 )
             else:
                 gui.messageBox(
@@ -193,9 +207,11 @@ class InstalledDengjenVoicesPanel(SizedPanel):
                     _("Voice removed successfully."),
                     # Translators: title of a message box
                     _("Done"),
-                    style=wx.ICON_INFORMATION
+                    style=wx.ICON_INFORMATION,
                 )
-                self.update_voices_list(set_focus=True, invalidate_synth_voices_cache=True)
+                self.update_voices_list(
+                    set_focus=True, invalidate_synth_voices_cache=True
+                )
 
     def _on_import_voices(self, event):
         voice_keys = voice_migration.importable_voice_keys()
@@ -251,9 +267,11 @@ class InstalledDengjenVoicesPanel(SizedPanel):
             defaultDir=wx.GetUserHome(),
             wildcard=(
                 # Translators: file dialog filter for tar archives
-                _("Tar archives (*.tar.gz, *.tgz)") + "|*.tar.gz;*.tgz|"
+                _("Tar archives (*.tar.gz, *.tgz)")
+                + "|*.tar.gz;*.tgz|"
                 # Translators: file dialog filter for all files
-                + _("All files") + "|*.*"
+                + _("All files")
+                + "|*.*"
             ),
             style=wx.FD_OPEN,
         )
@@ -287,9 +305,9 @@ class InstalledDengjenVoicesPanel(SizedPanel):
         else:
             gui.messageBox(
                 # Translators: message telling the user that installing the voice is successful
-                _(
-                    "Voice {voice} has been installed successfully."
-                ).format(voice=voice_key),
+                _("Voice {voice} has been installed successfully.").format(
+                    voice=voice_key
+                ),
                 _("Voice installed successfully"),
                 style=wx.ICON_INFORMATION,
             )
@@ -309,17 +327,13 @@ class OnlineDengjenVoicesPanel(SizedPanel):
         wx.StaticText(self, -1, _("Language"))
         self.language_choice = wx.Choice(self, -1, choices=[])
         wx.StaticText(self, -1, _("Available voices"))
-        voice_list_columns=[
+        voice_list_columns = [
             # Translators: list view column title
             ColumnDefn(_("Name"), "left", 30, operator.attrgetter("name")),
             # Translators: list view column title
             ColumnDefn(_("Quality"), "center", 30, operator.attrgetter("quality")),
         ]
-        self.voices_list = ImmutableObjectListView(
-            self,
-            -1,
-            columns=voice_list_columns
-        )
+        self.voices_list = ImmutableObjectListView(self, -1, columns=voice_list_columns)
         self.voices_list.SetSizerProps(expand=True)
         self.buttons_panel = SizedPanel(self, -1)
         self.buttons_panel.SetSizerType("vertical")
@@ -333,26 +347,38 @@ class OnlineDengjenVoicesPanel(SizedPanel):
         dl_buttons_panel = SizedPanel(self.buttons_panel, -1)
         dl_buttons_panel.SetSizerType("horizontal")
         # Translators: label of a button to download the standard variant of the voice
-        self.download_std_btn = wx.Button(dl_buttons_panel, -1, _("&Download standard variant"))
+        self.download_std_btn = wx.Button(
+            dl_buttons_panel, -1, _("&Download standard variant")
+        )
         # Translators: label of a button to download the fast variant of voice
-        self.download_rt_btn = wx.Button(dl_buttons_panel, -1, _("Download &fast variant"))
+        self.download_rt_btn = wx.Button(
+            dl_buttons_panel, -1, _("Download &fast variant")
+        )
         # Translators: label of a button to refresh the voices list
         refresh_list_btn = wx.Button(self, -1, _("&Refresh voices list"))
-        self.Bind(wx.EVT_CHOICE, self.on_language_selection_change, self.language_choice)
+        self.Bind(
+            wx.EVT_CHOICE, self.on_language_selection_change, self.language_choice
+        )
         self.Bind(wx.EVT_LIST_ITEM_SELECTED, self.on_voice_selected, self.voices_list)
         self.Bind(wx.EVT_BUTTON, self.on_preview, self.preview_btn)
         self.Bind(wx.EVT_BUTTON, self.on_download, self.download_std_btn)
         self.Bind(wx.EVT_BUTTON, self.on_download_rt, self.download_rt_btn)
-        self.Bind(wx.EVT_BUTTON, lambda e: self.populate_list(force_online=True), refresh_list_btn)
+        self.Bind(
+            wx.EVT_BUTTON,
+            lambda e: self.populate_list(force_online=True),
+            refresh_list_btn,
+        )
         self.speaker_choice.Enable(False)
         self.buttons_panel.Enable(False)
 
     def populate_list(self, force_online=False):
-        if not force_online and  self.__already_populated.is_set():
+        if not force_online and self.__already_populated.is_set():
             return
         AsyncSnakDialog(
             executor=voice_download.THREAD_POOL_EXECUTOR,
-            func=functools.partial(voice_download.get_available_voices, force_online=force_online),
+            func=functools.partial(
+                voice_download.get_available_voices, force_online=force_online
+            ),
             done_callback=self._voice_list_retrieved_callback,
             parent=self,
             # Translators: message in a dialog
@@ -371,7 +397,9 @@ class OnlineDengjenVoicesPanel(SizedPanel):
             log.exception("Failed to retreive voices list", exc_info=True)
             wx.CallAfter(
                 gui.messageBox,
-                _("Could not retrieve voice list.\nPlease check your connection and try again."),
+                _(
+                    "Could not retrieve voice list.\nPlease check your connection and try again."
+                ),
                 _("Error"),
                 style=wx.ICON_ERROR,
                 parent=gui.mainFrame,
@@ -428,9 +456,7 @@ class OnlineDengjenVoicesPanel(SizedPanel):
             self._preview_active = False
             self.preview_btn.SetLabel(self._preview_label)
             return
-        future.add_done_callback(
-            lambda f: wx.CallAfter(self._on_preview_done, f)
-        )
+        future.add_done_callback(lambda f: wx.CallAfter(self._on_preview_done, f))
 
     def _on_preview_done(self, future):
         self._preview_active = False
@@ -442,7 +468,9 @@ class OnlineDengjenVoicesPanel(SizedPanel):
             )
             gui.messageBox(
                 # Translators: error shown when voice preview fails to play
-                _("Could not play voice preview.\nCheck your connection and try again."),
+                _(
+                    "Could not play voice preview.\nCheck your connection and try again."
+                ),
                 # Translators: title of an error message box
                 _("Preview failed"),
                 style=wx.ICON_ERROR,
@@ -459,8 +487,7 @@ class OnlineDengjenVoicesPanel(SizedPanel):
         selected_voice = self.voices_list.get_selected()
         if selected_voice is not None:
             downloader = voice_download.PiperVoiceDownloader(
-                selected_voice,
-                success_callback=success_callback
+                selected_voice, success_callback=success_callback
             )
             downloader.download()
 
@@ -475,22 +502,17 @@ class OnlineDengjenVoicesPanel(SizedPanel):
         if selected_voice is None:
             return
         downloader = voice_download.PiperRTVoiceDownloader(
-            selected_voice,
-            success_callback=success_callback
+            selected_voice, success_callback=success_callback
         )
         downloader.download()
 
-
     def set_voices(self, voices):
         self.languages, self.lang_to_voices = logic.group_voices_by_language(voices)
-        self.language_choice.SetItems(
-            [lang.description for lang in self.languages]
-        )
+        self.language_choice.SetItems([lang.description for lang in self.languages])
         self.__already_populated.set()
 
 
 class DengjenVoiceManagerDialog(SimpleDialog):
-
     def __init__(self):
         super().__init__(
             gui.mainFrame,
@@ -521,7 +543,9 @@ class DengjenVoiceManagerDialog(SimpleDialog):
         self.Bind(
             wx.EVT_NOTEBOOK_PAGE_CHANGED, self.onNotebookPageChanged, self.notebookCtrl
         )
-        self.notebookCtrl._invalidate_pages_voice_cache = self._invalidate_pages_voice_cache
+        self.notebookCtrl._invalidate_pages_voice_cache = (
+            self._invalidate_pages_voice_cache
+        )
         self.notebookCtrl.GetCurrentPage().populate_list()
 
     def getButtons(self, parent):
@@ -549,8 +573,4 @@ def play_remote_mp3(mp3_url):
     with tempfile.TemporaryDirectory() as tempdir:
         wav_file = os.path.join(tempdir, "speaker_0.wav")
         miniaudio.wav_write_file(wav_file, decoded_file)
-        winsound.PlaySound(
-            wav_file,
-            winsound.SND_FILENAME | winsound.SND_PURGE
-        )
-
+        winsound.PlaySound(wav_file, winsound.SND_FILENAME | winsound.SND_PURGE)

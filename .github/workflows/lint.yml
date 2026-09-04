@@ -1,0 +1,62 @@
+name: Lint
+
+on:
+  push:
+    branches: [main, master]
+  pull_request:
+    branches: [main, master]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  lint:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5.1.0
+        with:
+          persist-credentials: false
+
+      - name: Set up Python
+        uses: actions/setup-python@ece7cb06caefa5fff74198d8649806c4678c61a1 # v6.3.0
+        with:
+          python-version: "3.13"
+
+      - name: Install ruff
+        run: 'pip install --only-binary :all: ruff'
+
+      - run: ruff check .
+      - run: ruff format --check .
+
+  # No pip-audit precedent yet in any sibling Python repo (nvda-addon-testkit
+  # doesn't have one either), so pinned dependencies haven't been triaged
+  # against advisories before. Kept non-blocking on this first pass -- mirrors
+  # how the Rust repos' `deny` job separates cheap license/bans/sources checks
+  # from the full `audit` gate -- so findings surface without failing PRs
+  # until someone has looked at them; tighten to a hard gate once that happens.
+  audit:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5.1.0
+        with:
+          persist-credentials: false
+
+      - name: Set up Python
+        uses: actions/setup-python@ece7cb06caefa5fff74198d8649806c4678c61a1 # v6.3.0
+        with:
+          python-version: "3.13"
+
+      - name: Install pip-audit
+        run: 'pip install --only-binary :all: pip-audit'
+
+      - name: Audit dependencies
+        continue-on-error: true
+        run: |
+          pip-audit \
+            -r requirements-bootstrap.txt \
+            -r requirements-build.txt \
+            -r requirements-test.txt \
+            -r requirements-test-e2e.txt \
+            -r requirements-test-gui.txt \
+            -r requirements-l10n.txt

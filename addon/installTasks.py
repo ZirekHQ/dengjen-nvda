@@ -1,5 +1,3 @@
-# coding: utf-8
-
 # Copyright (c) 2023 Musharraf Omer
 # This file is covered by the GNU General Public License.
 
@@ -26,12 +24,12 @@ LIB_DIR = os.path.join(_PIPER_SYNTH_DIR, "lib")
 BIN_DIR = os.path.join(_PIPER_SYNTH_DIR, "bin")
 
 
-def _load_voice_migration():
+def _load_voice_migration(piper_synth_dir=_PIPER_SYNTH_DIR):
     """By file path, not import: the synth package pulls in grpc and the
     bundled Windows libraries at import time, which install must not need."""
     spec = importlib.util.spec_from_file_location(
         "_dengjen_voice_migration",
-        os.path.join(_PIPER_SYNTH_DIR, "voice_migration.py"),
+        os.path.join(piper_synth_dir, "voice_migration.py"),
     )
     module = importlib.util.module_from_spec(spec)
     spec.loader.exec_module(module)
@@ -78,7 +76,7 @@ def warn_if_old_addon_installed(addons=None):
             "The Sonata Neural Voices add-on is still installed, so your downloaded "
             "voices have been left where they are and Sonata keeps working. To use "
             "them with Dengjen Neural Voices, open the Dengjen voice manager and "
-            "choose \"Import voices from Sonata\". Removing the Sonata Neural Voices "
+            'choose "Import voices from Sonata". Removing the Sonata Neural Voices '
             "add-on also avoids two synthesizers appearing in your speech settings."
         ),
         # Translators: title of the message shown when the pre-rename add-on is still present
@@ -160,6 +158,7 @@ def _temporary_import_psutil():
     sys.path.insert(0, temp_import_dir.name)
     try:
         import psutil
+
         yield psutil
     finally:
         sys.path.remove(temp_import_dir.name)

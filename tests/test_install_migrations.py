@@ -1,4 +1,3 @@
-# coding: utf-8
 """Tests for the 4.0.0 upgrade path in installTasks.py.
 
 The real upgrade runs inside NVDA on Windows. These exercise the decision
@@ -130,7 +129,9 @@ class _FakeAggregatedSection:
 
     def as_plain_dict(self):
         return {
-            key: value.as_plain_dict() if isinstance(value, _FakeAggregatedSection) else value
+            key: value.as_plain_dict()
+            if isinstance(value, _FakeAggregatedSection)
+            else value
             for key, value in self._data.items()
         }
 
@@ -208,19 +209,24 @@ class _FakeAddon:
 
 class TestIsOldAddonInstalled:
     def test_detects_the_old_addon(self):
-        assert install_tasks.is_old_addon_installed(
-            [_FakeAddon("sonata_neural_voices")]
-        ) is True
+        assert (
+            install_tasks.is_old_addon_installed([_FakeAddon("sonata_neural_voices")])
+            is True
+        )
 
     def test_ignores_the_new_addon(self):
-        assert install_tasks.is_old_addon_installed(
-            [_FakeAddon("dengjen_neural_voices")]
-        ) is False
+        assert (
+            install_tasks.is_old_addon_installed([_FakeAddon("dengjen_neural_voices")])
+            is False
+        )
 
     def test_ignores_an_addon_already_pending_removal(self):
-        assert install_tasks.is_old_addon_installed(
-            [_FakeAddon("sonata_neural_voices", pending_remove=True)]
-        ) is False
+        assert (
+            install_tasks.is_old_addon_installed(
+                [_FakeAddon("sonata_neural_voices", pending_remove=True)]
+            )
+            is False
+        )
 
     def test_handles_an_empty_addon_list(self):
         assert install_tasks.is_old_addon_installed([]) is False

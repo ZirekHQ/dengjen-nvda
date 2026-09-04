@@ -1,9 +1,8 @@
-# coding: utf-8
 import asyncio
 
 import pytest
-
 from dengjen_neural_voices.ports.tts_backend import BackendUnavailableError
+
 from tests.fake_tts_backend import FakeTTSBackend
 
 
@@ -20,7 +19,9 @@ def test_set_synth_options_updates_get_synth_options():
     backend.set_synth_options(loaded.backend_voice_id, noise_scale=1.5)
     assert backend.get_synth_options(loaded.backend_voice_id).noise_scale == 1.5
     # Explicit None values must not clobber existing fields.
-    backend.set_synth_options(loaded.backend_voice_id, length_scale=2.0, noise_scale=None)
+    backend.set_synth_options(
+        loaded.backend_voice_id, length_scale=2.0, noise_scale=None
+    )
     assert backend.get_synth_options(loaded.backend_voice_id).noise_scale == 1.5
     assert backend.get_synth_options(loaded.backend_voice_id).length_scale == 2.0
 

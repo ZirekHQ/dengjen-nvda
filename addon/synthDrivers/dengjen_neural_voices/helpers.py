@@ -1,17 +1,13 @@
-# coding: utf-8
-
 # Copyright (c) 2021 Blind Pandas Team
 # This file is covered by the GNU General Public License.
 
-import sys
-import os
 import contextlib
+import os
 import socket
-
+import sys
 
 import wx
 from gui.settingsDialogs import NVDASettingsDialog, SpeechSettingsPanel
-
 
 PLUGIN_DIRECTORY = os.path.abspath(os.path.dirname(__file__))
 LIB_DIRECTORY = os.path.join(PLUGIN_DIRECTORY, "lib")
@@ -52,11 +48,11 @@ def update_displaied_params_on_voice_change(synth):
             if isinstance(win, NVDASettingsDialog)
         )
     except StopIteration:
-        # No gui displaied 
+        # No gui displaied
         return
     current_panel = setting_dialog.currentCategory
     if not isinstance(current_panel, SpeechSettingsPanel):
-        # No gui displaied 
+        # No gui displaied
         return
     voice_panel = current_panel.voicePanel
     # Patch values

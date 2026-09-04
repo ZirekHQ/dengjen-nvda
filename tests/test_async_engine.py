@@ -1,4 +1,3 @@
-# coding: utf-8
 """
 Tests for aio.AsyncEngine — the class that owns the thread pool executor and
 asyncio event loop the synth driver runs its gRPC and audio work on.
@@ -171,9 +170,9 @@ class TestRunInExecutor:
         async def drive():
             return await running_engine.run_in_executor(recorded.append, "value")
 
-        asyncio.run_coroutine_threadsafe(
-            drive(), running_engine.event_loop
-        ).result(timeout=5)
+        asyncio.run_coroutine_threadsafe(drive(), running_engine.event_loop).result(
+            timeout=5
+        )
         assert recorded == ["value"]
 
     def test_passes_through_keyword_arguments(self, running_engine):
@@ -290,7 +289,9 @@ class TestModuleLevelDelegation:
             return await aio.run_in_executor(recorded.append, "value")
 
         aio.initialize()
-        asyncio.run_coroutine_threadsafe(drive(), aio.ENGINE.event_loop).result(timeout=5)
+        asyncio.run_coroutine_threadsafe(drive(), aio.ENGINE.event_loop).result(
+            timeout=5
+        )
         assert recorded == ["value"]
 
     def test_asyncio_coroutine_to_concurrent_future_uses_the_singleton(self):

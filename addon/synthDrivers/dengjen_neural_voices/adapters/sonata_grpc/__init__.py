@@ -1,5 +1,3 @@
-# coding: utf-8
-
 import asyncio
 import atexit
 import ctypes
@@ -41,8 +39,9 @@ def _show_vcruntime_warning():
     contexts (tests, headless tooling) where the NVDA GUI isn't available.
     """
     try:
-        import wx
         import gui
+        import wx
+
         wx.CallAfter(
             gui.messageBox,
             (
@@ -56,7 +55,10 @@ def _show_vcruntime_warning():
             parent=gui.mainFrame,
         )
     except Exception:
-        log.exception("Failed to show VC++ redistributable warning dialog", exc_info=True)
+        log.exception(
+            "Failed to show VC++ redistributable warning dialog", exc_info=True
+        )
+
 
 from ...const import DENGJEN_VOICES_BASE_DIR
 from ...helpers import BIN_DIRECTORY, find_free_port, import_bundled_library
@@ -68,12 +70,12 @@ from ...ports.tts_backend import (
     VoiceLoadError,
 )
 
-
 with import_bundled_library():
     import grpc
+
     from ... import aio
-    from .grpc_protos.dengjen_grpc_pb2_grpc import DengjenGrpcStub
     from .grpc_protos import dengjen_grpc_pb2 as msgs
+    from .grpc_protos.dengjen_grpc_pb2_grpc import DengjenGrpcStub
 
 
 # All of the module-level state below is normally only touched from the
@@ -112,20 +114,26 @@ def start_grpc_server():
     grpc_server_exe = os.path.join(BIN_DIRECTORY, "dengjen-tts-grpc.exe")
     nvda_espeak_dir = os.path.join(globalVars.appDir, "synthDrivers")
     env = os.environ.copy()
-    env.update({
-        "DENGJEN_GRPC_SERVER_PORT": str(SONATA_GRPC_SERVER_PORT),
-        "DENGJEN_ESPEAKNG_DATA_DIRECTORY": os.fspath(nvda_espeak_dir),
-        "DENGJEN_GRPC": "info",
-    })
+    env.update(
+        {
+            "DENGJEN_GRPC_SERVER_PORT": str(SONATA_GRPC_SERVER_PORT),
+            "DENGJEN_ESPEAKNG_DATA_DIRECTORY": os.fspath(nvda_espeak_dir),
+            "DENGJEN_GRPC": "info",
+        }
+    )
     creationflags = (
         subprocess.DETACHED_PROCESS
         | subprocess.CREATE_NEW_PROCESS_GROUP
         | subprocess.REALTIME_PRIORITY_CLASS
     )
     try:
-        server_log_file = os.path.join(DENGJEN_VOICES_BASE_DIR, "logs", "dengjen-tts-grpc.log")
+        server_log_file = os.path.join(
+            DENGJEN_VOICES_BASE_DIR, "logs", "dengjen-tts-grpc.log"
+        )
         Path(server_log_file).parent.mkdir(parents=True, exist_ok=True)
-        server_stdout = SERVER_LOG_HANDLE = open(server_log_file, "wb")
+        # Held open past this function: used as the subprocess's stdout and
+        # closed later, alongside the process, by the module's cleanup path.
+        server_stdout = SERVER_LOG_HANDLE = open(server_log_file, "wb")  # noqa: SIM115
     except OSError:
         log.exception("Failed to open server log file for writing", exc_info=True)
         server_stdout = subprocess.DEVNULL
@@ -141,7 +149,7 @@ def start_grpc_server():
     except Exception:
         log.exception(
             "Failed to start Dengjen GRPC server. The synth will not be available.",
-            exc_info=True
+            exc_info=True,
         )
         if SERVER_LOG_HANDLE is not None:
             SERVER_LOG_HANDLE.close()
@@ -154,7 +162,7 @@ def start_grpc_server():
 
 @aio.asyncio_coroutine_to_concurrent_future
 async def initialize():
-    global CHANNEL, SONATA_GRPC_SERVICE, SONATA_GRPC_SERVER_PORT
+    global CHANNEL, SONATA_GRPC_SERVICE
     if not start_grpc_server():
         raise RuntimeError("Failed to start the Dengjen GRPC server")
     if CHANNEL is not None:
@@ -162,7 +170,10 @@ async def initialize():
             # grpc.aio binds a channel to the loop that created it, so a channel
             # outliving its loop has to be replaced rather than reused.
             channel_loop = getattr(CHANNEL, "_loop", None)
-            if channel_loop is aio.ENGINE.event_loop and aio.ENGINE.event_loop.is_running():
+            if (
+                channel_loop is aio.ENGINE.event_loop
+                and aio.ENGINE.event_loop.is_running()
+            ):
                 return
         except Exception:
             log.debug("Failed to inspect the existing GRPC channel", exc_info=True)
@@ -241,7 +252,12 @@ async def _clear_stale_server_state():
     loop already -- close_channel()'s run_coroutine_threadsafe().result()
     would deadlock waiting on the very loop it's called from.
     """
-    global GRPC_SERVER_PROCESS, SONATA_GRPC_SERVER_PORT, SERVER_LOG_HANDLE, CHANNEL, SONATA_GRPC_SERVICE
+    global \
+        GRPC_SERVER_PROCESS, \
+        SONATA_GRPC_SERVER_PORT, \
+        SERVER_LOG_HANDLE, \
+        CHANNEL, \
+        SONATA_GRPC_SERVICE
     process, GRPC_SERVER_PROCESS = GRPC_SERVER_PROCESS, None
     SONATA_GRPC_SERVER_PORT = None
     SONATA_GRPC_SERVICE = None
@@ -309,7 +325,13 @@ async def set_synth_options(
 
 
 async def speak(
-    voice_id, text, rate=None, volume=None, pitch=None, appended_silence_ms=None, streaming=False
+    voice_id,
+    text,
+    rate=None,
+    volume=None,
+    pitch=None,
+    appended_silence_ms=None,
+    streaming=False,
 ):
     speech_args = None
     if any(v is not None for v in (rate, volume, pitch, appended_silence_ms)):
@@ -421,7 +443,16 @@ class SonataGrpcBackend:
         except Exception as exc:
             raise VoiceLoadError(str(exc)) from exc
 
-    async def synthesize(self, backend_voice_id, text, rate, volume, pitch, sentence_silence_ms, streaming):
+    async def synthesize(
+        self,
+        backend_voice_id,
+        text,
+        rate,
+        volume,
+        pitch,
+        sentence_silence_ms,
+        streaming,
+    ):
         try:
             async for ret in speak(
                 voice_id=backend_voice_id,

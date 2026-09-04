@@ -1,14 +1,15 @@
-# coding: utf-8
-
 import asyncio
 import os
 import threading
 import typing as t
-from concurrent.futures import CancelledError, ThreadPoolExecutor
-from functools import wraps, partial
-from logHandler import log
-from .helpers import import_bundled_library
+from concurrent.futures import CancelledError, Future, ThreadPoolExecutor
+from functools import partial, wraps
 
+from logHandler import log
+
+# Re-exported for synth_driver.py, which reaches this via `from ...aio import ...`
+# rather than importing concurrent.futures directly.
+__all__ = ["CancelledError"]
 
 LOOP_STARTUP_TIMEOUT = 5
 LOOP_SHUTDOWN_TIMEOUT = 2
@@ -75,7 +76,10 @@ class AsyncEngine:
                 # The thread is started before run_forever() marks the loop
                 # running, so wait on the handshake rather than sampling
                 # is_running().
-                if self._loop_running.wait(timeout=LOOP_SHUTDOWN_TIMEOUT) and self.is_running():
+                if (
+                    self._loop_running.wait(timeout=LOOP_SHUTDOWN_TIMEOUT)
+                    and self.is_running()
+                ):
                     return
                 self._loop_thread.join(timeout=LOOP_SHUTDOWN_TIMEOUT)
 

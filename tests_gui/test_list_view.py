@@ -1,4 +1,3 @@
-# coding: utf-8
 """
 Smoke tests for components.py against real wxPython: ImmutableObjectListView
 actually populates a wx.ListCtrl from ColumnDefns, get_selected maps the
@@ -54,13 +53,22 @@ def list_view(components, nvda_gui):
 
 class TestColumnDefn:
     def test_alignment_maps_to_wx_format_flags(self, components):
-        assert components.ColumnDefn("t", "left", 1, "x").alignment_flag == wx.LIST_FORMAT_LEFT
-        assert components.ColumnDefn("t", "center", 1, "x").alignment_flag == wx.LIST_FORMAT_CENTRE
-        assert components.ColumnDefn("t", "right", 1, "x").alignment_flag == wx.LIST_FORMAT_RIGHT
+        assert (
+            components.ColumnDefn("t", "left", 1, "x").alignment_flag
+            == wx.LIST_FORMAT_LEFT
+        )
+        assert (
+            components.ColumnDefn("t", "center", 1, "x").alignment_flag
+            == wx.LIST_FORMAT_CENTRE
+        )
+        assert (
+            components.ColumnDefn("t", "right", 1, "x").alignment_flag
+            == wx.LIST_FORMAT_RIGHT
+        )
 
     def test_unknown_alignment_is_rejected(self, components):
         with pytest.raises(ValueError, match="Unknown alignment directive"):
-            components.ColumnDefn("t", "sideways", 1, "x").alignment_flag
+            _ = components.ColumnDefn("t", "sideways", 1, "x").alignment_flag
 
     def test_annotations_resolve(self, components):
         # `from __future__ import annotations` keeps these as strings, so a

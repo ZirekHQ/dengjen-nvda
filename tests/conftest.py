@@ -1,4 +1,3 @@
-# coding: utf-8
 """
 conftest.py for the stub-based test tree.
 

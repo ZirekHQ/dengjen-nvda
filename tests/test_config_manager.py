@@ -1,4 +1,3 @@
-# coding: utf-8
 """
 Tests for _config.py — the thin mapping over NVDA's config section for this
 synth, which stores per-voice variant/speaker/scale settings.

@@ -1,4 +1,3 @@
-# coding: utf-8
 """
 Menu lifecycle and startup-check tests for globalPlugins/__init__.py against
 real wxPython.
@@ -10,6 +9,7 @@ sysTrayIcon.menu is a real wx.Menu here, so Append/DestroyItem are genuinely
 exercised.
 """
 
+import contextlib
 import sys
 from unittest.mock import MagicMock
 
@@ -17,8 +17,6 @@ import pytest
 
 if sys.platform != "win32":
     pytest.skip("real wxPython is Windows-only here", allow_module_level=True)
-
-import wx
 
 
 @pytest.fixture
@@ -48,10 +46,8 @@ def one_installed_voice(plugin_module, monkeypatch):
 def plugin(plugin_module, nvda_gui):
     instance = plugin_module.GlobalPlugin()
     yield instance
-    try:
+    with contextlib.suppress(Exception):
         instance.terminate()
-    except Exception:
-        pass
 
 
 class TestMenuLifecycle:
@@ -116,6 +112,6 @@ class TestVoiceCheck:
         # short-circuit in _perform_voice_check -- and dragging them in would
         # only add flakiness risk for no extra coverage. The flag is set
         # directly here so the test isolates that short-circuit alone.
-        setattr(plugin, "_GlobalPlugin__voice_manager_shown", True)
+        plugin._GlobalPlugin__voice_manager_shown = True
         plugin._perform_voice_check()
         assert not gui.messageBox.called

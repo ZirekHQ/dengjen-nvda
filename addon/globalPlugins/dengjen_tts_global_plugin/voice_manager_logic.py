@@ -1,5 +1,3 @@
-# coding: utf-8
-
 # Copyright (c) 2023 Musharraf Omer
 # This file is covered by the GNU General Public License.
 
@@ -14,7 +12,6 @@ from __future__ import annotations
 
 import dataclasses
 import operator
-import typing
 
 DENGJEN_SYNTH_NAME = "dengjen_neural_voices"
 
@@ -37,15 +34,13 @@ def is_active_voice(synth_name: str, synth_voice: str, voice_key: str) -> bool:
     )
 
 
-def group_voices_by_language(voices) -> typing.Tuple[list, dict]:
+def group_voices_by_language(voices) -> tuple[list, dict]:
     lang_to_voices: dict = {}
     for voice in voices:
         lang_to_voices.setdefault(voice.language, []).append(voice)
     for vlist in lang_to_voices.values():
         vlist.sort(key=operator.attrgetter("key"))
-    languages = sorted(
-        lang_to_voices.keys(), key=operator.attrgetter("name_english")
-    )
+    languages = sorted(lang_to_voices.keys(), key=operator.attrgetter("name_english"))
     return languages, lang_to_voices
 
 

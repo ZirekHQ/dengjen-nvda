@@ -1,4 +1,3 @@
-# coding: utf-8
 """
 conftest.py for the gRPC contract tests — these talk to the real, vendored
 dengjen-tts-grpc.exe over a real gRPC channel.
@@ -28,7 +27,9 @@ import sys
 
 _TESTS_CONTRACT_DIR = os.path.dirname(__file__)
 REPO_ROOT = os.path.abspath(os.path.join(_TESTS_CONTRACT_DIR, ".."))
-_SYNTH_PKG_DIR = os.path.join(REPO_ROOT, "addon", "synthDrivers", "dengjen_neural_voices")
+_SYNTH_PKG_DIR = os.path.join(
+    REPO_ROOT, "addon", "synthDrivers", "dengjen_neural_voices"
+)
 
 LIB_DIRECTORY = os.path.join(_SYNTH_PKG_DIR, "lib")
 BIN_DIRECTORY = os.path.join(_SYNTH_PKG_DIR, "bin")

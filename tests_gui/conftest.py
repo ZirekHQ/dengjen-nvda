@@ -1,4 +1,3 @@
-# coding: utf-8
 """
 conftest.py for the GUI smoke tests -- these import the REAL wxPython.
 
@@ -36,8 +35,8 @@ if sys.platform == "win32":
 
     install(stub_wx=False)
 
-    import wx
     import gui
+    import wx
 
 
 @pytest.fixture(scope="session")
@@ -65,7 +64,7 @@ class _SyncExecutor:
         future = Future()
         try:
             future.set_result(fn(*args, **kwargs))
-        except BaseException as exc:  # noqa: BLE001 - mirrors Executor semantics
+        except BaseException as exc:
             future.set_exception(exc)
         return future
 

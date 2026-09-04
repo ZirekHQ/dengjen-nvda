@@ -1,4 +1,3 @@
-# coding: utf-8
 """
 Tests for the core TTS system logic in domain/tts_system.py.
 
@@ -6,32 +5,32 @@ All NVDA internals are stubbed by conftest.py. No gRPC/NVDA dependency: every
 voice here is constructed against a FakeTTSBackend.
 """
 
-import pytest
 from pathlib import Path
 
-from dengjen_neural_voices.domain.tts_system import (
-    DengjenVoice,
-    DengjenTextToSpeechSystem,
-    SpeechOptions,
-    SilenceProvider,
-    VoiceNotFoundError,
-    SpeakerNotFoundError,
-    Scales,
-)
+import pytest
 from dengjen_neural_voices.const import (
+    DEFAULT_PITCH,
     DEFAULT_RATE,
     DEFAULT_VOLUME,
-    DEFAULT_PITCH,
     FALLBACK_SPEAKER_NAME,
     IGNORED_PUNCS,
 )
+from dengjen_neural_voices.domain.tts_system import (
+    DengjenTextToSpeechSystem,
+    DengjenVoice,
+    Scales,
+    SilenceProvider,
+    SpeechOptions,
+    VoiceNotFoundError,
+)
 from dengjen_neural_voices.ports.tts_backend import SynthOptions
-from tests.fake_tts_backend import FakeTTSBackend
 
+from tests.fake_tts_backend import FakeTTSBackend
 
 # ---------------------------------------------------------------------------
 # Fixtures
 # ---------------------------------------------------------------------------
+
 
 def _make_voice(
     backend,
@@ -62,7 +61,9 @@ def _make_voice(
     v.default_speaker = None
     backend._synth_options_by_voice_id.setdefault(
         v.remote_id,
-        SynthOptions(speaker="default", length_scale=1.0, noise_scale=0.667, noise_w=0.8),
+        SynthOptions(
+            speaker="default", length_scale=1.0, noise_scale=0.667, noise_w=0.8
+        ),
     )
     return v
 
@@ -92,7 +93,13 @@ def multi_voice(backend):
 def voice_list(backend, single_voice):
     return [
         single_voice,
-        _make_voice(backend, key="en-test+RT-medium", name="Test", language="en", sample_rate=16000),
+        _make_voice(
+            backend,
+            key="en-test+RT-medium",
+            name="Test",
+            language="en",
+            sample_rate=16000,
+        ),
         _make_voice(backend, key="fr-durand-medium", name="Durand", language="fr"),
     ]
 
@@ -115,8 +122,8 @@ def tts(voice_list):
 # DengjenVoice unit tests
 # ---------------------------------------------------------------------------
 
-class TestDengjenVoiceFromPath:
 
+class TestDengjenVoiceFromPath:
     def test_parses_standard_key(self, backend):
         v = DengjenVoice.from_path("/tmp/en-john-medium", backend)
         assert v.key == "en-john-medium"
@@ -153,8 +160,8 @@ class TestDengjenVoiceFromPath:
 # SilenceProvider unit tests -- unchanged, no backend involved
 # ---------------------------------------------------------------------------
 
-class TestSilenceProvider:
 
+class TestSilenceProvider:
     def test_generates_correct_byte_length(self):
         provider = SilenceProvider(time_ms=100, sample_rate=22050)
         audio = provider.generate_audio()
@@ -175,8 +182,8 @@ class TestSilenceProvider:
 # DengjenTextToSpeechSystem -- defaults
 # ---------------------------------------------------------------------------
 
-class TestTTSDefaults:
 
+class TestTTSDefaults:
     def test_rate_default(self, tts):
         assert tts.rate == DEFAULT_RATE
 
@@ -197,8 +204,8 @@ class TestTTSDefaults:
 # DengjenTextToSpeechSystem -- voice switching
 # ---------------------------------------------------------------------------
 
-class TestTTSVoiceSwitching:
 
+class TestTTSVoiceSwitching:
     def test_set_valid_voice(self, tts, voice_list):
         tts.voice = voice_list[1].key
         assert tts.voice == voice_list[1].key
@@ -230,7 +237,9 @@ class TestTTSVoiceSwitching:
         hyphen-joined code ('en-') while voice.language is underscore-joined
         ('en_US'), so the match always failed for dialect voices.
         """
-        dialect_voice = _make_voice(backend, key="en_US-alex-medium", name="Alex", language="en_US")
+        dialect_voice = _make_voice(
+            backend, key="en_US-alex-medium", name="Alex", language="en_US"
+        )
         opts = SpeechOptions.__new__(SpeechOptions)
         opts.voice = dialect_voice
         opts.rate = opts.volume = opts.pitch = opts.sentence_silence_ms = None
@@ -248,7 +257,9 @@ class TestTTSVoiceSwitching:
         before the driver ever compares languages, so a dash- or
         differently-cased request must resolve to the same dialect voice as
         the canonical 'en_US' form."""
-        dialect_voice = _make_voice(backend, key="en_US-alex-medium", name="Alex", language="en_US")
+        dialect_voice = _make_voice(
+            backend, key="en_US-alex-medium", name="Alex", language="en_US"
+        )
         opts = SpeechOptions.__new__(SpeechOptions)
         opts.voice = dialect_voice
         opts.rate = opts.volume = opts.pitch = opts.sentence_silence_ms = None
@@ -266,8 +277,8 @@ class TestTTSVoiceSwitching:
 # DengjenTextToSpeechSystem -- rate / volume / pitch
 # ---------------------------------------------------------------------------
 
-class TestTTSParameters:
 
+class TestTTSParameters:
     def test_set_rate(self, tts):
         tts.rate = 75
         assert tts.rate == 75
@@ -285,8 +296,8 @@ class TestTTSParameters:
 # DengjenTextToSpeechSystem -- synthesis context
 # ---------------------------------------------------------------------------
 
-class TestSynthesisContext:
 
+class TestSynthesisContext:
     def test_context_restores_rate(self, tts):
         tts.rate = 30
         with tts.create_synthesis_context():
@@ -310,8 +321,8 @@ class TestSynthesisContext:
 # DengjenTextToSpeechSystem -- providers
 # ---------------------------------------------------------------------------
 
-class TestProviders:
 
+class TestProviders:
     def test_create_speech_provider_stores_text(self, tts):
         provider = tts.create_speech_provider("Hello world")
         assert provider.text == "Hello world"
@@ -326,8 +337,8 @@ class TestProviders:
 # DengjenTextToSpeechSystem -- get_voice_variants
 # ---------------------------------------------------------------------------
 
-class TestGetVoiceVariants:
 
+class TestGetVoiceVariants:
     def test_standard_and_rt_keys(self):
         std, rt = DengjenTextToSpeechSystem.get_voice_variants("en-john-medium")
         assert std == "en-john-medium"
@@ -343,8 +354,8 @@ class TestGetVoiceVariants:
 # Speaker (single-speaker voice)
 # ---------------------------------------------------------------------------
 
-class TestSpeakerSingleVoice:
 
+class TestSpeakerSingleVoice:
     def test_speaker_returns_fallback_for_single_speaker(self, tts):
         assert tts.speaker == FALLBACK_SPEAKER_NAME
 
@@ -357,8 +368,8 @@ class TestSpeakerSingleVoice:
 # Synthesis options (backend-forwarded accessors)
 # ---------------------------------------------------------------------------
 
-class TestSynthOptionAccessors:
 
+class TestSynthOptionAccessors:
     @pytest.mark.parametrize(
         "name, expected",
         [("noise_scale", 0.667), ("length_scale", 1.0), ("noise_w", 0.8)],
@@ -375,10 +386,14 @@ class TestSynthOptionAccessors:
     def test_speaker_getter_reads_from_backend_for_multi_speaker(self, multi_voice):
         assert multi_voice.speaker == "default"
 
-    def test_speaker_setter_forwards_to_backend_for_multi_speaker(self, multi_voice, backend):
+    def test_speaker_setter_forwards_to_backend_for_multi_speaker(
+        self, multi_voice, backend
+    ):
         backend.set_synth_options_calls.clear()
         multi_voice.speaker = "Bob"
-        assert backend.set_synth_options_calls == [(multi_voice.remote_id, {"speaker": "Bob"})]
+        assert backend.set_synth_options_calls == [
+            (multi_voice.remote_id, {"speaker": "Bob"})
+        ]
 
     def test_accessor_propagates_a_backend_error(self, multi_voice, backend):
         from dengjen_neural_voices.ports.tts_backend import VoiceLoadError
@@ -390,15 +405,15 @@ class TestSynthOptionAccessors:
 
         backend.get_synth_options = _boom
         with pytest.raises(VoiceLoadError):
-            multi_voice.noise_scale
+            _ = multi_voice.noise_scale
 
 
 # ---------------------------------------------------------------------------
 # Constants -- unchanged
 # ---------------------------------------------------------------------------
 
-class TestConstants:
 
+class TestConstants:
     def test_ignored_puncs_is_frozenset(self):
         assert isinstance(IGNORED_PUNCS, frozenset)
 

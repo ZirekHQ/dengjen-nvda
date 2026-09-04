@@ -1,5 +1,3 @@
-# coding: utf-8
-
 """The TTSBackend port: the one interface a TTS engine adapter must satisfy.
 
 No implementation and no NVDA/gRPC imports live here -- this module is the
@@ -7,8 +5,9 @@ seam domain/tts_system.py and every adapters/*_backend implementation both
 depend on.
 """
 
+from collections.abc import AsyncIterator, Mapping
 from dataclasses import dataclass
-from typing import AsyncIterator, Mapping, Optional, Protocol
+from typing import Protocol
 
 
 @dataclass(frozen=True)
@@ -20,7 +19,7 @@ class SynthOptions:
     both are the same four fields.
     """
 
-    speaker: Optional[str]
+    speaker: str | None
     length_scale: float
     noise_scale: float
     noise_w: float
@@ -80,9 +79,9 @@ class TTSBackend(Protocol):
         self,
         backend_voice_id: str,
         text: str,
-        rate: Optional[float],
-        volume: Optional[float],
-        pitch: Optional[float],
-        sentence_silence_ms: Optional[float],
+        rate: float | None,
+        volume: float | None,
+        pitch: float | None,
+        sentence_silence_ms: float | None,
         streaming: bool,
     ) -> AsyncIterator[bytes]: ...

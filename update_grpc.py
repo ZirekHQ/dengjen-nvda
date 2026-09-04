@@ -1,8 +1,9 @@
-import urllib.request
 import json
-import zipfile
 import os
 import shutil
+import sys
+import urllib.request
+import zipfile
 
 import vendored_manifest
 
@@ -10,13 +11,13 @@ import vendored_manifest
 url = "https://pypi.org/pypi/grpcio/json"
 
 print("Fetching grpcio release info from PyPI...")
-req = urllib.request.Request(url, headers={'User-Agent': 'Mozilla/5.0'})
+req = urllib.request.Request(url, headers={"User-Agent": "Mozilla/5.0"})
 try:
     with urllib.request.urlopen(req) as response:
         data = json.loads(response.read().decode())
 except Exception as e:
     print(f"Failed to fetch PyPI data: {e}")
-    exit(1)
+    sys.exit(1)
 
 # Find the latest wheel for cp313 win_amd64
 version = data["info"]["version"]
@@ -31,8 +32,10 @@ for r in releases:
         break
 
 if not wheel_url:
-    print(f"Could not find a Python 3.13 64-bit Windows wheel for grpcio version {version}.")
-    exit(1)
+    print(
+        f"Could not find a Python 3.13 64-bit Windows wheel for grpcio version {version}."
+    )
+    sys.exit(1)
 
 print(f"Downloading {wheel_url}...")
 wheel_path = "grpcio.whl"
@@ -40,16 +43,18 @@ try:
     urllib.request.urlretrieve(wheel_url, wheel_path)
 except Exception as e:
     print(f"Download failed: {e}")
-    exit(1)
+    sys.exit(1)
 
 print("Extracting grpc...")
 extract_dir = "grpc_extracted"
-with zipfile.ZipFile(wheel_path, 'r') as z:
+with zipfile.ZipFile(wheel_path, "r") as z:
     for info in z.infolist():
         if info.filename.startswith("grpc/"):
             z.extract(info, extract_dir)
 
-target_dir = os.path.join("addon", "synthDrivers", "dengjen_neural_voices", "lib", "grpc")
+target_dir = os.path.join(
+    "addon", "synthDrivers", "dengjen_neural_voices", "lib", "grpc"
+)
 if os.path.exists(target_dir):
     print(f"Removing old 32-bit Python 3.11 grpc from {target_dir}...")
     shutil.rmtree(target_dir)

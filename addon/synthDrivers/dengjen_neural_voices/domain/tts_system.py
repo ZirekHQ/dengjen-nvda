@@ -1,5 +1,3 @@
-# coding: utf-8
-
 # Copyright (c) 2023 Musharraf Omer
 # This file is covered by the GNU General Public License.
 
@@ -14,10 +12,10 @@ import copy
 import operator
 import os
 from abc import ABC, abstractmethod
+from collections.abc import Mapping, Sequence
 from contextlib import contextmanager
 from dataclasses import dataclass, field
 from pathlib import Path
-from typing import Mapping, Optional, Sequence
 
 from languageHandler import normalizeLanguage
 
@@ -25,12 +23,12 @@ from ..const import (
     DEFAULT_PITCH,
     DEFAULT_RATE,
     DEFAULT_VOLUME,
+    DENGJEN_VOICES_DIR,
     FALLBACK_SPEAKER_NAME,
     IGNORED_PUNCS,
-    DENGJEN_VOICES_DIR,
 )
-from ..voice_migration import migrate_voices_directory
 from ..ports.tts_backend import TTSBackend
+from ..voice_migration import migrate_voices_directory
 
 
 class VoiceNotFoundError(LookupError):
@@ -55,7 +53,7 @@ class AudioProvider(ABC):
 
 
 class SilenceProvider(AudioProvider):
-    __slots__ = ["time_ms", "sample_rate"]
+    __slots__ = ["sample_rate", "time_ms"]
 
     def __init__(self, time_ms, sample_rate):
         self.time_ms = time_ms
@@ -69,7 +67,7 @@ class SilenceProvider(AudioProvider):
 class SpeechProvider(AudioProvider):
     """A pending request to speak some text."""
 
-    __slots__ = ["text", "speech_options"]
+    __slots__ = ["speech_options", "text"]
 
     def __init__(self, text, speech_options):
         self.text = text
@@ -87,8 +85,8 @@ class DengjenVoice:
     description: str
     location: str
     backend: TTSBackend
-    properties: Optional[Mapping[str, int]] = field(default_factory=dict)
-    remote_id: Optional[str] = None
+    properties: Mapping[str, int] | None = field(default_factory=dict)
+    remote_id: str | None = None
     supports_streaming_output: bool = False
 
     @classmethod
@@ -115,7 +113,9 @@ class DengjenVoice:
         try:
             self.config_path = next(self.location.glob("*.json"))
         except StopIteration:
-            raise RuntimeError(f"Could not load voice from `{os.fspath(self.location)}`")
+            raise RuntimeError(
+                f"Could not load voice from `{os.fspath(self.location)}`"
+            )
         loaded = self.backend.load_voice(str(self.config_path))
         self.remote_id = loaded.backend_voice_id
         self.supports_streaming_output = loaded.supports_streaming_output
@@ -128,7 +128,9 @@ class DengjenVoice:
         self.speakers = loaded.speakers
         self.speaker_names = list(self.speakers.values())
         self.is_multi_speaker = bool(self.speakers)
-        self.default_speaker = loaded.defaults.speaker if self.is_multi_speaker else None
+        self.default_speaker = (
+            loaded.defaults.speaker if self.is_multi_speaker else None
+        )
 
     def _get_synth_option(self, name):
         options = self.backend.get_synth_options(self.remote_id)
@@ -192,7 +194,12 @@ class DengjenVoice:
         if (len(text) < 10) and (set(text.strip()).issubset(IGNORED_PUNCS)):
             return
         stream = self.backend.synthesize(
-            self.remote_id, text, rate, volume, pitch, sentence_silence_ms,
+            self.remote_id,
+            text,
+            rate,
+            volume,
+            pitch,
+            sentence_silence_ms,
             streaming=self.supports_streaming_output,
         )
         async for chunk in stream:
@@ -200,9 +207,17 @@ class DengjenVoice:
 
 
 class SpeechOptions:
-    __slots__ = ["voice", "rate", "volume", "pitch", "sentence_silence_ms"]
+    __slots__ = ["pitch", "rate", "sentence_silence_ms", "voice", "volume"]
 
-    def __init__(self, voice, speaker=None, rate=None, volume=None, pitch=None, sentence_silence_ms=None):
+    def __init__(
+        self,
+        voice,
+        speaker=None,
+        rate=None,
+        volume=None,
+        pitch=None,
+        sentence_silence_ms=None,
+    ):
         self.voice = None
         self.set_voice(voice)
         self.rate = rate
@@ -232,8 +247,9 @@ class SpeechOptions:
 
 
 class DengjenTextToSpeechSystem:
-
-    def __init__(self, voices: Sequence[DengjenVoice], speech_options: SpeechOptions = None):
+    def __init__(
+        self, voices: Sequence[DengjenVoice], speech_options: SpeechOptions = None
+    ):
         self.voices = voices
         if speech_options is not None:
             self.speech_options = speech_options
@@ -268,7 +284,9 @@ class DengjenTextToSpeechSystem:
             if voice.key == new_voice:
                 self.speech_options.set_voice(voice)
                 return
-        raise VoiceNotFoundError(f"A voice with the given key `{new_voice}` was not found")
+        raise VoiceNotFoundError(
+            f"A voice with the given key `{new_voice}` was not found"
+        )
 
     @property
     def speaker(self) -> str:
@@ -305,7 +323,9 @@ class DengjenTextToSpeechSystem:
         if possible_voices:
             self.speech_options.set_voice(possible_voices[0])
             return
-        raise VoiceNotFoundError(f"A voice with the given language `{new_language}` was not found")
+        raise VoiceNotFoundError(
+            f"A voice with the given language `{new_language}` was not found"
+        )
 
     @property
     def volume(self) -> float:
@@ -369,7 +389,9 @@ class DengjenTextToSpeechSystem:
         )
 
     @classmethod
-    def load_voices_from_directory(cls, voices_directory, backend, *, directory_name_prefix="voice-"):
+    def load_voices_from_directory(
+        cls, voices_directory, backend, *, directory_name_prefix="voice-"
+    ):
         rv = []
         for directory in (d for d in Path(voices_directory).iterdir() if d.is_dir()):
             try:

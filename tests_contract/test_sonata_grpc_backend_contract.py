@@ -1,4 +1,3 @@
-# coding: utf-8
 """
 Contract test for SonataGrpcBackend against the real, vendored
 dengjen-tts-grpc.exe. Unlike test_grpc_contract.py (which talks to the raw
@@ -39,22 +38,37 @@ if sys.platform != "win32":
 # espeak-ng-data espeakng_loader vendors for test_grpc_contract.py.
 _APP_DIR = tempfile.mkdtemp()
 _SYNTH_DRIVERS_DIR = os.path.join(_APP_DIR, "synthDrivers")
-shutil.copytree(espeakng_loader.get_data_path(), os.path.join(_SYNTH_DRIVERS_DIR, "espeak-ng-data"))
+shutil.copytree(
+    espeakng_loader.get_data_path(), os.path.join(_SYNTH_DRIVERS_DIR, "espeak-ng-data")
+)
 
 sys.modules.setdefault(
     "globalVars",
-    types.SimpleNamespace(appArgs=types.SimpleNamespace(configPath=tempfile.mkdtemp()), appDir=_APP_DIR),
+    types.SimpleNamespace(
+        appArgs=types.SimpleNamespace(configPath=tempfile.mkdtemp()), appDir=_APP_DIR
+    ),
 )
-sys.modules.setdefault("logHandler", types.SimpleNamespace(log=types.SimpleNamespace(
-    info=lambda *a, **k: None, error=lambda *a, **k: None,
-    debug=lambda *a, **k: None, exception=lambda *a, **k: None,
-)))
-sys.modules.setdefault("wx", types.SimpleNamespace(GetTopLevelWindows=lambda: []))
-sys.modules.setdefault("gui", types.SimpleNamespace(messageBox=lambda *a, **k: None, mainFrame=None))
+sys.modules.setdefault(
+    "logHandler",
+    types.SimpleNamespace(
+        log=types.SimpleNamespace(
+            info=lambda *a, **k: None,
+            error=lambda *a, **k: None,
+            debug=lambda *a, **k: None,
+            exception=lambda *a, **k: None,
+        )
+    ),
+)
+sys.modules.setdefault("wx", types.SimpleNamespace(GetTopLevelWindows=list))
+sys.modules.setdefault(
+    "gui", types.SimpleNamespace(messageBox=lambda *a, **k: None, mainFrame=None)
+)
 sys.modules.setdefault(
     "gui.settingsDialogs",
-    types.SimpleNamespace(NVDASettingsDialog=type("NVDASettingsDialog", (), {}),
-                           SpeechSettingsPanel=type("SpeechSettingsPanel", (), {})),
+    types.SimpleNamespace(
+        NVDASettingsDialog=type("NVDASettingsDialog", (), {}),
+        SpeechSettingsPanel=type("SpeechSettingsPanel", (), {}),
+    ),
 )
 
 from tests_contract.conftest import REPO_ROOT
@@ -65,7 +79,9 @@ from tests_contract.conftest import REPO_ROOT
 # real __path__ makes plain relative imports inside adapters/sonata_grpc
 # (`from ...const import ...`, `from ...helpers import ...`) resolve
 # correctly while skipping that __init__.py entirely.
-_SYNTH_PKG_DIR = os.path.join(REPO_ROOT, "addon", "synthDrivers", "dengjen_neural_voices")
+_SYNTH_PKG_DIR = os.path.join(
+    REPO_ROOT, "addon", "synthDrivers", "dengjen_neural_voices"
+)
 _dengjen_pkg = types.ModuleType("dengjen_neural_voices")
 _dengjen_pkg.__path__ = [_SYNTH_PKG_DIR]
 sys.modules.setdefault("dengjen_neural_voices", _dengjen_pkg)
@@ -82,7 +98,10 @@ CALL_TIMEOUT = 30
 
 
 def _download(url, target_path):
-    with urllib.request.urlopen(url, timeout=DOWNLOAD_TIMEOUT) as response, open(target_path, "wb") as f:
+    with (
+        urllib.request.urlopen(url, timeout=DOWNLOAD_TIMEOUT) as response,
+        open(target_path, "wb") as f,
+    ):
         f.write(response.read())
 
 
@@ -110,7 +129,9 @@ class TestSonataGrpcBackendContract:
         assert isinstance(version, str)
         assert version.strip() != ""
 
-    def test_load_voice_and_synthesize_returns_non_empty_audio(self, backend, downloaded_voice):
+    def test_load_voice_and_synthesize_returns_non_empty_audio(
+        self, backend, downloaded_voice
+    ):
         loaded = backend.load_voice(downloaded_voice)
         assert loaded.backend_voice_id
         assert loaded.sample_rate > 0

@@ -1,4 +1,3 @@
-# coding: utf-8
 """
 Stubs for NVDA's internal modules, so add-on code can be imported and driven
 outside a real NVDA process.
@@ -27,18 +26,18 @@ then drifts. Strategy, unchanged from before:
 """
 
 import builtins
-import inspect
-import sys
-import os
-import types
 import importlib.util
+import inspect
+import os
+import sys
+import types
 from concurrent.futures import Future as _Future
 from unittest.mock import MagicMock
-
 
 # ---------------------------------------------------------------------------
 # Helper utilities
 # ---------------------------------------------------------------------------
+
 
 def _stub_module(name: str, **attrs) -> types.ModuleType:
     """Create a plain module stub and register it in sys.modules."""
@@ -67,7 +66,7 @@ GLOBAL_PLUGIN_PKG_DIR = os.path.abspath(_GLOBAL_PLUGIN_PKG_DIR)
 
 
 def load_module_from_path(
-    module_name: str, path: str, package: str = None
+    module_name: str, path: str, package: str | None = None
 ) -> types.ModuleType:
     """Execute a real .py file as a registered module.
 
@@ -116,8 +115,12 @@ def install(*, stub_wx: bool = True) -> None:
     # -----------------------------------------------------------------------
 
     for _grpc_name in [
-        "grpc", "grpc._cython", "grpc._cython.cygrpc",
-        "grpc._compression", "grpc.experimental", "grpc.aio",
+        "grpc",
+        "grpc._cython",
+        "grpc._cython.cygrpc",
+        "grpc._compression",
+        "grpc.experimental",
+        "grpc.aio",
     ]:
         sys.modules.setdefault(_grpc_name, MagicMock())
 
@@ -130,7 +133,9 @@ def install(*, stub_wx: bool = True) -> None:
     # -----------------------------------------------------------------------
 
     # globalVars
-    _stub_module("globalVars", appArgs=types.SimpleNamespace(configPath="/tmp/nvda_test_config"))
+    _stub_module(
+        "globalVars", appArgs=types.SimpleNamespace(configPath="/tmp/nvda_test_config")
+    )
 
     # languageHandler
     def _normalize_language(lang: str) -> str:
@@ -155,11 +160,14 @@ def install(*, stub_wx: bool = True) -> None:
             val = _FakeConfSection()
             self[key] = val
             return val
+
         def isSet(self, key):
             return key in self
+
         @property
         def spec(self):
             return _FakeConfSection()
+
         def update(self, other):
             pass
 
@@ -189,9 +197,9 @@ def install(*, stub_wx: bool = True) -> None:
             for klass in cls.__mro__:
                 for attr_name in vars(klass):
                     if attr_name.startswith("_get_"):
-                        prop_names.add(attr_name[len("_get_"):])
+                        prop_names.add(attr_name[len("_get_") :])
                     elif attr_name.startswith("_set_"):
-                        prop_names.add(attr_name[len("_set_"):])
+                        prop_names.add(attr_name[len("_set_") :])
             for prop_name in prop_names:
                 if prop_name in cls.__dict__:
                     continue
@@ -199,7 +207,6 @@ def install(*, stub_wx: bool = True) -> None:
                 setter = getattr(cls, f"_set_{prop_name}", None)
                 setattr(cls, prop_name, property(getter, setter))
             return cls
-
 
     class _FakeSynthDriver(metaclass=_AutoPropertyMeta):
         cachePropertiesByDefault = False
@@ -209,7 +216,10 @@ def install(*, stub_wx: bool = True) -> None:
         RateBoostSetting = MagicMock(return_value=MagicMock())
         VolumeSetting = MagicMock(return_value=MagicMock())
         PitchSetting = MagicMock(return_value=MagicMock())
-        def __init__(self): pass
+
+        def __init__(self):
+            pass
+
         def _percentToParam(self, percent, min_val, max_val):
             return min_val + (max_val - min_val) * percent / 100
 
@@ -237,14 +247,29 @@ def install(*, stub_wx: bool = True) -> None:
 
     # nvwave
     class _FakeWavePlayer:
-        def __init__(self, *args, **kwargs): pass
-        def feed(self, data): pass
-        def sync(self): pass
-        def stop(self): pass
-        def pause(self, switch): pass
-        def close(self): pass
-        def idle(self): pass
-        def setVolume(self, **kwargs): pass
+        def __init__(self, *args, **kwargs):
+            pass
+
+        def feed(self, data):
+            pass
+
+        def sync(self):
+            pass
+
+        def stop(self):
+            pass
+
+        def pause(self, switch):
+            pass
+
+        def close(self):
+            pass
+
+        def idle(self):
+            pass
+
+        def setVolume(self, **kwargs):
+            pass
 
     _stub_module("nvwave", WavePlayer=_FakeWavePlayer)
 
@@ -258,7 +283,9 @@ def install(*, stub_wx: bool = True) -> None:
         "speech.commands",
         IndexCommand=type("IndexCommand", (), {"index": 0}),
         BreakCommand=type("BreakCommand", (), {"time": 0}),
-        LangChangeCommand=type("LangChangeCommand", (), {"lang": "en", "isDefault": False}),
+        LangChangeCommand=type(
+            "LangChangeCommand", (), {"lang": "en", "isDefault": False}
+        ),
         RateCommand=type("RateCommand", (), {"newValue": 50}),
         VolumeCommand=type("VolumeCommand", (), {"newValue": 100}),
         PitchCommand=type("PitchCommand", (), {"newValue": 50}),
@@ -279,7 +306,7 @@ def install(*, stub_wx: bool = True) -> None:
     _stub_module(
         "addonHandler",
         initTranslation=_init_translation,
-        getAvailableAddons=lambda: [],
+        getAvailableAddons=list,
     )
 
     # wx / gui
@@ -291,14 +318,29 @@ def install(*, stub_wx: bool = True) -> None:
             # Distinct bit flags, as in real wx, so bitwise-OR combinations (e.g.
             # wx.YES_NO | wx.ICON_WARNING) can't collide with any other stubbed
             # constant, including ones ORed together elsewhere (e.g. wx.OK).
-            ID_ANY=0, YES=1, NO=2, YES_NO=3, OK=4,
-            ICON_WARNING=8, ICON_ERROR=16, ICON_INFORMATION=32,
+            ID_ANY=0,
+            YES=1,
+            NO=2,
+            YES_NO=3,
+            OK=4,
+            ICON_WARNING=8,
+            ICON_ERROR=16,
+            ICON_INFORMATION=32,
             EVT_MENU=MagicMock(),
             CallAfter=MagicMock(side_effect=lambda func, *a, **kw: func(*a, **kw)),
             ProgressDialog=MagicMock(return_value=MagicMock()),
         )
-    _stub_module("gui", messageBox=MagicMock(), mainFrame=MagicMock(), runScriptModalDialog=MagicMock())
-    _stub_module("gui.settingsDialogs", NVDASettingsDialog=MagicMock(), SpeechSettingsPanel=MagicMock())
+    _stub_module(
+        "gui",
+        messageBox=MagicMock(),
+        mainFrame=MagicMock(),
+        runScriptModalDialog=MagicMock(),
+    )
+    _stub_module(
+        "gui.settingsDialogs",
+        NVDASettingsDialog=MagicMock(),
+        SpeechSettingsPanel=MagicMock(),
+    )
     _stub_module("core", postNvdaStartup=MagicMock(), restart=MagicMock())
 
     class _FakeGlobalPlugin:
@@ -314,7 +356,6 @@ def install(*, stub_wx: bool = True) -> None:
 
     _stub_module("globalPluginHandler", GlobalPlugin=_FakeGlobalPlugin)
     _stub_module("ui", message=MagicMock())
-
 
     # -----------------------------------------------------------------------
     # 3. Register `dengjen_neural_voices` as a package WITHOUT running __init__.py
@@ -334,7 +375,6 @@ def install(*, stub_wx: bool = True) -> None:
         submodule_search_locations=[_SYNTH_PKG_DIR],
     )
     sys.modules["dengjen_neural_voices"] = _pkg
-
 
     # -----------------------------------------------------------------------
     # 4. Stub intra-package submodules that have platform/runtime dependencies
@@ -367,10 +407,10 @@ def install(*, stub_wx: bool = True) -> None:
                 return _aio.ENGINE.executor.submit(func, *args, **kwargs)
             except RuntimeError:
                 return None
+
         return wrapper
 
     _aio.call_threaded = _call_threaded
-
 
     # -----------------------------------------------------------------------
     # 5. Load real submodules we actually want to test
@@ -390,8 +430,12 @@ def install(*, stub_wx: bool = True) -> None:
     # dengjen_tts_global_plugin's `from dengjen_neural_voices import
     # DengjenTextToSpeechSystem, DENGJEN_VOICES_DIR`, exercised for real in
     # tests_gui/) have to be set here by hand, from the module just loaded.
-    _pkg.DengjenTextToSpeechSystem = sys.modules["dengjen_neural_voices.domain.tts_system"].DengjenTextToSpeechSystem
-    _pkg.DENGJEN_VOICES_DIR = sys.modules["dengjen_neural_voices.domain.tts_system"].DENGJEN_VOICES_DIR
+    _pkg.DengjenTextToSpeechSystem = sys.modules[
+        "dengjen_neural_voices.domain.tts_system"
+    ].DengjenTextToSpeechSystem
+    _pkg.DENGJEN_VOICES_DIR = sys.modules[
+        "dengjen_neural_voices.domain.tts_system"
+    ].DENGJEN_VOICES_DIR
 
     # -----------------------------------------------------------------------
     # 6. Register `dengjen_tts_global_plugin` as a package WITHOUT running its
@@ -413,10 +457,16 @@ def install(*, stub_wx: bool = True) -> None:
         _gui_plugin_pkg = types.ModuleType("dengjen_tts_global_plugin")
         _gui_plugin_pkg.__path__ = [_GLOBAL_PLUGIN_PKG_DIR]
         _gui_plugin_pkg.__package__ = "dengjen_tts_global_plugin"
-        _gui_plugin_pkg.DengjenTextToSpeechSystem = sys.modules["dengjen_neural_voices.domain.tts_system"].DengjenTextToSpeechSystem
-        _gui_plugin_pkg.DENGJEN_VOICES_DIR = sys.modules["dengjen_neural_voices.domain.tts_system"].DENGJEN_VOICES_DIR
+        _gui_plugin_pkg.DengjenTextToSpeechSystem = sys.modules[
+            "dengjen_neural_voices.domain.tts_system"
+        ].DengjenTextToSpeechSystem
+        _gui_plugin_pkg.DENGJEN_VOICES_DIR = sys.modules[
+            "dengjen_neural_voices.domain.tts_system"
+        ].DENGJEN_VOICES_DIR
         _gui_plugin_pkg.helpers = sys.modules["dengjen_neural_voices.helpers"]
-        _gui_plugin_pkg.voice_migration = sys.modules["dengjen_neural_voices.voice_migration"]
+        _gui_plugin_pkg.voice_migration = sys.modules[
+            "dengjen_neural_voices.voice_migration"
+        ]
         _gui_plugin_pkg.aio = _aio
         _gui_plugin_pkg.SonataGrpcBackend = _sonata_grpc.SonataGrpcBackend
         sys.modules["dengjen_tts_global_plugin"] = _gui_plugin_pkg

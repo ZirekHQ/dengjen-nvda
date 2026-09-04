@@ -1,17 +1,15 @@
-# coding: utf-8
 """
 Tests for buildVars.py — validate that the addon manifest metadata
 meets NVDA Add-on Store requirements.
 """
 
+import os
 import re
 import sys
-import os
 
 # Ensure repo root is on path so buildVars is importable directly
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), ".."))
 import buildVars
-
 
 INFO = buildVars.addon_info
 
@@ -111,7 +109,9 @@ class TestURLFields:
         for field in self.URL_FIELDS:
             url = INFO.get(field)
             if url is not None:
-                assert url_re.match(url), f"'{field}' does not look like a valid URL: {url!r}"
+                assert url_re.match(url), (
+                    f"'{field}' does not look like a valid URL: {url!r}"
+                )
 
 
 class TestAddonName:
@@ -133,8 +133,12 @@ class TestAuthorFormat:
 
     def test_author_contains_email(self):
         author = INFO["addon_author"]
-        assert "<" in author, f"addon_author '{author}' should contain an opening angle bracket"
-        assert ">" in author, f"addon_author '{author}' should contain a closing angle bracket"
+        assert "<" in author, (
+            f"addon_author '{author}' should contain an opening angle bracket"
+        )
+        assert ">" in author, (
+            f"addon_author '{author}' should contain a closing angle bracket"
+        )
 
     def test_author_email_is_valid(self):
         author = INFO["addon_author"]
