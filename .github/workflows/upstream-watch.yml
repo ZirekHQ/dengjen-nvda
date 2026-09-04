@@ -1,0 +1,81 @@
+name: Upstream Watch
+
+# Tracks divergence from mush42/sonata-nvda, the upstream this repo was
+# forked from (see readme.md: the original author, Musharraf Omer (@mush42),
+# announced that commercial contract conflicts prevent him from continuing
+# to maintain the open-source add-on; this repo continues the project as a
+# fork). This repo's own git history is that fork lineage, so it shares
+# commit ancestry with mush42/sonata-nvda directly -- the compare API below
+# works the same way it would for any GitHub fork. Rather than auto-merging
+# upstream/main -- which would risk clobbering this fork's own divergence --
+# this just keeps one tracking issue current so a human decides when and how
+# to pull changes in.
+
+on:
+  schedule:
+    - cron: '0 9 * * 1' # weekly, Monday 09:00 UTC
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: upstream-watch
+  cancel-in-progress: true
+
+jobs:
+  check-upstream:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      issues: write
+    steps:
+      - name: Compare against mush42/sonata-nvda main
+        id: compare
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          set -euo pipefail
+          compare=$(gh api "repos/${{ github.repository }}/compare/main...mush42:main")
+          ahead_by=$(echo "$compare" | jq -r '.ahead_by')
+          echo "ahead_by=$ahead_by" >> "$GITHUB_OUTPUT"
+          echo "$compare" | jq -r '.commits[] | "- [\(.sha[0:7])](\(.html_url)) \(.commit.message | split("\n")[0])"' > commits.md
+
+      - name: Ensure tracking label exists
+        if: steps.compare.outputs.ahead_by != '0'
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          gh label create upstream-sync --repo "${{ github.repository }}" \
+            --color 0e8a16 --description "Tracks divergence from mush42/sonata-nvda upstream" \
+            2>/dev/null || true
+
+      - name: Open or update tracking issue
+        if: steps.compare.outputs.ahead_by != '0'
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          AHEAD_BY: ${{ steps.compare.outputs.ahead_by }}
+        run: |
+          set -euo pipefail
+          body=$(printf 'Upstream [mush42/sonata-nvda](https://github.com/mush42/sonata-nvda) main is **%s commit(s)** ahead of this fork'\''s main:\n\n%s\n\nCompare: https://github.com/%s/compare/main...mush42:main' \
+            "$AHEAD_BY" "$(cat commits.md)" "${{ github.repository }}")
+          existing=$(gh issue list --repo "${{ github.repository }}" --label upstream-sync --state open --json number --jq '.[0].number // empty')
+          if [ -n "$existing" ]; then
+            gh issue edit "$existing" --repo "${{ github.repository }}" --body "$body"
+          else
+            gh issue create --repo "${{ github.repository }}" \
+              --title "Upstream sync: mush42/sonata-nvda has new commits" \
+              --body "$body" --label upstream-sync
+          fi
+
+      - name: Close tracking issue once caught up
+        if: steps.compare.outputs.ahead_by == '0'
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          set -euo pipefail
+          existing=$(gh issue list --repo "${{ github.repository }}" --label upstream-sync --state open --json number --jq '.[0].number // empty')
+          if [ -n "$existing" ]; then
+            gh issue close "$existing" --repo "${{ github.repository }}" \
+              --comment "Caught up with mush42/sonata-nvda main."
+          fi
