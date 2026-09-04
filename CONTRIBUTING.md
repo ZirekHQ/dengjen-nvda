@@ -43,7 +43,7 @@ scons pot
 
 ```bash
 pytest                    # the stub-based suite -- runs anywhere, incl. Linux
-pytest tests_contract/    # real sonata-grpc.exe        (Windows only)
+pytest tests_contract/    # real dengjen-tts-grpc.exe   (Windows only)
 pytest tests_gui/         # real wxPython               (Windows only)
 pytest tests_e2e/ -v      # real NVDA, install to speech (Windows CI only)
 ```
@@ -53,7 +53,7 @@ Four trees, because the process-wide fakes they need are mutually exclusive:
 | Tree | Fakes | Real | Runs on |
 | --- | --- | --- | --- |
 | `tests/` | NVDA, `wx`, `grpc` | add-on logic | Linux + Windows |
-| `tests_contract/` | nothing — avoids NVDA entirely | `grpc`, `sonata-grpc.exe` | Windows |
+| `tests_contract/` | nothing — avoids NVDA entirely | `grpc`, `dengjen-tts-grpc.exe` | Windows |
 | `tests_gui/` | NVDA | `wxPython` | Windows |
 | `tests_e2e/` | nothing | a full NVDA install, driven end to end | Windows CI only |
 
