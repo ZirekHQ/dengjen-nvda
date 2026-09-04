@@ -157,7 +157,7 @@ class TestPiperVoiceDataclasses:
     def test_file_type_raises_for_unknown_suffix(self):
         f = PiperVoiceFile(file_path="v/voice.txt", size_in_bytes=10, md5hash="x")
         with pytest.raises(ValueError):
-            f.type
+            _ = f.type
 
     def test_language_str_uses_dash_not_underscore(self):
         assert str(_language(code="en_US")) == "en-US"
@@ -656,11 +656,13 @@ class TestCertVerificationFallback:
         fake_request = _FakeMureq(stream_responses=[HTTPException("connection reset")])
         monkeypatch.setattr(voice_download, "request", fake_request)
 
-        with pytest.raises(HTTPException, match="connection reset"):
-            with voice_download._yield_response_with_cert_fallback(
+        with (
+            pytest.raises(HTTPException, match="connection reset"),
+            voice_download._yield_response_with_cert_fallback(
                 "GET", "https://example.com/voice.onnx"
-            ):
-                pass
+            ),
+        ):
+            pass
 
         assert len(fake_request.yield_calls) == 1
 
@@ -698,7 +700,8 @@ class TestPiperVoiceDownloaderFileTransfer:
             file, str(tmp_path), MagicMock()
         )
         assert result_file is file
-        assert open(target, "rb").read() == body
+        with open(target, "rb") as f:
+            assert f.read() == body
         assert digest == hashlib.md5(body).hexdigest()
 
     def test_follows_a_redirect_before_downloading(self, tmp_path, monkeypatch):
@@ -720,7 +723,8 @@ class TestPiperVoiceDownloaderFileTransfer:
         __, target, __ = PiperVoiceDownloader._do_download_file(
             file, str(tmp_path), MagicMock()
         )
-        assert open(target, "rb").read() == body
+        with open(target, "rb") as f:
+            assert f.read() == body
         assert len(fake_request.yield_urls) == 2
 
     def test_raises_after_too_many_redirects(self, tmp_path, monkeypatch):
@@ -912,7 +916,8 @@ class TestPiperRTVoiceDownloader:
             str(tmp_path),
             MagicMock(),
         )
-        assert open(target, "rb").read() == body
+        with open(target, "rb") as f:
+            assert f.read() == body
 
     def test_success_installs_the_archive_and_offers_a_restart(
         self, tmp_path, monkeypatch

@@ -180,7 +180,7 @@ class ColumnDefn:
     width: int
     string_converter: typing.Callable[[typing.Any], str] | str
 
-    _ALIGNMENT_FLAGS = {
+    _ALIGNMENT_FLAGS: typing.ClassVar = {
         "left": wx.LIST_FORMAT_LEFT,
         "center": wx.LIST_FORMAT_CENTRE,
         "right": wx.LIST_FORMAT_RIGHT,

@@ -64,7 +64,7 @@ class _SyncExecutor:
         future = Future()
         try:
             future.set_result(fn(*args, **kwargs))
-        except BaseException as exc:  # noqa: BLE001 - mirrors Executor semantics
+        except BaseException as exc:
             future.set_exception(exc)
         return future
 

@@ -405,7 +405,7 @@ class TestSynthOptionAccessors:
 
         backend.get_synth_options = _boom
         with pytest.raises(VoiceLoadError):
-            multi_voice.noise_scale
+            _ = multi_voice.noise_scale
 
 
 # ---------------------------------------------------------------------------

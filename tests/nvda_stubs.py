@@ -66,7 +66,7 @@ GLOBAL_PLUGIN_PKG_DIR = os.path.abspath(_GLOBAL_PLUGIN_PKG_DIR)
 
 
 def load_module_from_path(
-    module_name: str, path: str, package: str = None
+    module_name: str, path: str, package: str | None = None
 ) -> types.ModuleType:
     """Execute a real .py file as a registered module.
 

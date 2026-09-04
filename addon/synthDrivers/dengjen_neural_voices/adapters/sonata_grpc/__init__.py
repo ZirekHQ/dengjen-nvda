@@ -131,7 +131,9 @@ def start_grpc_server():
             DENGJEN_VOICES_BASE_DIR, "logs", "dengjen-tts-grpc.log"
         )
         Path(server_log_file).parent.mkdir(parents=True, exist_ok=True)
-        server_stdout = SERVER_LOG_HANDLE = open(server_log_file, "wb")
+        # Held open past this function: used as the subprocess's stdout and
+        # closed later, alongside the process, by the module's cleanup path.
+        server_stdout = SERVER_LOG_HANDLE = open(server_log_file, "wb")  # noqa: SIM115
     except OSError:
         log.exception("Failed to open server log file for writing", exc_info=True)
         server_stdout = subprocess.DEVNULL
@@ -160,7 +162,7 @@ def start_grpc_server():
 
 @aio.asyncio_coroutine_to_concurrent_future
 async def initialize():
-    global CHANNEL, SONATA_GRPC_SERVICE, SONATA_GRPC_SERVER_PORT
+    global CHANNEL, SONATA_GRPC_SERVICE
     if not start_grpc_server():
         raise RuntimeError("Failed to start the Dengjen GRPC server")
     if CHANNEL is not None:

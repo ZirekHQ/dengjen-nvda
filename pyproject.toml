@@ -15,3 +15,21 @@ extend-exclude = [
 ]
 # `_` is NVDA's gettext translation function, injected via addonHandler.initTranslation()
 builtins = ["_"]
+
+[tool.ruff.lint]
+extend-ignore = [
+    # This codebase's error handling convention is deliberately broad at
+    # boundaries (subprocess/IPC lookups, best-effort cleanup) rather than
+    # enumerating specific exception types - see the comments throughout
+    # installTasks.py and the sonata_grpc adapter.
+    "BLE001",
+]
+
+[tool.ruff.lint.per-file-ignores]
+# SCons discovers tools by matching the package name to the tool name, so
+# `NVDATool/__init__.py` cannot be renamed to satisfy module-naming rules.
+"site_scons/site_tools/NVDATool/__init__.py" = ["N999"]
+# Test doubles freely use generic exceptions, exec(), and mutable class
+# attributes for throwaway fixtures/fakes - none of that is production API.
+"tests/**/*.py" = ["TRY002", "S102", "RUF012"]
+"tests_*/**/*.py" = ["TRY002", "S102", "RUF012"]

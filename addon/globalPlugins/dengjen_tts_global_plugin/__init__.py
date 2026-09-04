@@ -31,6 +31,17 @@ finally:
     sys.path.remove(_TTS_MODULE_DIR)
 del _DIR, _ADDON_ROOT, _TTS_MODULE_DIR
 
+# Re-exported for voice_manager.py and voice_download.py, which reach these
+# via `from . import ...` rather than importing dengjen_neural_voices directly.
+__all__ = [
+    "DENGJEN_VOICES_DIR",
+    "DengjenTextToSpeechSystem",
+    "SonataGrpcBackend",
+    "aio",
+    "helpers",
+    "voice_migration",
+]
+
 from .voice_manager import DengjenVoiceManagerDialog
 
 

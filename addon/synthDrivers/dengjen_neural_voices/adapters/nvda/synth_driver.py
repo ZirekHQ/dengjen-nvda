@@ -1,6 +1,7 @@
 # Copyright (c) 2023 Musharraf Omer
 # This file is covered by the GNU General Public License.
 
+import typing
 from asyncio.exceptions import CancelledError as AsyncioCancelledError
 from collections import OrderedDict
 from contextlib import suppress
@@ -173,7 +174,7 @@ class SynthDriver(NvdaSynthDriver):
         NumericDriverSetting("length_scale", _("&Length scale"), True),
         NumericDriverSetting("noise_w", _("Noise &w"), False),
     )
-    supportedCommands = {
+    supportedCommands: typing.ClassVar = {
         IndexCommand,
         LangChangeCommand,
         BreakCommand,
@@ -181,7 +182,7 @@ class SynthDriver(NvdaSynthDriver):
         VolumeCommand,
         PitchCommand,
     }
-    supportedNotifications = {synthIndexReached, synthDoneSpeaking}
+    supportedNotifications: typing.ClassVar = {synthIndexReached, synthDoneSpeaking}
 
     description = "Dengjen Neural Voices"
     name = "dengjen_neural_voices"
@@ -383,7 +384,7 @@ class SynthDriver(NvdaSynthDriver):
     # name -> (backing attribute, default_scales multiplier, skip re-applying
     # an unchanged value). name doubles as the DengjenConfig key and the
     # attribute on tts.speech_options.voice / voice.default_scales.
-    _SCALE_SETTINGS = {
+    _SCALE_SETTINGS: typing.ClassVar = {
         "noise_scale": {
             "factor_attr": "_noise_scale_factor",
             "multiplier": 3,

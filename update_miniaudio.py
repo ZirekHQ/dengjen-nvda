@@ -1,6 +1,7 @@
 import json
 import os
 import shutil
+import sys
 import urllib.request
 import zipfile
 
@@ -16,7 +17,7 @@ try:
         data = json.loads(response.read().decode())
 except Exception as e:
     print(f"Failed to fetch PyPI data: {e}")
-    exit(1)
+    sys.exit(1)
 
 # Find the latest wheel for cp313 win_amd64
 version = data["info"]["version"]
@@ -34,7 +35,7 @@ if not wheel_url:
     print(
         f"Could not find a Python 3.13 64-bit Windows wheel for miniaudio version {version}."
     )
-    exit(1)
+    sys.exit(1)
 
 print(f"Downloading {wheel_url}...")
 wheel_path = "miniaudio.whl"
@@ -42,7 +43,7 @@ try:
     urllib.request.urlretrieve(wheel_url, wheel_path)
 except Exception as e:
     print(f"Download failed: {e}")
-    exit(1)
+    sys.exit(1)
 
 print("Extracting miniaudio...")
 extract_dir = "miniaudio_extracted"

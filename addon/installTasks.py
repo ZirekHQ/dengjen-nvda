@@ -24,12 +24,12 @@ LIB_DIR = os.path.join(_PIPER_SYNTH_DIR, "lib")
 BIN_DIR = os.path.join(_PIPER_SYNTH_DIR, "bin")
 
 
-def _load_voice_migration():
+def _load_voice_migration(piper_synth_dir=_PIPER_SYNTH_DIR):
     """By file path, not import: the synth package pulls in grpc and the
     bundled Windows libraries at import time, which install must not need."""
     spec = importlib.util.spec_from_file_location(
         "_dengjen_voice_migration",
-        os.path.join(_PIPER_SYNTH_DIR, "voice_migration.py"),
+        os.path.join(piper_synth_dir, "voice_migration.py"),
     )
     module = importlib.util.module_from_spec(spec)
     spec.loader.exec_module(module)

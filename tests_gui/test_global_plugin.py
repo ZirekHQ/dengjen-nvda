@@ -9,6 +9,7 @@ sysTrayIcon.menu is a real wx.Menu here, so Append/DestroyItem are genuinely
 exercised.
 """
 
+import contextlib
 import sys
 from unittest.mock import MagicMock
 
@@ -45,10 +46,8 @@ def one_installed_voice(plugin_module, monkeypatch):
 def plugin(plugin_module, nvda_gui):
     instance = plugin_module.GlobalPlugin()
     yield instance
-    try:
+    with contextlib.suppress(Exception):
         instance.terminate()
-    except Exception:
-        pass
 
 
 class TestMenuLifecycle:

@@ -30,7 +30,7 @@ from .manifests import generateManifest, generateTranslatedManifest
 
 
 def generate(env: Environment):
-    env.SetDefault(excludePatterns=tuple())
+    env.SetDefault(excludePatterns=())
 
     addonAction = env.Action(
         lambda target, source, env: (

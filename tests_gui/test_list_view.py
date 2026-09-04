@@ -68,7 +68,7 @@ class TestColumnDefn:
 
     def test_unknown_alignment_is_rejected(self, components):
         with pytest.raises(ValueError, match="Unknown alignment directive"):
-            components.ColumnDefn("t", "sideways", 1, "x").alignment_flag
+            _ = components.ColumnDefn("t", "sideways", 1, "x").alignment_flag
 
     def test_annotations_resolve(self, components):
         # `from __future__ import annotations` keeps these as strings, so a

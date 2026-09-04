@@ -2,7 +2,7 @@ import asyncio
 import os
 import threading
 import typing as t
-from concurrent.futures import ThreadPoolExecutor
+from concurrent.futures import Future, ThreadPoolExecutor
 from functools import partial, wraps
 
 from logHandler import log

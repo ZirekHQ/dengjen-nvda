@@ -149,7 +149,7 @@ class InstalledDengjenVoicesPanel(SizedPanel):
             content = logic.sanitize_model_card(content)
             gui.messageBox(
                 content,
-                #! Intentionally untranslatable
+                # NOTE: Intentionally untranslatable
                 # Translators: title of a message box showing voice model card
                 _("Model card"),
                 style=wx.ICON_INFORMATION,
