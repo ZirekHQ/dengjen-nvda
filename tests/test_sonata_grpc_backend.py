@@ -3,7 +3,7 @@
 Tests for SonataGrpcBackend's TTSBackend surface: that it correctly
 translates the underlying module-level gRPC calls' failures into the
 TTSBackend port's typed errors. The gRPC calls themselves (against a real
-sonata-grpc.exe) are covered by tests_contract/, not here.
+dengjen-tts-grpc.exe) are covered by tests_contract/, not here.
 """
 
 from concurrent.futures import Future
@@ -46,12 +46,12 @@ def test_load_voice_wraps_a_failure_as_voice_load_error(monkeypatch):
 
 def test_load_voice_maps_the_response_fields(monkeypatch):
     class _FakeInfo:
-        voice_id = "v1"
+        voice_key = "v1"
         supports_streaming_output = True
         class audio:
             sample_rate = 22050
         speakers = {"0": "Alice"}
-        class synth_options:
+        class synthesis_options:
             speaker = "Alice"
             length_scale = 1.0
             noise_scale = 0.5
@@ -98,18 +98,18 @@ def test_synthesize_wraps_a_failure_as_synthesis_error():
         mod.speak = orig
 
 
-def test_synthesize_yields_wav_samples_bytes_not_the_raw_message():
+def test_synthesize_yields_audio_bytes_not_the_raw_message():
     """Regression test: synthesize() briefly re-yielded the raw protobuf
-    message instead of unwrapping .wav_samples (caught and fixed during this
+    message instead of unwrapping .audio_bytes (caught and fixed during this
     branch's own work). speak() yields message-shaped objects, not bytes, so
     a fixture asserting bytes-in/bytes-out here would pass even if
-    synthesize() forgot to extract .wav_samples."""
+    synthesize() forgot to extract .audio_bytes."""
     import asyncio
     import types
 
     async def _fake_speak(**kwargs):
-        yield types.SimpleNamespace(wav_samples=b"abc")
-        yield types.SimpleNamespace(wav_samples=b"def")
+        yield types.SimpleNamespace(audio_bytes=b"abc")
+        yield types.SimpleNamespace(audio_bytes=b"def")
 
     async def _run():
         return [
