@@ -215,8 +215,8 @@ def terminate():
             SERVER_LOG_HANDLE = None
 
 
-def _clear_stale_server_state():
-    """Drop cached server/port state after a failed readiness check.
+async def _clear_stale_server_state():
+    """Drop cached server/port/channel state after a failed readiness check.
 
     start_grpc_server() caches the spawned process and its port in
     globalVars as soon as Popen succeeds -- before anything confirms the
@@ -225,14 +225,32 @@ def _clear_stale_server_state():
     claim the port in that gap; if that happens the child exits (or never
     becomes reachable) and, without this, every later start_grpc_server()
     call would keep reusing the same dead process and port forever, since
-    its cache check only looks at presence, not health. Called from
-    check_grpc_server() -- the one place that actually confirms the server
-    is alive -- whenever that confirmation fails, so the next call spawns a
-    fresh subprocess on a freshly chosen port instead.
+    its cache check only looks at presence, not health.
+
+    Also clears CHANNEL/SONATA_GRPC_SERVICE: initialize() reuses a cached
+    CHANNEL outright when its loop still matches the running one, without
+    checking which port it was opened against -- leaving those set would
+    have every later RPC call reconnect to the dead port's channel even
+    after a fresh subprocess starts on a new one.
+
+    Called from check_grpc_server() -- the one place that actually
+    confirms the server is alive -- whenever that confirmation fails, so
+    the next initialize() call opens a fresh channel to a freshly spawned
+    subprocess instead. Awaits the channel's own close() directly (rather
+    than close_channel()'s thread-hop) because this always runs on the aio
+    loop already -- close_channel()'s run_coroutine_threadsafe().result()
+    would deadlock waiting on the very loop it's called from.
     """
-    global GRPC_SERVER_PROCESS, SONATA_GRPC_SERVER_PORT, SERVER_LOG_HANDLE
+    global GRPC_SERVER_PROCESS, SONATA_GRPC_SERVER_PORT, SERVER_LOG_HANDLE, CHANNEL, SONATA_GRPC_SERVICE
     process, GRPC_SERVER_PROCESS = GRPC_SERVER_PROCESS, None
     SONATA_GRPC_SERVER_PORT = None
+    SONATA_GRPC_SERVICE = None
+    channel, CHANNEL = CHANNEL, None
+    if channel is not None:
+        try:
+            await channel.close()
+        except Exception:
+            log.debug("Failed to close the stale GRPC channel", exc_info=True)
     if hasattr(globalVars, "SONATA_GRPC_SERVER_PORT"):
         del globalVars.SONATA_GRPC_SERVER_PORT
     if hasattr(globalVars, "GRPC_SERVER_PROCESS"):
@@ -253,7 +271,7 @@ async def check_grpc_server() -> str:
         async with asyncio.timeout(SERVER_CHECK_TIMEOUT):
             return await get_sonata_version()
     except Exception:
-        _clear_stale_server_state()
+        await _clear_stale_server_state()
         raise
 
 

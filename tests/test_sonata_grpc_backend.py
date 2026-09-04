@@ -132,11 +132,18 @@ class TestClearStaleServerState:
     """_clear_stale_server_state() is the recovery path for a server that
     Popen'd successfully but never became reachable (e.g. lost the
     find_free_port()-to-bind race to another process) -- without it, every
-    later start_grpc_server() call would keep reusing the same dead process
-    and port forever, since its cache check only looks at presence in
-    globalVars, not health."""
+    later start_grpc_server()/initialize() call would keep reusing the same
+    dead process, port and channel forever, since their cache checks only
+    look at presence, not health.
+
+    It's an async function (it awaits the channel's own close() rather than
+    close_channel()'s thread-hop, which would deadlock when called from the
+    aio loop it's already running on -- see its docstring), so every test
+    here drives it with asyncio.run(), same as the synthesize() tests
+    above."""
 
     def test_kills_the_cached_process_and_clears_module_globals(self, monkeypatch):
+        import asyncio
         import types
 
         killed = types.SimpleNamespace(value=False)
@@ -144,51 +151,94 @@ class TestClearStaleServerState:
         monkeypatch.setattr(sonata_grpc, "GRPC_SERVER_PROCESS", fake_process)
         monkeypatch.setattr(sonata_grpc, "SONATA_GRPC_SERVER_PORT", 12345)
 
-        sonata_grpc._clear_stale_server_state()
+        asyncio.run(sonata_grpc._clear_stale_server_state())
 
         assert killed.value
         assert sonata_grpc.GRPC_SERVER_PROCESS is None
         assert sonata_grpc.SONATA_GRPC_SERVER_PORT is None
+
+    def test_closes_and_clears_the_channel_and_service(self, monkeypatch):
+        import asyncio
+        import types
+
+        closed = types.SimpleNamespace(value=False)
+
+        class _FakeChannel:
+            async def close(self):
+                closed.value = True
+
+        monkeypatch.setattr(sonata_grpc, "CHANNEL", _FakeChannel())
+        monkeypatch.setattr(sonata_grpc, "SONATA_GRPC_SERVICE", object())
+
+        asyncio.run(sonata_grpc._clear_stale_server_state())
+
+        assert closed.value
+        assert sonata_grpc.CHANNEL is None
+        assert sonata_grpc.SONATA_GRPC_SERVICE is None
+
+    def test_a_channel_that_fails_to_close_does_not_stop_the_rest_of_the_cleanup(self, monkeypatch):
+        import asyncio
+        import types
+
+        class _FakeChannel:
+            async def close(self):
+                raise Exception("channel already broken")
+
+        killed = types.SimpleNamespace(value=False)
+        fake_process = types.SimpleNamespace(kill=lambda: setattr(killed, "value", True))
+        monkeypatch.setattr(sonata_grpc, "CHANNEL", _FakeChannel())
+        monkeypatch.setattr(sonata_grpc, "GRPC_SERVER_PROCESS", fake_process)
+
+        asyncio.run(sonata_grpc._clear_stale_server_state())  # must not raise
+
+        assert sonata_grpc.CHANNEL is None
+        assert killed.value
 
     def test_clears_the_globalVars_cache(self):
         # Not monkeypatch.setattr: _clear_stale_server_state() deletes these
         # attributes outright, and monkeypatch's teardown assumes setattr
         # (not delattr) undoes its own patches -- it would raise trying to
         # restore an attribute the code under test already removed.
+        import asyncio
         import globalVars
 
         globalVars.SONATA_GRPC_SERVER_PORT = 12345
         globalVars.GRPC_SERVER_PROCESS = object()
 
-        sonata_grpc._clear_stale_server_state()
+        asyncio.run(sonata_grpc._clear_stale_server_state())
 
         assert not hasattr(globalVars, "SONATA_GRPC_SERVER_PORT")
         assert not hasattr(globalVars, "GRPC_SERVER_PROCESS")
 
     def test_closes_the_server_log_handle(self, monkeypatch):
+        import asyncio
         import types
 
         closed = types.SimpleNamespace(value=False)
         fake_handle = types.SimpleNamespace(close=lambda: setattr(closed, "value", True))
         monkeypatch.setattr(sonata_grpc, "SERVER_LOG_HANDLE", fake_handle)
 
-        sonata_grpc._clear_stale_server_state()
+        asyncio.run(sonata_grpc._clear_stale_server_state())
 
         assert closed.value
         assert sonata_grpc.SERVER_LOG_HANDLE is None
 
     def test_is_a_noop_when_nothing_is_cached(self, monkeypatch):
+        import asyncio
         import globalVars
 
         monkeypatch.setattr(sonata_grpc, "GRPC_SERVER_PROCESS", None)
         monkeypatch.setattr(sonata_grpc, "SONATA_GRPC_SERVER_PORT", None)
         monkeypatch.setattr(sonata_grpc, "SERVER_LOG_HANDLE", None)
+        monkeypatch.setattr(sonata_grpc, "CHANNEL", None)
+        monkeypatch.setattr(sonata_grpc, "SONATA_GRPC_SERVICE", None)
         monkeypatch.delattr(globalVars, "SONATA_GRPC_SERVER_PORT", raising=False)
         monkeypatch.delattr(globalVars, "GRPC_SERVER_PROCESS", raising=False)
 
-        sonata_grpc._clear_stale_server_state()  # must not raise
+        asyncio.run(sonata_grpc._clear_stale_server_state())  # must not raise
 
     def test_a_process_that_refuses_to_die_does_not_stop_the_cleanup(self, monkeypatch):
+        import asyncio
         import types
 
         fake_process = types.SimpleNamespace(
@@ -196,7 +246,7 @@ class TestClearStaleServerState:
         )
         monkeypatch.setattr(sonata_grpc, "GRPC_SERVER_PROCESS", fake_process)
 
-        sonata_grpc._clear_stale_server_state()  # must not raise
+        asyncio.run(sonata_grpc._clear_stale_server_state())  # must not raise
 
         assert sonata_grpc.GRPC_SERVER_PROCESS is None
 
