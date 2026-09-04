@@ -7,7 +7,6 @@ import zipfile
 
 import vendored_manifest
 
-# PyPI JSON API for grpcio
 url = "https://pypi.org/pypi/grpcio/json"
 
 print("Fetching grpcio release info from PyPI...")
@@ -19,14 +18,14 @@ except Exception as e:
     print(f"Failed to fetch PyPI data: {e}")
     sys.exit(1)
 
-# Find the latest wheel for cp313 win_amd64
+
 version = data["info"]["version"]
 releases = data["releases"][version]
 
 wheel_url = None
 for r in releases:
     filename = r["filename"]
-    # NVDA 2026.1 uses Python 3.13 64-bit on Windows
+
     if "cp313-cp313-win_amd64.whl" in filename:
         wheel_url = r["url"]
         break

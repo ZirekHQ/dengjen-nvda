@@ -1,6 +1,3 @@
-# Copyright (c) 2023 Musharraf Omer
-# This file is covered by the GNU General Public License.
-
 """wx-free decisions behind the voice manager UI.
 
 Imports nothing from wx, gui, winsound, miniaudio or synthDriverHandler, so
@@ -52,9 +49,7 @@ class InstalledListState:
 
 
 def installed_list_state(voices, synth_name: str) -> InstalledListState:
-    # `remove_enabled` is deliberately not ANDed with `is_dengjen_synth`: the
-    # caller only touches the remove button when a dengjen synth is active,
-    # and leaves it alone otherwise.
+
     return InstalledListState(
         buttons_enabled=bool(voices),
         remove_enabled=len(voices) >= 2,

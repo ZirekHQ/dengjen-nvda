@@ -33,7 +33,6 @@ def findFileId(
         data = resp["data"]
         for f in data:
             path_crowdin = f["data"]["path"].lower()
-            # Check if the path ends with addon_id.pot or addon_id.xliff.
             if path_crowdin.endswith(f"{baseTarget}{searchExt}"):
                 fileId = f["data"]["id"]
                 print(f"DEBUG: Match found: {path_crowdin} (ID: {fileId})")
@@ -87,7 +86,6 @@ def getScoreFromApi(fileNameToSearch: str, langId: str) -> float:
             print(f"WARNING: File '{baseTarget}{searchExt}' not found on Crowdin.")
             return 0.0
 
-        # Pagination for translation status (Progress).
         offset = 0
         limit = 100
 
@@ -109,7 +107,6 @@ def getScoreFromApi(fileNameToSearch: str, langId: str) -> float:
                     progress = float(item["data"]["translationProgress"])
                     return progress
 
-            # Check pagination total.
             total = resp["pagination"]["totalCount"]
             if offset + limit >= total:
                 break
@@ -136,14 +133,12 @@ def main():
     # Output formatted for capture by the PowerShell script.
     print(f"translationRatio={score}")
 
-    # Identify extension to provide a specific score label.
     ext = input_file.lower().split(".")[-1]
     if ext == "md":
         print(f"mdScore={score}")
     elif ext == "xliff":
         print(f"xliffScore={score}")
     else:
-        # Default to poScore for .po and other localization files.
         print(f"poScore={score}")
 
 

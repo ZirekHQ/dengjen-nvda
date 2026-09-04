@@ -1,6 +1,3 @@
-# Copyright (c) 2023 Musharraf Omer
-# This file is covered by the GNU General Public License.
-
 """Carrying downloaded voices across the 4.0.0 rename.
 
 Two paths, because moving the folder is only safe when nobody else wants it:
@@ -125,8 +122,7 @@ def migrate_voices_directory(config_path=None, addons=None):
     if is_old_addon_installed(addons):
         log.debug(f"Skipping voices migration: {OLD_ADDON_NAME} is still installed")
         return False
-    # Not os.path.exists: the synth driver creates an empty tree here on every
-    # load, so existence alone would refuse the migration for good.
+
     if _holds_any_file(new_dir):
         log.debug(f"Skipping voices migration: {new_dir} already holds voices")
         return False

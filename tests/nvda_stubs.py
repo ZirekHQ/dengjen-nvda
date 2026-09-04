@@ -132,12 +132,10 @@ def install(*, stub_wx: bool = True) -> None:
     # 2. NVDA internal stubs
     # -----------------------------------------------------------------------
 
-    # globalVars
     _stub_module(
         "globalVars", appArgs=types.SimpleNamespace(configPath="/tmp/nvda_test_config")
     )
 
-    # languageHandler
     def _normalize_language(lang: str) -> str:
         """Port of NVDA's languageHandler.normalizeLanguage: dash -> underscore,
         lowercase language, uppercase dialect. Kept in sync with NVDA's real
@@ -154,7 +152,6 @@ def install(*, stub_wx: bool = True) -> None:
 
     _stub_module("languageHandler", normalizeLanguage=_normalize_language)
 
-    # config
     class _FakeConfSection(dict):
         def __missing__(self, key):
             val = _FakeConfSection()
@@ -176,13 +173,10 @@ def install(*, stub_wx: bool = True) -> None:
     _fake_conf["speech"]["dengjen_neural_voices"] = _FakeConfSection()
     _stub_module("config", conf=_fake_conf)
 
-    # configobj
     _stub_module("configobj", ConfigObj=MagicMock())
 
-    # logHandler
     _stub_module("logHandler", log=MagicMock())
 
-    # synthDriverHandler
     class _AutoPropertyMeta(type):
         """Stand-in for NVDA's baseObject.AutoPropertyObject: turns `_get_x`/
         `_set_x` method pairs into a real `x` property. The real SynthDriver's
@@ -223,9 +217,6 @@ def install(*, stub_wx: bool = True) -> None:
         def _percentToParam(self, percent, min_val, max_val):
             return min_val + (max_val - min_val) * percent / 100
 
-    # Non-dengjen by default so callers that check the active synth's name
-    # (e.g. update_voices_list) never take the dengjen branch that calls
-    # synth.terminate()/__init__() on this stub.
     _default_synth = types.SimpleNamespace(name="espeak", voice="default")
 
     _stub_module(
@@ -237,7 +228,6 @@ def install(*, stub_wx: bool = True) -> None:
         getSynth=lambda: _default_synth,
     )
 
-    # autoSettingsUtils
     _stub_module("autoSettingsUtils")
     _stub_module(
         "autoSettingsUtils.driverSetting",
@@ -245,7 +235,6 @@ def install(*, stub_wx: bool = True) -> None:
         NumericDriverSetting=MagicMock(return_value=MagicMock()),
     )
 
-    # nvwave
     class _FakeWavePlayer:
         def __init__(self, *args, **kwargs):
             pass
@@ -273,7 +262,6 @@ def install(*, stub_wx: bool = True) -> None:
 
     _stub_module("nvwave", WavePlayer=_FakeWavePlayer)
 
-    # speech + speech.commands
     _say_all = MagicMock()
     _say_all.isRunning.return_value = False
     _speech_mod = _stub_module("speech")
@@ -291,12 +279,6 @@ def install(*, stub_wx: bool = True) -> None:
         PitchCommand=type("PitchCommand", (), {"newValue": 50}),
     )
 
-    # addonHandler
-    # The real initTranslation() binds `_` on the calling module alone, so a
-    # module that skips it silently falls through to the builtin NVDA installs
-    # and misses the add-on's catalogue (issue #102). Bind the same way here,
-    # and keep the builtin fallback, so tests reproduce that silence rather
-    # than turning it into an import error.
     builtins._ = lambda message: message
 
     def _init_translation():
@@ -309,15 +291,9 @@ def install(*, stub_wx: bool = True) -> None:
         getAvailableAddons=list,
     )
 
-    # wx / gui
     if stub_wx:
-        # CallAfter runs synchronously (no real event loop under test) so
-        # callers can assert on its effects immediately.
         _stub_module(
             "wx",
-            # Distinct bit flags, as in real wx, so bitwise-OR combinations (e.g.
-            # wx.YES_NO | wx.ICON_WARNING) can't collide with any other stubbed
-            # constant, including ones ORed together elsewhere (e.g. wx.OK).
             ID_ANY=0,
             YES=1,
             NO=2,
@@ -361,11 +337,9 @@ def install(*, stub_wx: bool = True) -> None:
     # 3. Register `dengjen_neural_voices` as a package WITHOUT running __init__.py
     # -----------------------------------------------------------------------
 
-    # Add synthDrivers to path so the package is findable
     if _SYNTH_DIR not in sys.path:
         sys.path.insert(0, _SYNTH_DIR)
 
-    # Register the package stub (no __init__.py executed)
     _pkg = types.ModuleType("dengjen_neural_voices")
     _pkg.__path__ = [_SYNTH_PKG_DIR]
     _pkg.__package__ = "dengjen_neural_voices"
@@ -380,7 +354,6 @@ def install(*, stub_wx: bool = True) -> None:
     # 4. Stub intra-package submodules that have platform/runtime dependencies
     # -----------------------------------------------------------------------
 
-    # aio — starts real threads/event loops; stub completely
     _aio = _stub_module("dengjen_neural_voices.aio")
     _aio.initialize = MagicMock()
     _aio.ensure_running = MagicMock()
@@ -390,17 +363,11 @@ def install(*, stub_wx: bool = True) -> None:
     _aio.asyncio_cancel_task = MagicMock()
     _aio.asyncio_coroutine_to_concurrent_future = lambda f: f
     _aio.run_in_executor = MagicMock()
-    # Mirrors the real AsyncEngine: .executor is None until initialize()
-    # replaces it with a real ThreadPoolExecutor. A test that needs a working
-    # executor should inject one (e.g. monkeypatch ENGINE.executor to a sync
-    # stand-in) rather than rely on this being usable as-is.
+
     _aio.ENGINE = types.SimpleNamespace(executor=None, event_loop=MagicMock())
 
     def _call_threaded(func):
-        # Mirrors the real AsyncEngine.call_threaded: ensure_running() then
-        # submit to ENGINE.executor, swallowing a shut-down executor's
-        # RuntimeError. Relies on the same test-injected executor as direct
-        # ENGINE.executor use (see the comment above).
+
         def wrapper(*args, **kwargs):
             _aio.ensure_running()
             try:
@@ -425,28 +392,12 @@ def install(*, stub_wx: bool = True) -> None:
         package="dengjen_neural_voices.domain",
     )
 
-    # The `dengjen_neural_voices` package stub built in step 3 never runs the
-    # real __init__.py, so its public re-exports (used by
-    # dengjen_tts_global_plugin's `from dengjen_neural_voices import
-    # DengjenTextToSpeechSystem, DENGJEN_VOICES_DIR`, exercised for real in
-    # tests_gui/) have to be set here by hand, from the module just loaded.
     _pkg.DengjenTextToSpeechSystem = sys.modules[
         "dengjen_neural_voices.domain.tts_system"
     ].DengjenTextToSpeechSystem
     _pkg.DENGJEN_VOICES_DIR = sys.modules[
         "dengjen_neural_voices.domain.tts_system"
     ].DENGJEN_VOICES_DIR
-
-    # -----------------------------------------------------------------------
-    # 6. Register `dengjen_tts_global_plugin` as a package WITHOUT running its
-    #    __init__.py. That file pulls in voice_manager.py/components.py, which
-    #    subclass real wx widgets (wx.ListCtrl, the vendored sized_controls.py
-    #    SizedDialog) — a MagicMock `wx` can't stand in as a base class for those,
-    #    so that GUI layer is out of scope here. Only expose the names
-    #    __init__.py itself re-exports from dengjen_neural_voices, since
-    #    voice_download.py reaches them via `from . import DengjenTextToSpeechSystem,
-    #    helpers, DENGJEN_VOICES_DIR, SonataGrpcBackend`.
-    # -----------------------------------------------------------------------
 
     if _GLOBAL_PLUGIN_DIR not in sys.path:
         sys.path.insert(0, _GLOBAL_PLUGIN_DIR)

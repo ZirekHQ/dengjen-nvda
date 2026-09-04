@@ -1,7 +1,6 @@
 #!/usr/bin/env pwsh
 $ErrorActionPreference = 'Stop'
 
-# Git configuration for automated commits
 git config user.name "github-actions[bot]"
 git config user.email "github-actions[bot]@users.noreply.github.com"
 
@@ -51,7 +50,6 @@ if (Test-Path $mdFile) {
     }
 }
 
-# Update POT file (addon interface)
 scons pot
 $potFile = "$addonId.pot"
 
@@ -79,11 +77,9 @@ if (Test-Path $xliffFile) {
 Write-Host "DEBUG: Exporting translations from Crowdin..."
 ./l10nUtil.exe exportTranslations -o _addonL10n -c $env:L10N_UTIL_CONFIG
 
-# Ensure base directories exist
 New-Item -ItemType Directory -Force -Path addon/locale | Out-Null
 New-Item -ItemType Directory -Force -Path addon/doc | Out-Null
 
-# Load language mappings for Crowdin API calls
 $languageMappings = Get-Content -Raw ".github/scripts/languageMappings.json" | ConvertFrom-Json
 
 foreach ($dir in Get-ChildItem -Path "_addonL10n/$addonId" -Directory) {
@@ -93,8 +89,6 @@ foreach ($dir in Get-ChildItem -Path "_addonL10n/$addonId" -Directory) {
     if ($langCode -eq "en") {
         continue
     }
-
-    # --- Identify codes
 
     $crowdinLang = $null
 
@@ -107,8 +101,6 @@ foreach ($dir in Get-ChildItem -Path "_addonL10n/$addonId" -Directory) {
     }
 
     Write-Host "--- Processing Language: $langCode (Crowdin: $crowdinLang) ---" -ForegroundColor Cyan
-
-    # Paths
 
     $remoteXliff = Join-Path $dir.FullName "$addonId.xliff"
     $remotePo = Join-Path $dir.FullName "$addonId.po"

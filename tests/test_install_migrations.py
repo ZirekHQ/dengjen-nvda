@@ -243,9 +243,7 @@ class TestWarnIfOldAddonInstalled:
         assert "Sonata" in shown[0][0][0]
 
     def test_shows_the_warning_via_wx_CallAfter_not_directly(self, monkeypatch):
-        # gui.messageBox must be deferred through wx.CallAfter rather than
-        # called directly, or it would stack a modal dialog on top of NVDA's
-        # add-on installation dialog.
+
         call_after_calls = []
         monkeypatch.setattr(
             install_tasks.wx,

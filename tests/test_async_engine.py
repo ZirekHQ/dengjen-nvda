@@ -220,13 +220,7 @@ class TestTaskHelpers:
     def test_create_task_closes_the_coroutine_when_the_loop_is_gone(
         self, engine, monkeypatch
     ):
-        # Simulates the create_task/terminate race: ensure_running() has
-        # already returned (stubbed here to a no-op, since this engine was
-        # never actually started -- no real thread to leak) but _event_loop
-        # is unset, exactly what a concurrent terminate() would leave behind
-        # between create_task's ensure_running() call and it reading the
-        # loop under the lifecycle lock. The coroutine must be closed rather
-        # than left to leak as a "was never awaited" warning.
+
         monkeypatch.setattr(engine, "ensure_running", lambda: None)
         fake_coro = MagicMock()
 

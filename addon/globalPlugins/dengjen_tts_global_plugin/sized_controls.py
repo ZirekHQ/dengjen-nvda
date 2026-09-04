@@ -1,17 +1,3 @@
-# ----------------------------------------------------------------------
-# Name:        sized_controls.py
-# Purpose:     Implements default, HIG-compliant sizers under the hood
-#              and provides a simple interface for customizing those sizers.
-#
-# Author:      Kevin Ollivier
-#
-# Created:     26-May-2006
-# Copyright:   (c) 2006 Kevin Ollivier
-# Licence:     wxWindows license
-#
-#
-# Tags:        phoenix-port, unittest, documented, py3-port
-# ----------------------------------------------------------------------
 """
 The sized controls default HIG compliant sizers under the hood and provides
 a simple interface for customizing those sizers.
@@ -59,11 +45,6 @@ Sample usage::
 import wx
 import wx.lib.scrolledpanel as sp
 
-# For HIG info: links to all the HIGs can be found here:
-# http://en.wikipedia.org/wiki/Human_Interface_Guidelines
-
-
-# useful defines for sizer prop values
 
 halign = {
     "left": wx.ALIGN_LEFT,
@@ -111,7 +92,6 @@ def GetDefaultBorder(self):
     if wx.Platform == "__WXMAC__":
         border = 6
     elif wx.Platform == "__WXMSW__":
-        # MSW HIGs use dialog units, not pixels
         pnt = self.ConvertDialogToPixels(wx.Point(4, 4))
         border = pnt[0] // 2
     elif wx.Platform == "__WXGTK__":
@@ -203,16 +183,8 @@ def SetSizerProp(self, prop, value):
         flag = flag | halign[value]
     elif lprop == "valign":
         flag = flag | valign[value]
-    # elif lprop == "border":
-    #     # this arg takes a tuple (dir, pixels)
-    #     dirs, amount = value
-    #     if dirs == "all":
-    #         dirs = ["all"]
-    #     for dir in dirs:
-    #         flag = flag | border[dir]
-    #     item.SetBorder(amount)
+
     elif lprop == "border":
-        # this arg takes a tuple (dir, pixels)
         dirs, amount = value
         if dirs == "all":
             dirs = ["all"]
@@ -229,13 +201,10 @@ def SetSizerProp(self, prop, value):
         else:
             flag = flag | misc_flags[lprop]
 
-    # auto-adjust growable rows/columns if expand or proportion is set
-    # on a sizer item in a FlexGridSizer
     if lprop in ["expand", "proportion"] and isinstance(sizer, wx.FlexGridSizer):
         cols = sizer.GetCols()
         rows = sizer.GetRows()
-        # FIXME: I'd like to get the item index in the sizer instead, but
-        # doing sizer.GetChildren.index(item) always gives an error
+
         itemnum = self.GetParent().GetChildren().index(self)
 
         col = 0
@@ -357,7 +326,6 @@ def GetDefaultPanelBorder(self):
     return 0
 
 
-# Why, Python?! Why do you make it so easy?! ;-)
 wx.Dialog.GetDialogBorder = GetDialogBorder
 wx.Panel.GetDefaultHIGBorder = GetDefaultPanelBorder
 wx.Notebook.GetDefaultHIGBorder = GetDefaultPanelBorder
@@ -393,21 +361,11 @@ class SizedParent:
 
         sizer = self.GetSizer()
         if sizer:
-            # Note: The wx.LogNull is used here to suppress a log message
-            # on wxMSW that happens because when AddChild is called the
-            # widget's hwnd hasn't been set yet, so the GetWindowRect that
-            # happens as a result of sizer.Add (in wxSizerItem::SetWindow)
-            # fails.  A better fix would be to defer this code somehow
-            # until after the child widget is fully constructed.
             nolog = wx.LogNull()
             item = sizer.Add(child)
             del nolog
             item.SetUserData({"HGrow": 0, "VGrow": 0})
 
-            # Note: One problem is that the child class given to AddChild
-            # is the underlying wxWidgets control, not its Python subclass. So if
-            # you derive your own class, and override that class' GetDefaultBorder(),
-            # etc. methods, it will have no effect.
             child.SetDefaultSizerProps()
 
     def GetSizerType(self):
@@ -440,7 +398,6 @@ class SizedParent:
 
         elif type == "form":
             sizer = wx.FlexGridSizer(0, 2, 0, 0)
-            # sizer.AddGrowableCol(1)
 
         elif type == "grid":
             sizer = wx.FlexGridSizer(0, 0, 0, 0)
@@ -478,11 +435,6 @@ class SizedParent:
 
         props = {}
         for child in self.GetChildren():
-            # On the Mac the scrollbars and corner gripper of a
-            # ScrolledWindow will be in the list of children, but
-            # should not be managed by a sizer.  So if there is a
-            # child that is not in a sizer make sure we don't track
-            # info for it nor add it to the next sizer.
             csp = child.GetSizerProps()
             if csp is not None:
                 props[child.GetId()] = csp
@@ -500,7 +452,7 @@ class SizedParent:
         """
         for child in self.GetChildren():
             csp = props.get(child.GetId(), None)
-            # See Mac comment above.
+
             if csp is not None:
                 self.GetSizer().Add(child)
                 child.SetSizerProps(csp)
@@ -642,7 +594,6 @@ class SizedDialog(wx.Dialog):
             sizer, 0, wx.EXPAND | wx.BOTTOM | wx.RIGHT, self.GetDialogBorder()
         )
 
-        # Temporary hack to fix button ordering problems.
         cancel = self.FindWindow(wx.ID_CANCEL)
         no = self.FindWindow(wx.ID_NO)
         if no and cancel:
@@ -675,8 +626,7 @@ class SizedFrame(wx.Frame):
         wx.Frame.__init__(self, *args, **kwargs)
 
         self.borderLen = 12
-        # this probably isn't needed, but I thought it would help to make it consistent
-        # with SizedDialog, and creating a panel to hold things is often good practice.
+
         self.mainPanel = SizedPanel(self, -1)
 
         mysizer = wx.BoxSizer(wx.VERTICAL)

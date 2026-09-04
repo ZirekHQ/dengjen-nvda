@@ -21,9 +21,6 @@ from dengjen_neural_voices.domain import tts_system
 
 from tests.fake_tts_backend import FakeTTSBackend
 
-# These tests only assert on voice keys and on-disk migration side effects,
-# never on backend interaction, so one shared fake satisfies the now-required
-# parameter without any per-test setup.
 _backend = FakeTTSBackend()
 
 

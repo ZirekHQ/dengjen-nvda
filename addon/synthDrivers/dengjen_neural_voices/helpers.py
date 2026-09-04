@@ -55,13 +55,11 @@ def update_displaied_params_on_voice_change(synth):
         # No gui displaied
         return
     voice_panel = current_panel.voicePanel
-    # Patch values
     speakers = list(synth.availableSpeakers.values())
     variants = list(synth.availableVariants.values())
     voice_panel._speakers = speakers
     voice_panel._variants = variants
     voice_panel.speakerList.SetItems([s.displayName for s in speakers])
     voice_panel.variantList.SetItems([v.displayName for v in variants])
-    # Update based on config
     voice_panel.updateDriverSettings("speaker")
     voice_panel.updateDriverSettings("variant")

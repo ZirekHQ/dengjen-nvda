@@ -137,10 +137,7 @@ class TestInstalledPanelControls:
         panel.voices_list.set_objects([installed_voice])
         panel.voices_list.set_focused_item(0)
         _fire_button(panel, panel.model_card_button)
-        # No MODEL_CARD file at `location` -> the "not found" messageBox path.
-        # The title pins this to on_model_card specifically: on_remove_voice
-        # also calls messageBox, so `.called` alone would pass just as well
-        # if the button were mis-bound to it.
+
         assert gui.messageBox.called
         assert gui.messageBox.call_args.args[1] == "Not found"
 
@@ -155,10 +152,7 @@ class TestInstalledPanelControls:
     def test_remove_voice_button_reaches_on_remove_voice(
         self, panel, voice_manager, monkeypatch, installed_voice
     ):
-        # HAZARD: on_remove_voice calls shutil.rmtree(selected.location) on
-        # YES, and nvda_gui's gui.messageBox mock always returns wx.YES.
-        # Must stub rmtree before firing, regardless of how disposable
-        # `location` looks.
+
         monkeypatch.setattr(voice_manager.shutil, "rmtree", MagicMock())
         panel.voices_list.set_objects([installed_voice])
         panel.voices_list.set_focused_item(0)
@@ -166,8 +160,7 @@ class TestInstalledPanelControls:
         assert voice_manager.shutil.rmtree.called
 
     def test_add_voice_button_reaches_on_install_voice_from_tar(self, panel):
-        # add_voice_button is a local in InstalledDengjenVoicesPanel.__init__,
-        # so it has no attribute on the panel -- find it by type instead.
+
         add_voice_button = _find_child_of_type(panel, CommandLinkButton)
         _fire_button(panel, add_voice_button)
         assert gui.runScriptModalDialog.called
@@ -186,10 +179,7 @@ class TestOnlinePanelControls:
         assert panel.download_rt_btn is not None
 
     def test_speaker_choice_starts_disabled(self, panel):
-        # IsThisEnabled(), not IsEnabled(): speaker_choice's ancestor chain
-        # includes buttons_panel, which is *also* disabled at construction,
-        # so the ancestor-aware IsEnabled() would stay False even if
-        # speaker_choice's own Enable(False) call were deleted.
+
         assert panel.speaker_choice.IsThisEnabled() is False
 
     def test_buttons_panel_starts_disabled(self, panel):
@@ -217,14 +207,9 @@ class TestOnlinePanelControls:
         panel.voices_list.set_objects([voice])
         panel.voices_list.set_focused_item(0)
         _fire_list_item_selected(panel, panel.voices_list, 0)
-        # IsEnabled() reports the *effective* state, which is False here
-        # regardless of on_voice_selected's own Enable() call: both buttons'
-        # ancestor buttons_panel starts disabled and nothing in this test
-        # re-enables it. IsThisEnabled() reports the widget's own flag --
-        # exactly what on_voice_selected controls -- so it is the assertion
-        # that can actually catch a wiring/logic regression here.
+
         assert panel.download_std_btn.IsThisEnabled() is expected_std_enabled
-        # the fixture voice has no RT variant
+
         assert panel.download_rt_btn.IsThisEnabled() is False
 
     def test_language_selection_populates_voices_and_enables_buttons(
@@ -233,7 +218,7 @@ class TestOnlinePanelControls:
         panel.set_voices(online_voices)
         event = wx.CommandEvent(wx.EVT_CHOICE.typeId, panel.language_choice.GetId())
         event.SetEventObject(panel.language_choice)
-        event.SetInt(0)  # "English" sorts first; lang_to_voices[en] has 1 voice
+        event.SetInt(0)
         panel.ProcessEvent(event)
         assert panel.voices_list.ItemCount == 1
         assert panel.buttons_panel.IsEnabled() is True
@@ -255,8 +240,7 @@ class TestOnlinePanelControls:
         monkeypatch.setattr(
             voice_manager.voice_download, "THREAD_POOL_EXECUTOR", sync_executor
         )
-        # refresh_list_btn is a local in OnlineDengjenVoicesPanel.__init__, so
-        # it has no attribute on the panel -- find it by type instead.
+
         refresh_btn = _find_child_of_type(panel, wx.Button)
         _fire_button(panel, refresh_btn)
         assert calls == [{"force_online": True}]
@@ -264,10 +248,7 @@ class TestOnlinePanelControls:
     def test_the_wait_toast_it_raises_can_be_dismissed(
         self, panel, voice_manager, monkeypatch
     ):
-        # SnakDialog.onClose reads a falsy dismiss_callback result as "veto the
-        # close", and Close() on this panel returns exactly that: wxWindowBase
-        # only reports success when something handled the close event, and a
-        # notebook page has no EVT_CLOSE handler (#101).
+
         captured = {}
         monkeypatch.setattr(
             voice_manager, "AsyncSnakDialog", lambda **kwargs: captured.update(kwargs)
@@ -285,22 +266,16 @@ class TestOnlinePanelControls:
         panel.voices_list.set_objects([selected_voice])
         panel.voices_list.set_focused_item(0)
         _fire_button(panel, panel.preview_btn)
-        # play_remote_mp3 is only reachable through on_preview's submit call,
-        # so this is the actual proof the EVT_BUTTON binding reached the real
-        # handler; pinning the URL argument also pins the speaker index.
+
         assert calls == [selected_voice.get_preview_url(speaker_idx=0)]
-        # sync_executor + inline CallAfter means the whole cycle has already
-        # run by the time ProcessEvent returns, so this just confirms the
-        # handler returned to idle -- it is not what proves the wiring.
+
         assert panel._preview_active is False
         assert "Preview" in panel.preview_btn.GetLabel()
 
     def test_preview_button_resets_state_when_the_engine_is_shut_down(
         self, panel, voice_manager, monkeypatch, online_voices
     ):
-        # aio.call_threaded swallows a shut-down executor's RuntimeError and
-        # returns None; on_preview must recover from that instead of calling
-        # add_done_callback on it.
+
         class _RejectingExecutor:
             def submit(self, fn, *args, **kwargs):
                 raise RuntimeError("executor is shut down")
@@ -319,10 +294,7 @@ class TestOnlinePanelControls:
     def test_download_std_button_reaches_on_download(
         self, panel, voice_manager, monkeypatch, online_voices
     ):
-        # Stub the collaborator rather than letting a real download run: a
-        # real PiperVoiceDownloader.download() pops a wx.ProgressDialog and,
-        # for this fixture's file-less voice, would mkdir a real directory
-        # under DENGJEN_VOICES_DIR on the runner.
+
         downloader_cls = MagicMock()
         monkeypatch.setattr(
             voice_manager.voice_download, "PiperVoiceDownloader", downloader_cls
@@ -353,15 +325,11 @@ class TestKeyboardAccess:
     ever have reached the control (#97)."""
 
     def test_every_button_carries_an_access_key(self, dialog):
-        # tests/test_translations.py catches a locale that drops an `&`; this is
-        # the other half, a button that never had one to drop. Two of the
-        # CommandLinkButtons did not, so Alt reached neither (#108).
+
         buttons = list(_buttons(dialog))
-        # positive control: a _buttons that walked nothing would pass below.
+
         assert len(buttons) >= 9
         assert [
-            # The main label only: a CommandLinkButton's GetLabel() returns the
-            # note too, and no note carries a mnemonic.
             button.GetLabel().splitlines()[0]
             for button in buttons
             if _access_key(button) is None
@@ -369,21 +337,18 @@ class TestKeyboardAccess:
 
     @pytest.mark.parametrize("page", [0, 1])
     def test_access_keys_do_not_collide_on_a_page(self, dialog, page):
-        # Only one notebook page is ever visible, so a letter reused across the
-        # two pages is fine; a letter reused within one, alongside the dialog's
-        # own Close button, means Alt+that letter is ambiguous.
+
         hidden = _access_keys(dialog.notebookCtrl.GetPage(1 - page))
         visible = _access_keys(dialog)
         for key in hidden:
             visible.remove(key)
-        # positive control: a broken _access_key would make every page "unique".
+
         assert len(visible) >= 3
         assert len(visible) == len(set(visible)), sorted(visible)
 
     @pytest.mark.parametrize("page", [0, 1])
     def test_the_voices_list_is_reachable_by_tab(self, dialog, page):
-        # The list is the primary keyboard target on both pages -- every button
-        # acts on whatever it has selected.
+
         panel = dialog.notebookCtrl.GetPage(page)
         assert _reachable_by_tab(panel.voices_list) is True
 
@@ -391,17 +356,14 @@ class TestKeyboardAccess:
         assert _reachable_by_tab(dialog.FindWindowById(wx.ID_CANCEL)) is True
 
     def test_a_disabled_button_is_not_reachable_by_tab(self, dialog):
-        # Sensitivity anchor for the two above: _reachable_by_tab has to be
-        # capable of returning False for those True results to mean anything.
+
         panel = dialog.notebookCtrl.GetPage(1)
         assert panel.buttons_panel.IsEnabled() is False
         assert _reachable_by_tab(panel.download_std_btn) is False
 
     def test_the_installed_pages_controls_all_precede_the_close_button(self, dialog):
         panel = dialog.notebookCtrl.GetPage(0)
-        # Enabled by hand: this dialog has no voices installed, so
-        # update_voices_list disables the panel and its two buttons drop out of
-        # the order entirely -- which is the shipped behaviour, not the subject.
+
         panel.buttons_panel.Enable()
         order = _tab_order_from(panel.voices_list)
         close = dialog.FindWindowById(wx.ID_CANCEL)
@@ -415,8 +377,7 @@ class TestKeyboardAccess:
         )
 
     def test_the_download_pages_controls_all_precede_the_close_button(self, dialog):
-        # Selected first: the walk starts by focusing a control, and a control
-        # on an unselected notebook page is hidden, so focus never lands on it.
+
         dialog.notebookCtrl.SetSelection(1)
         panel = dialog.notebookCtrl.GetPage(1)
         panel.buttons_panel.Enable()
@@ -429,12 +390,10 @@ class TestKeyboardAccess:
             panel.preview_btn,
             panel.download_std_btn,
             panel.download_rt_btn,
-            _find_child_of_type(panel, wx.Button),  # the refresh button
+            _find_child_of_type(panel, wx.Button),
             close,
         )
-        # Anchor: the speaker choice is Enable(False)'d in its own right, so
-        # enabling the panel above does not bring it back. Without it, a walk
-        # that only mirrored child order would pass the assertion above.
+
         assert panel.speaker_choice.GetId() not in order
 
 
@@ -457,9 +416,7 @@ class TestNotebookPageChanged:
             voice_manager.voice_download, "THREAD_POOL_EXECUTOR", sync_executor
         )
         online_panel = dialog.notebookCtrl.GetPage(1)
-        # SetSelection() -- unlike ChangeSelection() -- generates the real
-        # page-changing/changed events, reaching the EVT_NOTEBOOK_PAGE_CHANGED
-        # binding without a running event loop.
+
         dialog.notebookCtrl.SetSelection(1)
         assert calls == [{"force_online": False}]
         assert online_panel.language_choice.GetCount() == 2
@@ -495,23 +452,20 @@ def _tab_order_from(control, limit=15):
 
 
 def _reachable_by_tab(window):
-    # Two calls, not one: AcceptsFocusFromKeyboard() is `!m_disableFocusFromKbd
-    # && AcceptsFocus()` and says nothing about enabled or shown state -- that
-    # is CanBeFocused()'s job, and the two are only combined in
-    # CanAcceptFocusFromKeyboard(), which wxPython does not expose.
+
     return window.AcceptsFocusFromKeyboard() and window.IsEnabled()
 
 
 def _buttons(window):
     for child in window.GetChildren():
-        if isinstance(child, wx.Button):  # CommandLinkButton subclasses it
+        if isinstance(child, wx.Button):
             yield child
         else:
             yield from _buttons(child)
 
 
 def _access_key(button):
-    # && is a literal ampersand, not a mnemonic marker.
+
     match = re.search(r"&(\w)", button.GetLabel().replace("&&", ""))
     return match.group(1).lower() if match else None
 

@@ -52,8 +52,7 @@ def plugin(plugin_module, nvda_gui):
 
 class TestMenuLifecycle:
     def test_global_plugin_is_a_real_class(self, plugin_module):
-        # Guards the stub: subclassing a MagicMock() would silently yield a
-        # mock here, and every assertion below would pass vacuously.
+
         assert isinstance(plugin_module.GlobalPlugin, type)
 
     def test_it_appends_one_menu_item(self, plugin, nvda_gui):
@@ -84,8 +83,7 @@ class TestVoiceCheck:
         opened = []
         monkeypatch.setattr(plugin, "on_manager", lambda evt: opened.append(evt))
         plugin._perform_voice_check()
-        # nvda_gui's gui.messageBox mock answers wx.YES (see conftest.py),
-        # which is the branch that reaches on_manager.
+
         import gui
 
         assert gui.messageBox.called
@@ -105,13 +103,6 @@ class TestVoiceCheck:
     ):
         import gui
 
-        # Not exercising the real on_manager here: DengjenVoiceManagerDialog
-        # construction needs synth/network fixtures (see
-        # test_voice_manager_dialog.py's espeak_synth/offline) that are
-        # irrelevant to what this test targets -- the __voice_manager_shown
-        # short-circuit in _perform_voice_check -- and dragging them in would
-        # only add flakiness risk for no extra coverage. The flag is set
-        # directly here so the test isolates that short-circuit alone.
         plugin._GlobalPlugin__voice_manager_shown = True
         plugin._perform_voice_check()
         assert not gui.messageBox.called

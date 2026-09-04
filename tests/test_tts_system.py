@@ -27,10 +27,6 @@ from dengjen_neural_voices.ports.tts_backend import SynthOptions
 
 from tests.fake_tts_backend import FakeTTSBackend
 
-# ---------------------------------------------------------------------------
-# Fixtures
-# ---------------------------------------------------------------------------
-
 
 def _make_voice(
     backend,
@@ -118,11 +114,6 @@ def tts(voice_list):
     return system
 
 
-# ---------------------------------------------------------------------------
-# DengjenVoice unit tests
-# ---------------------------------------------------------------------------
-
-
 class TestDengjenVoiceFromPath:
     def test_parses_standard_key(self, backend):
         v = DengjenVoice.from_path("/tmp/en-john-medium", backend)
@@ -156,11 +147,6 @@ class TestDengjenVoiceFromPath:
         assert single_voice.fast_variant_key == "en-test+RT-medium"
 
 
-# ---------------------------------------------------------------------------
-# SilenceProvider unit tests -- unchanged, no backend involved
-# ---------------------------------------------------------------------------
-
-
 class TestSilenceProvider:
     def test_generates_correct_byte_length(self):
         provider = SilenceProvider(time_ms=100, sample_rate=22050)
@@ -178,11 +164,6 @@ class TestSilenceProvider:
         assert provider.generate_audio() == b""
 
 
-# ---------------------------------------------------------------------------
-# DengjenTextToSpeechSystem -- defaults
-# ---------------------------------------------------------------------------
-
-
 class TestTTSDefaults:
     def test_rate_default(self, tts):
         assert tts.rate == DEFAULT_RATE
@@ -198,11 +179,6 @@ class TestTTSDefaults:
 
     def test_language_matches_voice(self, tts):
         assert tts.language == "en"
-
-
-# ---------------------------------------------------------------------------
-# DengjenTextToSpeechSystem -- voice switching
-# ---------------------------------------------------------------------------
 
 
 class TestTTSVoiceSwitching:
@@ -273,11 +249,6 @@ class TestTTSVoiceSwitching:
         assert system.language == "en_US"
 
 
-# ---------------------------------------------------------------------------
-# DengjenTextToSpeechSystem -- rate / volume / pitch
-# ---------------------------------------------------------------------------
-
-
 class TestTTSParameters:
     def test_set_rate(self, tts):
         tts.rate = 75
@@ -290,11 +261,6 @@ class TestTTSParameters:
     def test_set_pitch(self, tts):
         tts.pitch = 60
         assert tts.pitch == 60
-
-
-# ---------------------------------------------------------------------------
-# DengjenTextToSpeechSystem -- synthesis context
-# ---------------------------------------------------------------------------
 
 
 class TestSynthesisContext:
@@ -317,11 +283,6 @@ class TestSynthesisContext:
         assert tts.voice == original
 
 
-# ---------------------------------------------------------------------------
-# DengjenTextToSpeechSystem -- providers
-# ---------------------------------------------------------------------------
-
-
 class TestProviders:
     def test_create_speech_provider_stores_text(self, tts):
         provider = tts.create_speech_provider("Hello world")
@@ -331,11 +292,6 @@ class TestProviders:
         provider = tts.create_break_provider(500)
         assert provider.time_ms == 500
         assert provider.sample_rate == tts.speech_options.voice.sample_rate
-
-
-# ---------------------------------------------------------------------------
-# DengjenTextToSpeechSystem -- get_voice_variants
-# ---------------------------------------------------------------------------
 
 
 class TestGetVoiceVariants:
@@ -350,23 +306,13 @@ class TestGetVoiceVariants:
         assert rt == "en-john+RT-medium"
 
 
-# ---------------------------------------------------------------------------
-# Speaker (single-speaker voice)
-# ---------------------------------------------------------------------------
-
-
 class TestSpeakerSingleVoice:
     def test_speaker_returns_fallback_for_single_speaker(self, tts):
         assert tts.speaker == FALLBACK_SPEAKER_NAME
 
     def test_set_speaker_on_non_multispeaker_is_noop(self, tts):
-        # Should not raise
+
         tts.speaker = FALLBACK_SPEAKER_NAME
-
-
-# ---------------------------------------------------------------------------
-# Synthesis options (backend-forwarded accessors)
-# ---------------------------------------------------------------------------
 
 
 class TestSynthOptionAccessors:
@@ -398,19 +344,12 @@ class TestSynthOptionAccessors:
     def test_accessor_propagates_a_backend_error(self, multi_voice, backend):
         from dengjen_neural_voices.ports.tts_backend import VoiceLoadError
 
-        # get_synth_options is read directly from the fake's stored state, so
-        # simulate a failing backend by monkeypatching the method itself.
         def _boom(voice_id):
             raise VoiceLoadError("timed out")
 
         backend.get_synth_options = _boom
         with pytest.raises(VoiceLoadError):
             _ = multi_voice.noise_scale
-
-
-# ---------------------------------------------------------------------------
-# Constants -- unchanged
-# ---------------------------------------------------------------------------
 
 
 class TestConstants:
@@ -424,4 +363,4 @@ class TestConstants:
 
     def test_fallback_speaker_name_is_string(self):
         assert isinstance(FALLBACK_SPEAKER_NAME, str)
-        assert FALLBACK_SPEAKER_NAME  # non-empty
+        assert FALLBACK_SPEAKER_NAME

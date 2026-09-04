@@ -15,8 +15,6 @@ import typing
 import pytest
 
 if sys.platform != "win32":
-    # A skipif marker is not enough: pytest imports the module during
-    # collection, and `import wx` fails outright without a Windows wheel.
     pytest.skip("real wxPython is Windows-only here", allow_module_level=True)
 
 import wx
@@ -71,8 +69,7 @@ class TestColumnDefn:
             _ = components.ColumnDefn("t", "sideways", 1, "x").alignment_flag
 
     def test_annotations_resolve(self, components):
-        # `from __future__ import annotations` keeps these as strings, so a
-        # typo in an annotation never raises at import -- only here.
+
         hints = typing.get_type_hints(components.ColumnDefn)
         assert "string_converter" in hints
 
@@ -120,8 +117,7 @@ class TestImmutableObjectListView:
             mutate(list_view)
         assert list_view.ItemCount == 2
         assert list_view.GetItemText(0, 0) == "amy"
-        # ClearAll drops the columns too, so a guard that let it through would
-        # show up here rather than in the row assertions.
+
         assert list_view.GetColumnCount() == 2
 
     def test_the_guard_re_arms_after_set_objects(self, list_view):
@@ -141,15 +137,12 @@ class TestImmutableObjectListView:
         objects = [_Exploding()]
         with pytest.raises(ValueError, match="boom"):
             list_view.set_objects(objects)
-        # The failure happened inside __unsafe_modify. Without try/finally the
-        # flag stays set and the list is writable from then on.
+
         with pytest.raises(RuntimeError, match="List is immutable"):
             list_view.DeleteAllItems()
 
     def test_labels_cannot_be_edited_in_place(self, list_view):
-        # LC_EDIT_LABELS let a click on an already-selected row rewrite its text
-        # without going through any of the guarded row mutators, leaving the
-        # displayed name out of step with the object get_selected returns (#97).
+
         assert not list_view.GetWindowStyleFlag() & wx.LC_EDIT_LABELS
         list_view.set_objects([_Row("amy", "medium")])
         with pytest.raises(RuntimeError, match="List is immutable"):
@@ -161,7 +154,6 @@ class TestImmutableObjectListView:
         assert list_view.GetFocusedItem() == wx.NOT_FOUND
         list_view.set_focused_item(99)
         assert list_view.GetFocusedItem() == wx.NOT_FOUND
-        # positive control: without it, a set_focused_item that did nothing
-        # at all would also pass the assertions above.
+
         list_view.set_focused_item(0)
         assert list_view.GetFocusedItem() == 0

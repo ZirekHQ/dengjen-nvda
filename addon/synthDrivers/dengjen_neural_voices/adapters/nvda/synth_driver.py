@@ -1,6 +1,3 @@
-# Copyright (c) 2023 Musharraf Omer
-# This file is covered by the GNU General Public License.
-
 import typing
 from asyncio.exceptions import CancelledError as AsyncioCancelledError
 from collections import OrderedDict
@@ -131,10 +128,8 @@ def speaker_setting():
     """Factory function for creating speaker setting."""
     return DriverSetting(
         "speaker",
-        # Translators: Label for a setting in voice settings dialog.
         _("&Speaker"),
         availableInSettingsRing=True,
-        # Translators: Label for a setting in synth settings ring.
         displayName=_("Speaker"),
     )
 
@@ -194,8 +189,7 @@ class SynthDriver(NvdaSynthDriver):
 
     def __init__(self):
         super().__init__()
-        # Set before any early return below so terminate() stays safe when
-        # initialization bails out.
+
         self._current_task = None
         self._rateBoost = False
         self.tts = None
@@ -213,10 +207,6 @@ class SynthDriver(NvdaSynthDriver):
             )
             return
         except Exception:
-            # Last-resort safety net: an unanticipated bug in bootstrap must
-            # not crash NVDA's whole speech subsystem. See the design spec's
-            # Error Handling section for why this stays broad on top of the
-            # typed catch above.
             log.exception(
                 "Unexpected error initializing Dengjen services. Synthesizer will not be available.",
                 exc_info=True,
@@ -283,7 +273,7 @@ class SynthDriver(NvdaSynthDriver):
             if item_type is str:
                 text_list.append(item)
                 continue
-            # Pending text must be flushed before the command takes effect.
+
             if any(text_list):
                 speech_seq.append(self._create_speech_task(text_list))
                 text_list.clear()
@@ -381,9 +371,6 @@ class SynthDriver(NvdaSynthDriver):
     def _get_voice(self):
         return self._get_variant_independent_voice_id(self.tts.voice)
 
-    # name -> (backing attribute, default_scales multiplier, skip re-applying
-    # an unchanged value). name doubles as the DengjenConfig key and the
-    # attribute on tts.speech_options.voice / voice.default_scales.
     _SCALE_SETTINGS: typing.ClassVar = {
         "noise_scale": {
             "factor_attr": "_noise_scale_factor",
@@ -441,13 +428,7 @@ class SynthDriver(NvdaSynthDriver):
         setattr(self, factor_attr, value)
 
     def _reapply_scale_settings(self):
-        # Re-pushes each scale setting's current value to the newly selected
-        # voice/variant. `_set_scale_factor` writes to `tts.speech_options.voice`
-        # as a side effect, so this calls it explicitly instead of relying on
-        # `self.x = self.x` property round-trips (flagged by static analysis
-        # as a no-op self-assignment). force=True bypasses skip_if_unchanged:
-        # the cached factor always equals itself here, but the new voice/variant
-        # still needs the value written since it wasn't the one it came from.
+
         for name in self._SCALE_SETTINGS:
             self._set_scale_factor(name, self._get_scale_factor(name), force=True)
 
@@ -477,9 +458,6 @@ class SynthDriver(NvdaSynthDriver):
         except Exception:
             log.exception(f"Failed to load voice `{value}`")
             ui.message(
-                # Translators: reported when NVDA fails to switch to a Dengjen
-                # voice, e.g. because the voice's model file is corrupted or
-                # incomplete. The previous voice remains in use.
                 _("Failed to load voice {voice}. Keeping the previous voice.").format(
                     voice=self.availableVoices[value].displayName
                 )
@@ -500,7 +478,6 @@ class SynthDriver(NvdaSynthDriver):
 
         if speaker is not None:
             self._set_speaker(speaker)
-        # Update gui if shown
         try:
             update_displaied_params_on_voice_change(self)
         except Exception:
@@ -532,9 +509,7 @@ class SynthDriver(NvdaSynthDriver):
         DengjenConfig.setdefault(self.voice, {})["variant"] = value
         voice = self.tts.speech_options.voice
         self._player = self._get_or_create_player(voice.sample_rate)
-        # The new variant is a distinct voice object with its own defaults;
-        # push the user's current scale settings onto it (covers both a
-        # direct variant change and a voice change, which routes here too).
+
         self._reapply_scale_settings()
 
     def _getAvailableVariants(self):

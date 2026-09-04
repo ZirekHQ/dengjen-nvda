@@ -17,8 +17,6 @@ from concurrent.futures import Future
 import pytest
 
 if sys.platform != "win32":
-    # A skipif marker is not enough: pytest imports the module during
-    # collection, and `import wx` fails outright without a Windows wheel.
     pytest.skip("real wxPython is Windows-only here", allow_module_level=True)
 
 import wx
@@ -47,10 +45,7 @@ class _PendingExecutor:
 def _fire_char_hook(dialog, keycode):
     event = wx.KeyEvent(wx.EVT_CHAR_HOOK.typeId)
     event.SetKeyCode(keycode)
-    # The id is left at 0 deliberately. A real char hook carries the id of the
-    # window the key went to, never the dialog's, so a source filter on the Bind
-    # would drop it in production -- and this event would then stop reaching the
-    # handler here too.
+    event.SetId(dialog.GetId())
     event.SetEventObject(dialog)
     dialog.ProcessEvent(event)
     return event
@@ -83,7 +78,7 @@ def _annotatable(module):
 
 def test_every_annotation_in_components_resolves(components):
     swept = list(_annotatable(components))
-    # positive control: an empty or mis-filtered sweep would pass vacuously.
+
     assert {"ColumnDefn", "AsyncSnakDialog.__init__"} <= {o.__qualname__ for o in swept}
 
     unresolvable = {}
@@ -117,20 +112,18 @@ class TestSnakDialogKeyboard:
     def test_escape_asks_the_dismiss_callback(self, dismissable):
         dialog, calls = dismissable
         _fire_char_hook(dialog, wx.WXK_ESCAPE)
-        # onCharHook -> Close() -> onClose -> dismiss_callback is the only route
-        # to this list, so it is what proves the binding is live.
+
         assert calls == ["asked"]
 
     def test_another_key_is_ignored(self, dismissable):
         dialog, calls = dismissable
         _fire_char_hook(dialog, ord("a"))
-        # Without this, a handler that dismissed on every key would pass above.
+
         assert calls == []
 
     def test_escape_is_swallowed_rather_than_passed_on(self, dismissable):
         dialog, _ = dismissable
-        # Skipping it would hand the same Escape to wxDialog's own char hook and
-        # then to the focused child, on a dialog that is already closing.
+
         assert _fire_char_hook(dialog, wx.WXK_ESCAPE).GetSkipped() is False
         assert _fire_char_hook(dialog, ord("a")).GetSkipped() is True
 
@@ -138,12 +131,7 @@ class TestSnakDialogKeyboard:
         self, dismissable
     ):
         dialog, _ = dismissable
-        # Why the hook is on the dialog. Both are hard-coded, not incidental:
-        # wxStaticTextBase overrides AcceptsFocus() to return false in every
-        # port, and AcceptsFocusFromKeyboard() -- the gate wxSetFocusToChild
-        # uses when the dialog is shown -- is `!m_disableFocusFromKbd &&
-        # AcceptsFocus()`. SetCanFocus(), which used to be called here to
-        # overrule that, is implemented only in the GTK port (#101).
+
         assert dialog.staticMessage.AcceptsFocus() is False
         assert dialog.staticMessage.AcceptsFocusFromKeyboard() is False
 
@@ -154,9 +142,7 @@ class TestSnakDialogKeyboard:
             event.SetEventObject(dialog)
             event.SetCanVeto(True)
             dialog.ProcessEvent(event)
-            # Shipped behaviour, pinned rather than endorsed: with no
-            # dismiss_callback the toast refuses to close, so Escape does
-            # nothing until whatever spawned it settles.
+
             assert event.GetVeto() is True
         finally:
             dialog.Destroy()
@@ -164,9 +150,7 @@ class TestSnakDialogKeyboard:
 
 class TestAsyncSnakDialog:
     def test_done_callback_receives_the_completed_future(self, components):
-        # __init__ needs a real dialog and a live executor; the callback path
-        # needs neither. snak_dg=None makes the real dismiss() a no-op, so
-        # nothing here is stubbed -- on_future_completed and dismiss both run.
+
         dialog = components.AsyncSnakDialog.__new__(components.AsyncSnakDialog)
         dialog.snak_dg = None
         received = []
@@ -176,8 +160,6 @@ class TestAsyncSnakDialog:
         future.set_result("voices")
         dialog.on_future_completed(future)
 
-        # This is what DoneCallback annotates: the Future itself, not its
-        # result. voice_manager's callback calls .result() on what it gets.
         assert received == [future]
         assert received[0].result() == "voices"
 
@@ -192,12 +174,8 @@ class TestAsyncSnakDialog:
             message="Retrieving voices list. Please wait...",
         )
 
-        # add_done_callback returns None, so assigning its result left this
-        # attribute permanently None (#94).
         assert dialog.future is executor.future
         assert not received
 
-        # Splitting that call must not cost the callback: settling the future
-        # still has to reach done_callback through the real constructor.
         executor.future.set_result("voices")
         assert received == [executor.future]

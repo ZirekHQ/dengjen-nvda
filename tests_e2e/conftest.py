@@ -21,12 +21,7 @@ import pytest
 
 collect_ignore_glob = [] if sys.platform == "win32" else ["test_*.py"]
 
-#: A headless GitHub Windows runner has no audio endpoint, no braille
-#: display and no interactive desktop, so NVDA logs ERROR while
-#: initialising those on every startup. Those errors are the runner, not
-#: the add-on under test -- asserting on them would make the first CI run
-#: a false alarm. Same allowlist shape as nvda-addon-testkit's own
-#: tests_e2e/conftest.py, which hit the same runner noise first.
+
 RUNNER_ENVIRONMENT_ERRORS = (
     r"nvwave|WASAPI|audio (?:device|output|session|endpoint)",
     r"synthDriver|synthesi[sz]|espeak|oneCore|SAPI",
