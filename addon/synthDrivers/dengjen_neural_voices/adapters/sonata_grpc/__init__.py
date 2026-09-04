@@ -17,7 +17,7 @@ VC_REDIST_URL = "https://aka.ms/vs/17/release/vc_redist.x64.exe"
 def _vcruntime_missing():
     """Return True if vcruntime140_1.dll cannot be loaded.
 
-    sonata-grpc.exe is built with MSVC and needs the Visual C++ 2015-2022
+    dengjen-tts-grpc.exe is built with MSVC and needs the Visual C++ 2015-2022
     Redistributable (x64). On fresh Windows installs without it, Popen
     succeeds but the child process exits immediately with a missing-DLL
     dialog the user never sees from inside NVDA; the addon then logs the
@@ -72,8 +72,8 @@ from ...ports.tts_backend import (
 with import_bundled_library():
     import grpc
     from ... import aio
-    from .grpc_protos.sonata_grpc_pb2_grpc import sonata_grpcStub
-    from .grpc_protos import sonata_grpc_pb2 as msgs
+    from .grpc_protos.dengjen_grpc_pb2_grpc import DengjenGrpcStub
+    from .grpc_protos import dengjen_grpc_pb2 as msgs
 
 
 # All of the module-level state below is normally only touched from the
@@ -109,13 +109,13 @@ def start_grpc_server():
         _show_vcruntime_warning()
         return False
     SONATA_GRPC_SERVER_PORT = find_free_port()
-    grpc_server_exe = os.path.join(BIN_DIRECTORY, "sonata-grpc.exe")
+    grpc_server_exe = os.path.join(BIN_DIRECTORY, "dengjen-tts-grpc.exe")
     nvda_espeak_dir = os.path.join(globalVars.appDir, "synthDrivers")
     env = os.environ.copy()
     env.update({
-        "SONATA_GRPC_SERVER_PORT": str(SONATA_GRPC_SERVER_PORT),
-        "SONATA_ESPEAKNG_DATA_DIRECTORY": os.fspath(nvda_espeak_dir),
-        "SONATA_GRPC": "info",
+        "DENGJEN_GRPC_SERVER_PORT": str(SONATA_GRPC_SERVER_PORT),
+        "DENGJEN_ESPEAKNG_DATA_DIRECTORY": os.fspath(nvda_espeak_dir),
+        "DENGJEN_GRPC": "info",
     })
     creationflags = (
         subprocess.DETACHED_PROCESS
@@ -123,7 +123,7 @@ def start_grpc_server():
         | subprocess.REALTIME_PRIORITY_CLASS
     )
     try:
-        server_log_file = os.path.join(DENGJEN_VOICES_BASE_DIR, "logs", "sonata-grpc.log")
+        server_log_file = os.path.join(DENGJEN_VOICES_BASE_DIR, "logs", "dengjen-tts-grpc.log")
         Path(server_log_file).parent.mkdir(parents=True, exist_ok=True)
         server_stdout = SERVER_LOG_HANDLE = open(server_log_file, "wb")
     except OSError:
@@ -173,7 +173,7 @@ async def initialize():
         CHANNEL = None
     port = SONATA_GRPC_SERVER_PORT
     CHANNEL = grpc.aio.insecure_channel(f"localhost:{port}")
-    SONATA_GRPC_SERVICE = sonata_grpcStub(CHANNEL)
+    SONATA_GRPC_SERVICE = DengjenGrpcStub(CHANNEL)
 
 
 def close_channel():
@@ -222,19 +222,19 @@ async def check_grpc_server() -> str:
 
 
 async def get_sonata_version():
-    resp = await SONATA_GRPC_SERVICE.GetSonataVersion(msgs.Empty())
+    resp = await SONATA_GRPC_SERVICE.GetDengjenVersion(msgs.Empty())
     return resp.version
 
 
 @aio.asyncio_coroutine_to_concurrent_future
 async def load_voice(config_path):
-    req = msgs.VoicePath(config_path=config_path)
+    req = msgs.VoiceConfigLocation(path=config_path)
     return await SONATA_GRPC_SERVICE.LoadVoice(req)
 
 
 @aio.asyncio_coroutine_to_concurrent_future
 async def get_synth_options(voice_id):
-    req = msgs.VoiceIdentifier(voice_id=voice_id)
+    req = msgs.VoiceRef(voice_key=voice_id)
     return await SONATA_GRPC_SERVICE.GetSynthesisOptions(req)
 
 
@@ -242,9 +242,9 @@ async def get_synth_options(voice_id):
 async def set_synth_options(
     voice_id, speaker=None, length_scale=None, noise_scale=None, noise_w=None
 ):
-    req = msgs.VoiceSynthesisOptions(
-        voice_id=voice_id,
-        synthesis_options=msgs.SynthesisOptions(
+    req = msgs.VoiceSynthesisSettings(
+        voice_key=voice_id,
+        synthesis_options=msgs.SynthesisSettings(
             speaker=speaker,
             length_scale=length_scale,
             noise_scale=noise_scale,
@@ -259,16 +259,16 @@ async def speak(
 ):
     speech_args = None
     if any(v is not None for v in (rate, volume, pitch, appended_silence_ms)):
-        speech_args = msgs.SpeechArgs(
+        speech_args = msgs.ProsodyControls(
             rate=rate,
             volume=volume,
             pitch=pitch,
             appended_silence_ms=appended_silence_ms,
         )
-    utterance = msgs.Utterance(
-        voice_id=voice_id,
+    utterance = msgs.SynthesisRequest(
+        voice_key=voice_id,
         text=text,
-        speech_args=speech_args,
+        prosody=speech_args,
     )
     if streaming:
         stream = SONATA_GRPC_SERVICE.SynthesizeUtteranceRealtime
@@ -289,7 +289,7 @@ async def bench(n=10000):
 class SonataGrpcBackend:
     """TTSBackend adapter over this module's process-wide gRPC client state.
 
-    A thin facade: the gRPC channel and sonata-grpc.exe subprocess are
+    A thin facade: the gRPC channel and dengjen-tts-grpc.exe subprocess are
     genuinely process-wide resources (one subprocess for the whole NVDA
     process, regardless of how many SynthDriver instances come and go), so
     this class delegates to the module-level functions/globals above rather
@@ -320,15 +320,15 @@ class SonataGrpcBackend:
         except Exception as exc:
             raise VoiceLoadError(str(exc)) from exc
         return LoadedVoice(
-            backend_voice_id=info.voice_id,
+            backend_voice_id=info.voice_key,
             supports_streaming_output=info.supports_streaming_output,
             sample_rate=info.audio.sample_rate,
             speakers=dict(info.speakers),
             defaults=SynthOptions(
-                speaker=info.synth_options.speaker,
-                length_scale=info.synth_options.length_scale,
-                noise_scale=info.synth_options.noise_scale,
-                noise_w=info.synth_options.noise_w,
+                speaker=info.synthesis_options.speaker,
+                length_scale=info.synthesis_options.length_scale,
+                noise_scale=info.synthesis_options.noise_scale,
+                noise_w=info.synthesis_options.noise_w,
             ),
         )
 
@@ -361,6 +361,6 @@ class SonataGrpcBackend:
                 appended_silence_ms=sentence_silence_ms,
                 streaming=streaming,
             ):
-                yield ret.wav_samples
+                yield ret.audio_bytes
         except Exception as exc:
             raise SynthesisError(str(exc)) from exc
