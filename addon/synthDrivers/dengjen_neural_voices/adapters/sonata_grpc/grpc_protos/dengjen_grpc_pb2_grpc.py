@@ -2,10 +2,10 @@
 """Client and server classes corresponding to protobuf-defined services."""
 import grpc
 
-from . import sonata_grpc_pb2 as sonata__grpc__pb2
+import dengjen_grpc_pb2 as dengjen__grpc__pb2
 
 
-class sonata_grpcStub(object):
+class DengjenGrpcStub(object):
     """Missing associated documentation comment in .proto file."""
 
     def __init__(self, channel):
@@ -14,145 +14,145 @@ class sonata_grpcStub(object):
         Args:
             channel: A grpc.Channel.
         """
-        self.GetSonataVersion = channel.unary_unary(
-                '/sonata_grpc.sonata_grpc/GetSonataVersion',
-                request_serializer=sonata__grpc__pb2.Empty.SerializeToString,
-                response_deserializer=sonata__grpc__pb2.Version.FromString,
+        self.GetDengjenVersion = channel.unary_unary(
+                '/dengjen_grpc.DengjenGrpc/GetDengjenVersion',
+                request_serializer=dengjen__grpc__pb2.Empty.SerializeToString,
+                response_deserializer=dengjen__grpc__pb2.Version.FromString,
                 )
         self.LoadVoice = channel.unary_unary(
-                '/sonata_grpc.sonata_grpc/LoadVoice',
-                request_serializer=sonata__grpc__pb2.VoicePath.SerializeToString,
-                response_deserializer=sonata__grpc__pb2.VoiceInfo.FromString,
+                '/dengjen_grpc.DengjenGrpc/LoadVoice',
+                request_serializer=dengjen__grpc__pb2.VoiceConfigLocation.SerializeToString,
+                response_deserializer=dengjen__grpc__pb2.VoiceDescriptor.FromString,
                 )
         self.GetVoiceInfo = channel.unary_unary(
-                '/sonata_grpc.sonata_grpc/GetVoiceInfo',
-                request_serializer=sonata__grpc__pb2.VoiceIdentifier.SerializeToString,
-                response_deserializer=sonata__grpc__pb2.VoiceInfo.FromString,
+                '/dengjen_grpc.DengjenGrpc/GetVoiceInfo',
+                request_serializer=dengjen__grpc__pb2.VoiceRef.SerializeToString,
+                response_deserializer=dengjen__grpc__pb2.VoiceDescriptor.FromString,
                 )
         self.GetSynthesisOptions = channel.unary_unary(
-                '/sonata_grpc.sonata_grpc/GetSynthesisOptions',
-                request_serializer=sonata__grpc__pb2.VoiceIdentifier.SerializeToString,
-                response_deserializer=sonata__grpc__pb2.SynthesisOptions.FromString,
+                '/dengjen_grpc.DengjenGrpc/GetSynthesisOptions',
+                request_serializer=dengjen__grpc__pb2.VoiceRef.SerializeToString,
+                response_deserializer=dengjen__grpc__pb2.SynthesisSettings.FromString,
                 )
         self.SetSynthesisOptions = channel.unary_unary(
-                '/sonata_grpc.sonata_grpc/SetSynthesisOptions',
-                request_serializer=sonata__grpc__pb2.VoiceSynthesisOptions.SerializeToString,
-                response_deserializer=sonata__grpc__pb2.SynthesisOptions.FromString,
+                '/dengjen_grpc.DengjenGrpc/SetSynthesisOptions',
+                request_serializer=dengjen__grpc__pb2.VoiceSynthesisSettings.SerializeToString,
+                response_deserializer=dengjen__grpc__pb2.SynthesisSettings.FromString,
                 )
         self.SynthesizeUtterance = channel.unary_stream(
-                '/sonata_grpc.sonata_grpc/SynthesizeUtterance',
-                request_serializer=sonata__grpc__pb2.Utterance.SerializeToString,
-                response_deserializer=sonata__grpc__pb2.SynthesisResult.FromString,
+                '/dengjen_grpc.DengjenGrpc/SynthesizeUtterance',
+                request_serializer=dengjen__grpc__pb2.SynthesisRequest.SerializeToString,
+                response_deserializer=dengjen__grpc__pb2.SynthesisChunk.FromString,
                 )
         self.SynthesizeUtteranceRealtime = channel.unary_stream(
-                '/sonata_grpc.sonata_grpc/SynthesizeUtteranceRealtime',
-                request_serializer=sonata__grpc__pb2.Utterance.SerializeToString,
-                response_deserializer=sonata__grpc__pb2.WaveSamples.FromString,
+                '/dengjen_grpc.DengjenGrpc/SynthesizeUtteranceRealtime',
+                request_serializer=dengjen__grpc__pb2.SynthesisRequest.SerializeToString,
+                response_deserializer=dengjen__grpc__pb2.RealtimeAudioChunk.FromString,
                 )
 
 
-class sonata_grpcServicer(object):
+class DengjenGrpcServicer(object):
     """Missing associated documentation comment in .proto file."""
 
-    def GetSonataVersion(self, request, context):
-        """Return sonata version
+    def GetDengjenVersion(self, request, context):
+        """Return dengjen version
         """
         context.set_code(grpc.StatusCode.UNIMPLEMENTED)
         context.set_details('Method not implemented!')
         raise NotImplementedError('Method not implemented!')
 
     def LoadVoice(self, request, context):
-        """Load a voice from directory
+        """Load a voice given its config file path
         """
         context.set_code(grpc.StatusCode.UNIMPLEMENTED)
         context.set_details('Method not implemented!')
         raise NotImplementedError('Method not implemented!')
 
     def GetVoiceInfo(self, request, context):
-        """Get voice information
+        """Fetch details for a loaded voice
         """
         context.set_code(grpc.StatusCode.UNIMPLEMENTED)
         context.set_details('Method not implemented!')
         raise NotImplementedError('Method not implemented!')
 
     def GetSynthesisOptions(self, request, context):
-        """Get synthesis options
+        """Fetch a voice's current synthesis settings
         """
         context.set_code(grpc.StatusCode.UNIMPLEMENTED)
         context.set_details('Method not implemented!')
         raise NotImplementedError('Method not implemented!')
 
     def SetSynthesisOptions(self, request, context):
-        """Set synthesis options
+        """Update a voice's synthesis settings
         """
         context.set_code(grpc.StatusCode.UNIMPLEMENTED)
         context.set_details('Method not implemented!')
         raise NotImplementedError('Method not implemented!')
 
     def SynthesizeUtterance(self, request, context):
-        """Synthesize utterance
+        """Synthesize speech for a text request, streamed in chunks
         """
         context.set_code(grpc.StatusCode.UNIMPLEMENTED)
         context.set_details('Method not implemented!')
         raise NotImplementedError('Method not implemented!')
 
     def SynthesizeUtteranceRealtime(self, request, context):
-        """Synthesize utterance in realtime
+        """Synthesize speech for a text request, streamed as raw audio in realtime
         """
         context.set_code(grpc.StatusCode.UNIMPLEMENTED)
         context.set_details('Method not implemented!')
         raise NotImplementedError('Method not implemented!')
 
 
-def add_sonata_grpcServicer_to_server(servicer, server):
+def add_DengjenGrpcServicer_to_server(servicer, server):
     rpc_method_handlers = {
-            'GetSonataVersion': grpc.unary_unary_rpc_method_handler(
-                    servicer.GetSonataVersion,
-                    request_deserializer=sonata__grpc__pb2.Empty.FromString,
-                    response_serializer=sonata__grpc__pb2.Version.SerializeToString,
+            'GetDengjenVersion': grpc.unary_unary_rpc_method_handler(
+                    servicer.GetDengjenVersion,
+                    request_deserializer=dengjen__grpc__pb2.Empty.FromString,
+                    response_serializer=dengjen__grpc__pb2.Version.SerializeToString,
             ),
             'LoadVoice': grpc.unary_unary_rpc_method_handler(
                     servicer.LoadVoice,
-                    request_deserializer=sonata__grpc__pb2.VoicePath.FromString,
-                    response_serializer=sonata__grpc__pb2.VoiceInfo.SerializeToString,
+                    request_deserializer=dengjen__grpc__pb2.VoiceConfigLocation.FromString,
+                    response_serializer=dengjen__grpc__pb2.VoiceDescriptor.SerializeToString,
             ),
             'GetVoiceInfo': grpc.unary_unary_rpc_method_handler(
                     servicer.GetVoiceInfo,
-                    request_deserializer=sonata__grpc__pb2.VoiceIdentifier.FromString,
-                    response_serializer=sonata__grpc__pb2.VoiceInfo.SerializeToString,
+                    request_deserializer=dengjen__grpc__pb2.VoiceRef.FromString,
+                    response_serializer=dengjen__grpc__pb2.VoiceDescriptor.SerializeToString,
             ),
             'GetSynthesisOptions': grpc.unary_unary_rpc_method_handler(
                     servicer.GetSynthesisOptions,
-                    request_deserializer=sonata__grpc__pb2.VoiceIdentifier.FromString,
-                    response_serializer=sonata__grpc__pb2.SynthesisOptions.SerializeToString,
+                    request_deserializer=dengjen__grpc__pb2.VoiceRef.FromString,
+                    response_serializer=dengjen__grpc__pb2.SynthesisSettings.SerializeToString,
             ),
             'SetSynthesisOptions': grpc.unary_unary_rpc_method_handler(
                     servicer.SetSynthesisOptions,
-                    request_deserializer=sonata__grpc__pb2.VoiceSynthesisOptions.FromString,
-                    response_serializer=sonata__grpc__pb2.SynthesisOptions.SerializeToString,
+                    request_deserializer=dengjen__grpc__pb2.VoiceSynthesisSettings.FromString,
+                    response_serializer=dengjen__grpc__pb2.SynthesisSettings.SerializeToString,
             ),
             'SynthesizeUtterance': grpc.unary_stream_rpc_method_handler(
                     servicer.SynthesizeUtterance,
-                    request_deserializer=sonata__grpc__pb2.Utterance.FromString,
-                    response_serializer=sonata__grpc__pb2.SynthesisResult.SerializeToString,
+                    request_deserializer=dengjen__grpc__pb2.SynthesisRequest.FromString,
+                    response_serializer=dengjen__grpc__pb2.SynthesisChunk.SerializeToString,
             ),
             'SynthesizeUtteranceRealtime': grpc.unary_stream_rpc_method_handler(
                     servicer.SynthesizeUtteranceRealtime,
-                    request_deserializer=sonata__grpc__pb2.Utterance.FromString,
-                    response_serializer=sonata__grpc__pb2.WaveSamples.SerializeToString,
+                    request_deserializer=dengjen__grpc__pb2.SynthesisRequest.FromString,
+                    response_serializer=dengjen__grpc__pb2.RealtimeAudioChunk.SerializeToString,
             ),
     }
     generic_handler = grpc.method_handlers_generic_handler(
-            'sonata_grpc.sonata_grpc', rpc_method_handlers)
+            'dengjen_grpc.DengjenGrpc', rpc_method_handlers)
     server.add_generic_rpc_handlers((generic_handler,))
 
 
  # This class is part of an EXPERIMENTAL API.
-class sonata_grpc(object):
+class DengjenGrpc(object):
     """Missing associated documentation comment in .proto file."""
 
     @staticmethod
-    def GetSonataVersion(request,
+    def GetDengjenVersion(request,
             target,
             options=(),
             channel_credentials=None,
@@ -162,9 +162,9 @@ class sonata_grpc(object):
             wait_for_ready=None,
             timeout=None,
             metadata=None):
-        return grpc.experimental.unary_unary(request, target, '/sonata_grpc.sonata_grpc/GetSonataVersion',
-            sonata__grpc__pb2.Empty.SerializeToString,
-            sonata__grpc__pb2.Version.FromString,
+        return grpc.experimental.unary_unary(request, target, '/dengjen_grpc.DengjenGrpc/GetDengjenVersion',
+            dengjen__grpc__pb2.Empty.SerializeToString,
+            dengjen__grpc__pb2.Version.FromString,
             options, channel_credentials,
             insecure, call_credentials, compression, wait_for_ready, timeout, metadata)
 
@@ -179,9 +179,9 @@ class sonata_grpc(object):
             wait_for_ready=None,
             timeout=None,
             metadata=None):
-        return grpc.experimental.unary_unary(request, target, '/sonata_grpc.sonata_grpc/LoadVoice',
-            sonata__grpc__pb2.VoicePath.SerializeToString,
-            sonata__grpc__pb2.VoiceInfo.FromString,
+        return grpc.experimental.unary_unary(request, target, '/dengjen_grpc.DengjenGrpc/LoadVoice',
+            dengjen__grpc__pb2.VoiceConfigLocation.SerializeToString,
+            dengjen__grpc__pb2.VoiceDescriptor.FromString,
             options, channel_credentials,
             insecure, call_credentials, compression, wait_for_ready, timeout, metadata)
 
@@ -196,9 +196,9 @@ class sonata_grpc(object):
             wait_for_ready=None,
             timeout=None,
             metadata=None):
-        return grpc.experimental.unary_unary(request, target, '/sonata_grpc.sonata_grpc/GetVoiceInfo',
-            sonata__grpc__pb2.VoiceIdentifier.SerializeToString,
-            sonata__grpc__pb2.VoiceInfo.FromString,
+        return grpc.experimental.unary_unary(request, target, '/dengjen_grpc.DengjenGrpc/GetVoiceInfo',
+            dengjen__grpc__pb2.VoiceRef.SerializeToString,
+            dengjen__grpc__pb2.VoiceDescriptor.FromString,
             options, channel_credentials,
             insecure, call_credentials, compression, wait_for_ready, timeout, metadata)
 
@@ -213,9 +213,9 @@ class sonata_grpc(object):
             wait_for_ready=None,
             timeout=None,
             metadata=None):
-        return grpc.experimental.unary_unary(request, target, '/sonata_grpc.sonata_grpc/GetSynthesisOptions',
-            sonata__grpc__pb2.VoiceIdentifier.SerializeToString,
-            sonata__grpc__pb2.SynthesisOptions.FromString,
+        return grpc.experimental.unary_unary(request, target, '/dengjen_grpc.DengjenGrpc/GetSynthesisOptions',
+            dengjen__grpc__pb2.VoiceRef.SerializeToString,
+            dengjen__grpc__pb2.SynthesisSettings.FromString,
             options, channel_credentials,
             insecure, call_credentials, compression, wait_for_ready, timeout, metadata)
 
@@ -230,9 +230,9 @@ class sonata_grpc(object):
             wait_for_ready=None,
             timeout=None,
             metadata=None):
-        return grpc.experimental.unary_unary(request, target, '/sonata_grpc.sonata_grpc/SetSynthesisOptions',
-            sonata__grpc__pb2.VoiceSynthesisOptions.SerializeToString,
-            sonata__grpc__pb2.SynthesisOptions.FromString,
+        return grpc.experimental.unary_unary(request, target, '/dengjen_grpc.DengjenGrpc/SetSynthesisOptions',
+            dengjen__grpc__pb2.VoiceSynthesisSettings.SerializeToString,
+            dengjen__grpc__pb2.SynthesisSettings.FromString,
             options, channel_credentials,
             insecure, call_credentials, compression, wait_for_ready, timeout, metadata)
 
@@ -247,9 +247,9 @@ class sonata_grpc(object):
             wait_for_ready=None,
             timeout=None,
             metadata=None):
-        return grpc.experimental.unary_stream(request, target, '/sonata_grpc.sonata_grpc/SynthesizeUtterance',
-            sonata__grpc__pb2.Utterance.SerializeToString,
-            sonata__grpc__pb2.SynthesisResult.FromString,
+        return grpc.experimental.unary_stream(request, target, '/dengjen_grpc.DengjenGrpc/SynthesizeUtterance',
+            dengjen__grpc__pb2.SynthesisRequest.SerializeToString,
+            dengjen__grpc__pb2.SynthesisChunk.FromString,
             options, channel_credentials,
             insecure, call_credentials, compression, wait_for_ready, timeout, metadata)
 
@@ -264,8 +264,8 @@ class sonata_grpc(object):
             wait_for_ready=None,
             timeout=None,
             metadata=None):
-        return grpc.experimental.unary_stream(request, target, '/sonata_grpc.sonata_grpc/SynthesizeUtteranceRealtime',
-            sonata__grpc__pb2.Utterance.SerializeToString,
-            sonata__grpc__pb2.WaveSamples.FromString,
+        return grpc.experimental.unary_stream(request, target, '/dengjen_grpc.DengjenGrpc/SynthesizeUtteranceRealtime',
+            dengjen__grpc__pb2.SynthesisRequest.SerializeToString,
+            dengjen__grpc__pb2.RealtimeAudioChunk.FromString,
             options, channel_credentials,
             insecure, call_credentials, compression, wait_for_ready, timeout, metadata)
