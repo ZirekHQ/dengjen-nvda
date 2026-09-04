@@ -7,7 +7,7 @@ import os
 import re
 import sys
 
-# Ensure repo root is on path so buildVars is importable directly
+
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), ".."))
 import buildVars
 

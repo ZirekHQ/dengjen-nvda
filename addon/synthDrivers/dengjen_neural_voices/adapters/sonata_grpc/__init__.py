@@ -78,19 +78,19 @@ with import_bundled_library():
     from .grpc_protos.dengjen_grpc_pb2_grpc import DengjenGrpcStub
 
 
-# All of the module-level state below is normally only touched from the
-# single dedicated asyncio loop/thread that aio.AsyncEngine owns. The
-# exception is `terminate()`, which is atexit-registered and so can run on
-# whichever thread triggers interpreter shutdown; its accesses are
-# best-effort cleanup on process exit, not protected by a lock.
+
+
+
+
+
 SONATA_GRPC_SERVER_PORT = None
 GRPC_SERVER_PROCESS = None
 SERVER_LOG_HANDLE = None
 CHANNEL = None
 SONATA_GRPC_SERVICE = None
 SERVER_CHECK_TIMEOUT = 15
-# Outer bound on the startup futures; must exceed SERVER_CHECK_TIMEOUT so the
-# coroutine's own error surfaces instead of a bare future timeout.
+
+
 STARTUP_TIMEOUT = SERVER_CHECK_TIMEOUT + 5
 CALL_TIMEOUT = 10
 CHANNEL_CLOSE_TIMEOUT = 5
@@ -131,9 +131,9 @@ def start_grpc_server():
             DENGJEN_VOICES_BASE_DIR, "logs", "dengjen-tts-grpc.log"
         )
         Path(server_log_file).parent.mkdir(parents=True, exist_ok=True)
-        # Held open past this function: used as the subprocess's stdout and
-        # closed later, alongside the process, by the module's cleanup path.
-        server_stdout = SERVER_LOG_HANDLE = open(server_log_file, "wb")  # noqa: SIM115
+        
+        
+        server_stdout = SERVER_LOG_HANDLE = open(server_log_file, "wb")  
     except OSError:
         log.exception("Failed to open server log file for writing", exc_info=True)
         server_stdout = subprocess.DEVNULL
@@ -167,8 +167,8 @@ async def initialize():
         raise RuntimeError("Failed to start the Dengjen GRPC server")
     if CHANNEL is not None:
         try:
-            # grpc.aio binds a channel to the loop that created it, so a channel
-            # outliving its loop has to be replaced rather than reused.
+            
+            
             channel_loop = getattr(CHANNEL, "_loop", None)
             if (
                 channel_loop is aio.ENGINE.event_loop
@@ -382,13 +382,13 @@ class SonataGrpcBackend:
         try:
             return check_grpc_server().result(timeout=STARTUP_TIMEOUT)
         except Exception:
-            # A failure here most often means find_free_port()'s pick lost
-            # a bind race to another process -- check_grpc_server() already
-            # cleared the dead process/port/channel (_clear_stale_server_state),
-            # so a fresh initialize() spawns a genuinely new subprocess on a
-            # freshly chosen port. One retry only: this exists to smooth
-            # over a rare, transient race, not to loop indefinitely against
-            # a genuinely broken install.
+            
+            
+            
+            
+            
+            
+            
             log.warning(
                 "Dengjen GRPC server was not ready on the first attempt "
                 "(possibly lost a port-bind race); retrying once with a "

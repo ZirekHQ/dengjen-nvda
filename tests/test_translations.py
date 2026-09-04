@@ -27,11 +27,11 @@ _CATALOGUES = sorted(
 )
 _LOCALES = [path.split(os.sep)[-3] for path in _CATALOGUES]
 
-# The globs xgettext harvests msgids from -- kept in sync with
-# buildVars.pythonSources/i18nSources, which the SCons build reads. Bounded
-# to the flat layout plus exactly one extra level for the clean-architecture
-# subpackages (domain/, ports/, adapters/*/), so vendored lib/ and the
-# generated grpc_protos/ stay out.
+
+
+
+
+
 _I18N_SOURCES = sorted(
     path
     for pattern in (
@@ -48,13 +48,13 @@ _I18N_SOURCES = sorted(
 )
 _I18N_SOURCE_IDS = [os.path.relpath(path, _REPO_ROOT) for path in _I18N_SOURCES]
 
-# `_(`, but not `foo_(`, `self._(` or `ngettext(`.
+
 _GETTEXT_CALL = re.compile(r"(?<![\w.])_\(")
 
 
 def _po_string(token):
-    # Escapes are left as they are: this file only ever inspects `&`, and po
-    # never escapes that.
+    
+    
     assert token.startswith('"'), token
     assert token.endswith('"'), token
     return token[1:-1]
@@ -95,14 +95,14 @@ def _po_entries(path):
 
 def _access_key(text):
     """The Alt shortcut `text` claims, lowercased, or None."""
-    # && is a literal ampersand, not a mnemonic marker.
+    
     match = re.search(r"&(\w)", text.replace("&&", ""))
     return match.group(1).lower() if match else None
 
 
 def test_the_catalogues_were_found():
-    # Without this, a bad glob would silently parametrize nothing below and the
-    # whole file would pass by testing zero locales.
+    
+    
     assert _LOCALES, f"no catalogues under {_REPO_ROOT}/addon/locale"
 
 
@@ -111,10 +111,10 @@ def test_translations_neither_drop_nor_invent_access_keys(catalogue):
     translated = [
         (msgid, msgstr)
         for msgid, msgstr in _po_entries(catalogue)
-        if msgid and msgstr  # skip the header entry and untranslated strings
+        if msgid and msgstr  
     ]
-    # positive control: a parser that returned nothing useful would otherwise
-    # make every locale look clean.
+    
+    
     assert sum(1 for msgid, _ in translated if _access_key(msgid)) >= 5
 
     dropped = [
@@ -131,9 +131,9 @@ def test_translations_neither_drop_nor_invent_access_keys(catalogue):
     assert not invented, f"translations added an access key: {invented}"
 
 
-# The Installed tab's buttons plus the dialog's own Close button: the set a
-# user sees at once, so a letter reused inside it makes Alt ambiguous. The
-# Download tab is a separate page and free to reuse the same letters.
+
+
+
 _INSTALLED_TAB_LABELS = (
     "&Voice model card...",
     "&Remove voice...",
@@ -157,9 +157,9 @@ def test_translated_access_keys_do_not_collide_on_the_installed_tab(catalogue):
     claimed = {}
     for label in _INSTALLED_TAB_LABELS:
         key = _access_key(entries[label])
-        if key is not None:  # a string no translator has reached yet
+        if key is not None:  
             claimed.setdefault(key, []).append(entries[label])
-    # positive control: an empty or near-empty tally cannot collide.
+    
     assert len(claimed) >= 3, claimed
     collisions = {key: labels for key, labels in claimed.items() if len(labels) > 1}
     assert not collisions, f"Alt is ambiguous: {collisions}"
@@ -174,7 +174,7 @@ def _binds_gettext(source):
 
 
 def test_the_i18n_sources_were_found():
-    # A bad glob would parametrize nothing below and pass by testing no files.
+    
     assert len(_I18N_SOURCES) >= 10, _I18N_SOURCE_IDS
 
 
@@ -257,9 +257,9 @@ def test_catalogues_carry_exactly_the_msgids_the_source_uses(catalogue):
 
 
 def test_the_gettext_call_pattern_finds_real_calls_only():
-    # Positive and negative control for _GETTEXT_CALL: a pattern that matched
-    # nothing would skip every file above, and one that matched too much would
-    # demand initTranslation() in modules that never translate anything.
+    
+    
+    
     assert _GETTEXT_CALL.search('gui.messageBox(_("Error"))')
     assert not _GETTEXT_CALL.search("ngettext(n)")
     assert not _GETTEXT_CALL.search("self._(x)")

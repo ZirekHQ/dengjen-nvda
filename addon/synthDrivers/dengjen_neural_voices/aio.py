@@ -7,8 +7,8 @@ from functools import partial, wraps
 
 from logHandler import log
 
-# Re-exported for synth_driver.py, which reaches this via `from ...aio import ...`
-# rather than importing concurrent.futures directly.
+
+
 __all__ = ["CancelledError"]
 
 LOOP_STARTUP_TIMEOUT = 5
@@ -73,9 +73,9 @@ class AsyncEngine:
                 self._executor_is_shutdown = False
 
             if self._loop_thread is not None and self._loop_thread.is_alive():
-                # The thread is started before run_forever() marks the loop
-                # running, so wait on the handshake rather than sampling
-                # is_running().
+                
+                
+                
                 if (
                     self._loop_running.wait(timeout=LOOP_SHUTDOWN_TIMEOUT)
                     and self.is_running()

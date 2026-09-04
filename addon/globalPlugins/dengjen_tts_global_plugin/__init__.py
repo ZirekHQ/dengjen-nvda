@@ -31,8 +31,8 @@ finally:
     sys.path.remove(_TTS_MODULE_DIR)
 del _DIR, _ADDON_ROOT, _TTS_MODULE_DIR
 
-# Re-exported for voice_manager.py and voice_download.py, which reach these
-# via `from . import ...` rather than importing dengjen_neural_voices directly.
+
+
 __all__ = [
     "DENGJEN_VOICES_DIR",
     "DengjenTextToSpeechSystem",
@@ -53,9 +53,9 @@ class GlobalPlugin(globalPluginHandler.GlobalPlugin):
         core.postNvdaStartup.register(self._voice_checker)
         self.itemHandle = gui.mainFrame.sysTrayIcon.menu.Append(
             wx.ID_ANY,
-            # Translators: label of a menu item
+            
             _("Dengjen &voice manager..."),
-            # Translators: Dengjen's voice manager menu item help
+            
             _("Open the voice manager to preview, install or download dengjen voices"),
         )
         gui.mainFrame.sysTrayIcon.menu.Bind(
@@ -76,13 +76,13 @@ class GlobalPlugin(globalPluginHandler.GlobalPlugin):
             )
         ):
             retval = gui.messageBox(
-                # Translators: message telling the user that no voice is installed
+                
                 _(
                     "No Dengjen voice was found.\n"
                     "You can preview and download voices from the voice manager.\n"
                     "Do you want to open the voice manager now?"
                 ),
-                # Translators: title of a message telling the user that no Dengjen voice was found
+                
                 _("Dengjen Neural Voices"),
                 wx.YES_NO | wx.ICON_WARNING,
             )

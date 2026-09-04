@@ -1,5 +1,5 @@
-# Copyright (c) 2023 Musharraf Omer
-# This file is covered by the GNU General Public License.
+
+
 
 
 import json
@@ -203,11 +203,11 @@ def _fallback_ssl_context():
 
 
 def _is_os_trust_store_gap(exc):
-    # mureq wraps every socket-level IOError, including TLS failures, in
-    # HTTPException; the original exception survives as __cause__. OpenSSL
-    # (unlike WinHTTP/browsers) does no AIA chasing, so a Windows install
-    # whose local root store is missing a root CA fails verification even
-    # for a legitimately-signed server.
+    
+    
+    
+    
+    
     return isinstance(exc.__cause__, ssl.SSLCertVerificationError)
 
 
@@ -248,7 +248,7 @@ def _yield_response_with_cert_fallback(method, url, **kwargs):
 
 @contextmanager
 def _follow_redirects(url, label):
-    # mureq does not follow redirects, and HuggingFace serves every file as one.
+    
     for _redirect in range(REDIRECT_LIMIT):
         with _yield_response_with_cert_fallback("GET", url) as response:
             if response.status in REDIRECT_STATUSES:
@@ -301,14 +301,14 @@ class _BaseVoiceDownloader:
     def update_progress(self, progress):
         self.progress_dialog.Update(
             progress,
-            # Translators: message of a progress dialog
+            
             _("Downloaded: {progress}%").format(progress=progress),
         )
 
     def download(self):
         self.progress_dialog = wx.ProgressDialog(
             title=self._progress_title(),
-            # Translators: message of a progress dialog
+            
             message=_("Retrieving download information..."),
             parent=gui.mainFrame,
         )
@@ -318,10 +318,10 @@ class _BaseVoiceDownloader:
         )
 
     def done_callback(self, result):
-        # add_done_callback (and so _done_callback_wrapper) runs on the
-        # worker thread that completed the future; wx is not thread-safe, so
-        # the whole completion flow -- including the progress dialog and
-        # _install() -- has to move to the main thread.
+        
+        
+        
+        
         wx.CallAfter(self._on_download_complete, result)
 
     def _on_download_complete(self, result):
@@ -330,7 +330,7 @@ class _BaseVoiceDownloader:
         if not has_error:
             self.progress_dialog.Update(
                 0,
-                # Translators: message shown in the voice download progress dialog
+                
                 _("Installing voice"),
             )
             try:
@@ -347,7 +347,7 @@ class _BaseVoiceDownloader:
             self.success_callback()
             retval = gui.messageBox(
                 self._success_message(),
-                # Translators: title of a message box
+                
                 _("Voice downloaded"),
                 wx.YES_NO | wx.ICON_WARNING,
                 parent=gui.mainFrame,
@@ -375,7 +375,7 @@ class _BaseVoiceDownloader:
         else:
             done_callback(result)
 
-    # Hooks implemented by subclasses.
+    
 
     def _download_work(self):
         raise NotImplementedError
@@ -395,11 +395,11 @@ class _BaseVoiceDownloader:
 
 class PiperVoiceDownloader(_BaseVoiceDownloader):
     def _progress_title(self):
-        # Translators: title of a progress dialog
+        
         return _("Downloading voice {voice}").format(voice=self.voice.key)
 
     def _success_message(self):
-        # Translators: content of a message box
+        
         return _(
             "Successfully downloaded voice  {voice}.\n"
             "To use this voice, you need to restart NVDA.\n"
@@ -419,7 +419,7 @@ class PiperVoiceDownloader(_BaseVoiceDownloader):
         for file in self.voice.files:
             self.progress_dialog.Update(
                 0,
-                # Translators: message shown in progress dialog
+                
                 _("Downloading file: {file}").format(file=file.name),
             )
             result = self._do_download_file(
@@ -472,13 +472,13 @@ class PiperRTVoiceDownloader(_BaseVoiceDownloader):
         super().__init__(voice, success_callback)
 
     def _progress_title(self):
-        # Translators: title of a progress dialog
+        
         return _("Downloading fast variant of the voice {voice}").format(
             voice=self.voice.key
         )
 
     def _success_message(self):
-        # Translators: content of a message box
+        
         return _(
             "Successfully downloaded fast variant of the voice  {voice}.\n"
             "To use this voice, you need to restart NVDA.\n"
@@ -497,7 +497,7 @@ class PiperRTVoiceDownloader(_BaseVoiceDownloader):
         voice_name = self.rt_download_url.split("/")[-1].strip()
         self.progress_dialog.Update(
             0,
-            # Translators: message shown in progress dialog
+            
             _("Downloading file: {file}").format(file=voice_name),
         )
         result = self._do_download_archive(
@@ -598,10 +598,10 @@ def install_voice_from_tar_archive(tar_path, voices_dir):
             )
             voice_key = _voice_key_from_config(config)
         voice_folder_name = Path(voices_dir).joinpath(voice_key)
-        # voice_key can come from _voice_key_from_config(), which is built
-        # from attacker-controlled JSON fields (dataset, audio.quality) with
-        # only literal "-" sanitized; reject anything that would land the
-        # voice folder outside voices_dir (e.g. a path separator or "..").
+        
+        
+        
+        
         resolved_voices_dir = Path(voices_dir).resolve()
         resolved_voice_folder = voice_folder_name.resolve()
         if (

@@ -31,9 +31,9 @@ from dengjen_neural_voices.domain import tts_system
 
 from tests.conftest import GLOBAL_PLUGIN_PKG_DIR, load_module_from_path
 
-# In production this runs once, in the package __init__.py, before anything
-# that uses `_(...)` is ever imported. We load voice_download.py directly
-# without that __init__.py running, so it has to happen here instead.
+
+
+
 addonHandler.initTranslation()
 
 voice_download = load_module_from_path(
@@ -282,11 +282,11 @@ class TestVoiceInfoRegex:
     @pytest.mark.parametrize(
         "stem,name",
         [
-            # Regression: digits in the name, e.g. MLS dataset speaker IDs.
-            # Originally reported as mush42/sonata-nvda#2.
+            
+            
             ("pl_PL-mls_6892-low", "mls_6892"),
             ("fr_FR-mls_1840-low", "mls_1840"),
-            # The +RT (real-time) variant suffix.
+            
             ("en_US-amy+RT-medium", "amy+RT"),
             ("en_US-lessac+RT-medium", "lessac+RT"),
         ],
@@ -319,10 +319,10 @@ class TestVoiceKeyDerivation:
     @pytest.mark.parametrize(
         "stem",
         [
-            "aivars",  # upstream #47 — no separators at all
-            "voice",  # single word
-            "aivars-medium",  # missing language part
-            "en-foo-banana",  # quality not in {high,medium,low,x-low,x_low}
+            "aivars",  
+            "voice",  
+            "aivars-medium",  
+            "en-foo-banana",  
         ],
     )
     def test_from_filename_returns_none_when_it_does_not_match(self, stem):
@@ -340,8 +340,8 @@ class TestVoiceKeyDerivation:
                 "en_US-lessac-medium",
             ),
             (
-                # Dashes inside dataset/quality would break the X-Y-Z voice_key
-                # structure if left unreplaced (upstream #47's fallback path).
+                
+                
                 {
                     "language": {"code": "en_US"},
                     "dataset": "my-dataset",
@@ -431,7 +431,7 @@ class TestInstallVoiceFromTarArchive:
             {
                 "weird-name.onnx": json.dumps(
                     config
-                ).encode(),  # content unused for onnx
+                ).encode(),  
                 "weird-name.onnx.json": json.dumps(config).encode(),
             },
         )
@@ -493,11 +493,11 @@ class TestSelectNotInstalledVoices:
     def test_calls_the_real_backend_threaded_call_without_raising(
         self, tmp_path, monkeypatch
     ):
-        # Regression test for a TypeError: load_piper_voices_from_nvda_config_dir
-        # requires a backend argument, and this caller (voice_download.py:594)
-        # was missing it. Deliberately does NOT monkeypatch
-        # load_piper_voices_from_nvda_config_dir itself, so it exercises the
-        # real call, including the real SonataGrpcBackend() construction.
+        
+        
+        
+        
+        
         monkeypatch.setattr(tts_system, "DENGJEN_VOICES_DIR", str(tmp_path / "voices"))
         voices = {"en_US-lessac-medium": self._voice_dict(has_rt_variant=False)}
         result = voice_download._select_not_installed_voices(voices)
@@ -1080,9 +1080,9 @@ class TestDownloadWiresProgressDialogToInstall:
     def test_standard_and_rt_failure_messages_differ(
         self, tmp_path, monkeypatch, sync_executor, progress_dialog
     ):
-        # Both go through the same _BaseVoiceDownloader.done_callback -- this
-        # guards against the two subclasses' _failure_message hooks getting
-        # mixed up.
+        
+        
+        
         voices_dir = tmp_path / "voices"
         monkeypatch.setattr(voice_download, "DENGJEN_VOICES_DIR", str(voices_dir))
         messagebox_mock = MagicMock()

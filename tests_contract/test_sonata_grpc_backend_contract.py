@@ -20,22 +20,22 @@ import pytest
 if sys.platform != "win32":
     pytest.skip("dengjen-tts-grpc.exe is a Windows binary", allow_module_level=True)
 
-# Ensures the real, vendored grpc/NVDA-adjacent modules this backend imports
-# are importable outside NVDA. tests_contract/ deliberately does not use
-# tests/nvda_stubs.py (see conftest.py's own docstring): that module stubs
-# `grpc` itself as a MagicMock, which would shadow the real vendored grpc
-# these tests must exercise. Provide the minimal real stand-ins instead.
-#
-# adapters/sonata_grpc/__init__.py's own import chain (const.py, helpers.py,
-# aio.py) needs globalVars, logHandler, wx and gui.settingsDialogs -- not
-# domain/tts_system.py's or SynthDriver's much larger NVDA surface, because
-# dengjen_neural_voices/__init__.py is never allowed to run for real below.
-#
-# start_grpc_server() derives DENGJEN_ESPEAKNG_DATA_DIRECTORY as
-# `<globalVars.appDir>/synthDrivers`; without real espeak-ng phonemization
-# data there, dengjen-tts-grpc.exe aborts with "Failed to initialize eSpeak-ng".
-# Build a real app directory whose synthDrivers subfolder holds the same
-# espeak-ng-data espeakng_loader vendors for test_grpc_contract.py.
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 _APP_DIR = tempfile.mkdtemp()
 _SYNTH_DRIVERS_DIR = os.path.join(_APP_DIR, "synthDrivers")
 shutil.copytree(
@@ -73,12 +73,12 @@ sys.modules.setdefault(
 
 from tests_contract.conftest import REPO_ROOT
 
-# dengjen_neural_voices/__init__.py imports SynthDriver (synthDriverHandler,
-# speech, config, ui, ...) at module load time -- a much larger NVDA surface
-# than this test needs. Pre-registering the package in sys.modules with its
-# real __path__ makes plain relative imports inside adapters/sonata_grpc
-# (`from ...const import ...`, `from ...helpers import ...`) resolve
-# correctly while skipping that __init__.py entirely.
+
+
+
+
+
+
 _SYNTH_PKG_DIR = os.path.join(
     REPO_ROOT, "addon", "synthDrivers", "dengjen_neural_voices"
 )
@@ -136,11 +136,11 @@ class TestSonataGrpcBackendContract:
         assert loaded.backend_voice_id
         assert loaded.sample_rate > 0
 
-        # The gRPC channel was created inside backend.initialize() on
-        # aio.ENGINE's own dedicated loop. Driving synthesize() from a fresh
-        # asyncio.run() would cross event loops; production code never does
-        # that (process_speech() in synth_driver.py uses this same decorator
-        # to stay on aio.ENGINE's loop), so this test must too.
+        
+        
+        
+        
+        
         @aio.asyncio_coroutine_to_concurrent_future
         async def _collect():
             chunks = []

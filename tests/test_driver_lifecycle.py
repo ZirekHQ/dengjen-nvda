@@ -175,12 +175,12 @@ class TestAioLifecycle:
         def worker():
             barrier.wait()
             for _ in range(_STRESS_ITERATIONS):
-                # Only record exceptions here: a concurrent aio.terminate()
-                # from the main thread can legitimately clear the event loop
-                # right after ensure_running() returns, so checking it
-                # immediately would be racy. The final ensure_running() /
-                # _settled_loop_thread_count() assertions below are what
-                # actually verify the engine is left usable.
+                
+                
+                
+                
+                
+                
                 try:
                     aio.ensure_running()
                 except Exception as exc:
@@ -224,9 +224,9 @@ class TestAioGlobalsDoNotLeakMutableState:
                     continue
                 for alias in node.names:
                     name = alias.name
-                    # UPPER_CASE only: aio's helper functions (run_in_executor,
-                    # etc.) also contain "loop"/"executor" but are stable
-                    # function references, not mutable state.
+                    
+                    
+                    
                     if name.isupper() and ("LOOP" in name or "EXECUTOR" in name):
                         offenders.append(f"{os.path.basename(path)}: {name}")
 

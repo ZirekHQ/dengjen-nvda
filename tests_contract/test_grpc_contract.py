@@ -21,9 +21,9 @@ import urllib.request
 import pytest
 
 if sys.platform != "win32":
-    # A plain skipif marker would not be enough: pytest still imports this
-    # module during collection, and `import grpc` below fails outright on
-    # any platform other than the one the vendored lib/grpc was built for.
+    
+    
+    
     pytest.skip("dengjen-tts-grpc.exe is a Windows binary", allow_module_level=True)
 
 import espeakng_loader
@@ -52,13 +52,13 @@ def grpc_server():
     port = _find_free_port()
     log_path = os.path.join(tempfile.mkdtemp(), "dengjen-tts-grpc.log")
     env = os.environ.copy()
-    # The server needs real espeak-ng phonemization data to synthesize text
-    # (not just a valid directory), or SynthesizeUtterance aborts with
-    # "Failed to initialize eSpeak-ng". Production gets this for free from
-    # NVDA's own bundled eSpeak NG driver; espeakng-loader vendors the same
-    # data as a plain pip package for exactly this kind of standalone use.
-    # DENGJEN_ESPEAKNG_DATA_DIRECTORY must be the directory that *contains*
-    # an `espeak-ng-data` subfolder, not that subfolder itself.
+    
+    
+    
+    
+    
+    
+    
     espeakng_data_dir = os.path.dirname(espeakng_loader.get_data_path())
     env.update(
         {
@@ -126,11 +126,11 @@ class TestVersionHandshake:
         assert response.version.strip() != ""
 
 
-# vi_VN-vivos-x_low is deliberately the cheapest real Piper voice to test
-# against: x_low is the lowest quality tier and vivos is one of the smaller
-# datasets (~28MB total). Actual synthesis quality isn't the point here —
-# only that LoadVoice/SynthesizeUtterance work end-to-end against the real
-# engine, which the mocked grpc_client everywhere else in tests/ can't prove.
+
+
+
+
+
 VOICE_KEY = "vi_VN-vivos-x_low"
 VOICE_FILES_BASE_URL = (
     "https://huggingface.co/rhasspy/piper-voices/resolve/v1.0.0/vi/vi_VN/vivos/x_low"

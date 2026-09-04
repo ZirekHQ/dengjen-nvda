@@ -18,8 +18,8 @@ import os
 
 import globalVars
 
-# An utterance is ignored if it only contains the following chars
-# Eventually, this should be moved to sonata-rs
+
+
 IGNORED_PUNCS = frozenset(",(){}[]`\"'")
 PIPER_VOICES_VERSION = "v1.0"
 DENGJEN_VOICES_BASE_DIR = os.path.join(globalVars.appArgs.configPath, "dengjen")
