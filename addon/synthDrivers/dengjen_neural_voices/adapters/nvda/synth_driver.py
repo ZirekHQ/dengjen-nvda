@@ -500,7 +500,6 @@ class SynthDriver(NvdaSynthDriver):
 
         if speaker is not None:
             self._set_speaker(speaker)
-        # Update gui if shown
         try:
             update_displaied_params_on_voice_change(self)
         except Exception:

@@ -361,7 +361,6 @@ def install(*, stub_wx: bool = True) -> None:
     # 3. Register `dengjen_neural_voices` as a package WITHOUT running __init__.py
     # -----------------------------------------------------------------------
 
-    # Add synthDrivers to path so the package is findable
     if _SYNTH_DIR not in sys.path:
         sys.path.insert(0, _SYNTH_DIR)
 

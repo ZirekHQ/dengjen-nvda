@@ -107,11 +107,9 @@ class TestAioLifecycle:
         assert aio.ENGINE.executor is not None
 
     def test_reinitialization_after_terminate(self):
-        # Shutdown loop and executor
         aio.terminate()
         assert aio.ENGINE.executor is None
 
-        # Re-initialize
         aio.initialize()
         assert aio.ENGINE.event_loop is not None
         assert aio.ENGINE.event_loop.is_running()

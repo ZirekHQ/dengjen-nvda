@@ -48,7 +48,6 @@ class InstalledDengjenVoicesPanel(SizedPanel):
     def __init__(self, parent):
         super().__init__(parent, -1)
         self.__already_populated = threading.Event()
-        # Add controls
         # Translators: label for a list of installed voices
         wx.StaticText(self, -1, _("Installed voices"))
         self.voices_list = ImmutableObjectListView(
@@ -322,7 +321,6 @@ class OnlineDengjenVoicesPanel(SizedPanel):
         self.lang_to_voices = {}
         # Translators: label of a button
         self._preview_label = _("&Preview")
-        # Build controls
         # Translators: label of a choice
         wx.StaticText(self, -1, _("Language"))
         self.language_choice = wx.Choice(self, -1, choices=[])
