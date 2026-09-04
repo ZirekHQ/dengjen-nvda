@@ -215,10 +215,46 @@ def terminate():
             SERVER_LOG_HANDLE = None
 
 
+def _clear_stale_server_state():
+    """Drop cached server/port state after a failed readiness check.
+
+    start_grpc_server() caches the spawned process and its port in
+    globalVars as soon as Popen succeeds -- before anything confirms the
+    server actually bound that port and is answering RPCs. find_free_port()
+    closes its probe socket before the child starts, so another process can
+    claim the port in that gap; if that happens the child exits (or never
+    becomes reachable) and, without this, every later start_grpc_server()
+    call would keep reusing the same dead process and port forever, since
+    its cache check only looks at presence, not health. Called from
+    check_grpc_server() -- the one place that actually confirms the server
+    is alive -- whenever that confirmation fails, so the next call spawns a
+    fresh subprocess on a freshly chosen port instead.
+    """
+    global GRPC_SERVER_PROCESS, SONATA_GRPC_SERVER_PORT, SERVER_LOG_HANDLE
+    process, GRPC_SERVER_PROCESS = GRPC_SERVER_PROCESS, None
+    SONATA_GRPC_SERVER_PORT = None
+    if hasattr(globalVars, "SONATA_GRPC_SERVER_PORT"):
+        del globalVars.SONATA_GRPC_SERVER_PORT
+    if hasattr(globalVars, "GRPC_SERVER_PROCESS"):
+        del globalVars.GRPC_SERVER_PROCESS
+    if process is not None:
+        try:
+            process.kill()
+        except Exception:
+            log.debug("Failed to kill an unready GRPC server process", exc_info=True)
+    if SERVER_LOG_HANDLE is not None:
+        SERVER_LOG_HANDLE.close()
+        SERVER_LOG_HANDLE = None
+
+
 @aio.asyncio_coroutine_to_concurrent_future
 async def check_grpc_server() -> str:
-    async with asyncio.timeout(SERVER_CHECK_TIMEOUT):
-        return await get_sonata_version()
+    try:
+        async with asyncio.timeout(SERVER_CHECK_TIMEOUT):
+            return await get_sonata_version()
+    except Exception:
+        _clear_stale_server_state()
+        raise
 
 
 async def get_sonata_version():
