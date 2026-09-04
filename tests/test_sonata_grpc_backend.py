@@ -26,6 +26,12 @@ def _failed_future(exc):
     return f
 
 
+def _resolved_future(value):
+    f = Future()
+    f.set_result(value)
+    return f
+
+
 def test_initialize_wraps_a_failure_as_backend_unavailable(monkeypatch):
     monkeypatch.setattr(sonata_grpc, "initialize", lambda: _failed_future(RuntimeError("no port")))
     with pytest.raises(BackendUnavailableError):
@@ -33,9 +39,54 @@ def test_initialize_wraps_a_failure_as_backend_unavailable(monkeypatch):
 
 
 def test_check_version_wraps_a_failure_as_backend_unavailable(monkeypatch):
+    # initialize is patched too, not just check_grpc_server: check_version()
+    # retries through it once (see the tests below), and an unpatched real
+    # initialize() would return a bare coroutine under the test stubs'
+    # identity-decorated aio (nvda_stubs.py) rather than a Future, which
+    # .result() can't call -- caught by check_version()'s except, so this
+    # test would still pass, but only after leaking an unawaited-coroutine
+    # RuntimeWarning into the test output.
     monkeypatch.setattr(sonata_grpc, "check_grpc_server", lambda: _failed_future(TimeoutError()))
+    monkeypatch.setattr(sonata_grpc, "initialize", lambda: _failed_future(RuntimeError("no port")))
     with pytest.raises(BackendUnavailableError):
         backend.check_version()
+
+
+def test_check_version_retries_once_after_a_failed_handshake_and_succeeds(monkeypatch):
+    """The retry this backend needs for a lost find_free_port() race
+    (#143): the first handshake fails, a fresh initialize() is attempted,
+    and the second handshake succeeds."""
+    attempts = []
+
+    def _check_grpc_server():
+        attempts.append(None)
+        if len(attempts) == 1:
+            return _failed_future(TimeoutError())
+        return _resolved_future("1.2.3")
+
+    monkeypatch.setattr(sonata_grpc, "check_grpc_server", _check_grpc_server)
+    monkeypatch.setattr(sonata_grpc, "initialize", lambda: _resolved_future(None))
+
+    assert backend.check_version() == "1.2.3"
+    assert len(attempts) == 2
+
+
+def test_check_version_gives_up_as_backend_unavailable_after_one_failed_retry(monkeypatch):
+    """The retry is bounded: a second consecutive failure still surfaces as
+    BackendUnavailableError rather than looping indefinitely."""
+    attempts = []
+
+    def _check_grpc_server():
+        attempts.append(None)
+        return _failed_future(TimeoutError())
+
+    monkeypatch.setattr(sonata_grpc, "check_grpc_server", _check_grpc_server)
+    monkeypatch.setattr(sonata_grpc, "initialize", lambda: _resolved_future(None))
+
+    with pytest.raises(BackendUnavailableError):
+        backend.check_version()
+
+    assert len(attempts) == 2
 
 
 def test_load_voice_wraps_a_failure_as_voice_load_error(monkeypatch):

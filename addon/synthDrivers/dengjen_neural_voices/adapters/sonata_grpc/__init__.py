@@ -359,8 +359,25 @@ class SonataGrpcBackend:
     def check_version(self):
         try:
             return check_grpc_server().result(timeout=STARTUP_TIMEOUT)
-        except Exception as exc:
-            raise BackendUnavailableError(str(exc)) from exc
+        except Exception:
+            # A failure here most often means find_free_port()'s pick lost
+            # a bind race to another process -- check_grpc_server() already
+            # cleared the dead process/port/channel (_clear_stale_server_state),
+            # so a fresh initialize() spawns a genuinely new subprocess on a
+            # freshly chosen port. One retry only: this exists to smooth
+            # over a rare, transient race, not to loop indefinitely against
+            # a genuinely broken install.
+            log.warning(
+                "Dengjen GRPC server was not ready on the first attempt "
+                "(possibly lost a port-bind race); retrying once with a "
+                "fresh subprocess.",
+                exc_info=True,
+            )
+            try:
+                initialize().result(timeout=STARTUP_TIMEOUT)
+                return check_grpc_server().result(timeout=STARTUP_TIMEOUT)
+            except Exception as exc:
+                raise BackendUnavailableError(str(exc)) from exc
 
     def shutdown(self):
         try:
