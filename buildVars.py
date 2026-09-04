@@ -22,7 +22,7 @@ addon_info = AddonInfo(
 	# Add-on description
 	# Translators: Long description to be shown for this add-on on add-on information from add-on store
 	addon_description=_(
-		"""Adds fast, local neural text-to-speech voices to NVDA. Provides a synthesizer driver for Piper voice models via the Sonata engine, together with a voice manager for downloading and installing voices."""
+		"""Adds fast, local neural text-to-speech voices to NVDA. Provides a synthesizer driver for Piper voice models via the dengjen engine, together with a voice manager for downloading and installing voices."""
 	),
 	# version
 	addon_version="4.0.1",

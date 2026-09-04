@@ -106,10 +106,10 @@ def onInstall():
 
 def onUninstall():
     with _temporary_import_psutil() as psutil:
-        force_kill_sonata_grpc_server(psutil)
+        force_kill_dengjen_grpc_server(psutil)
 
 
-def _is_sonata_grpc_process(proc, grpc_server_exe):
+def _is_dengjen_grpc_process(proc, grpc_server_exe):
     """Best-effort match: a process can exit or become inaccessible between
     enumeration and inspection, so any lookup failure here just means "not
     a match" rather than aborting the whole uninstall."""
@@ -117,7 +117,7 @@ def _is_sonata_grpc_process(proc, grpc_server_exe):
         name = proc.name()
     except Exception:
         return False
-    if not name or "sonata-grpc" not in name.lower():
+    if not name or "dengjen-tts-grpc" not in name.lower():
         return False
     try:
         exe = proc.exe()
@@ -131,13 +131,13 @@ def _is_sonata_grpc_process(proc, grpc_server_exe):
         return False
 
 
-def force_kill_sonata_grpc_server(psutil):
+def force_kill_dengjen_grpc_server(psutil):
     log.debug("Trying to force kill GRPC server process")
-    grpc_server_exe = os.path.join(BIN_DIR, "sonata-grpc.exe")
+    grpc_server_exe = os.path.join(BIN_DIR, "dengjen-tts-grpc.exe")
     grpc_server_processes = [
         proc
         for proc in psutil.process_iter(attrs=["name", "exe"])
-        if _is_sonata_grpc_process(proc, grpc_server_exe)
+        if _is_dengjen_grpc_process(proc, grpc_server_exe)
     ]
     for proc in grpc_server_processes:
         try:

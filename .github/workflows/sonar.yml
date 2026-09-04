@@ -14,7 +14,7 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
-  # tests_contract/ (real sonata-grpc.exe) and tests_gui/ (real wxPython) only
+  # tests_contract/ (real dengjen-tts-grpc.exe) and tests_gui/ (real wxPython) only
   # run on Windows, so the modules they exercise are invisible to the ubuntu
   # coverage run below. This job measures them and hands the raw data over as
   # an artifact for the scan job to combine (#89).

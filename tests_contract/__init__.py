@@ -1,1 +1,1 @@
-# gRPC contract tests against the real, vendored sonata-grpc.exe (Windows only).
+# gRPC contract tests against the real, vendored dengjen-tts-grpc.exe (Windows only).

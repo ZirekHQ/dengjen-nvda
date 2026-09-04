@@ -1,7 +1,7 @@
 # coding: utf-8
 """
 Contract test for SonataGrpcBackend against the real, vendored
-sonata-grpc.exe. Unlike test_grpc_contract.py (which talks to the raw
+dengjen-tts-grpc.exe. Unlike test_grpc_contract.py (which talks to the raw
 protobuf stub directly, bypassing any Python wrapper by design), this
 exercises the actual TTSBackend adapter production code will call --
 catching "the wrapper doesn't behave like the port says" before it reaches
@@ -19,7 +19,7 @@ import espeakng_loader
 import pytest
 
 if sys.platform != "win32":
-    pytest.skip("sonata-grpc.exe is a Windows binary", allow_module_level=True)
+    pytest.skip("dengjen-tts-grpc.exe is a Windows binary", allow_module_level=True)
 
 # Ensures the real, vendored grpc/NVDA-adjacent modules this backend imports
 # are importable outside NVDA. tests_contract/ deliberately does not use
@@ -32,9 +32,9 @@ if sys.platform != "win32":
 # domain/tts_system.py's or SynthDriver's much larger NVDA surface, because
 # dengjen_neural_voices/__init__.py is never allowed to run for real below.
 #
-# start_grpc_server() derives SONATA_ESPEAKNG_DATA_DIRECTORY as
+# start_grpc_server() derives DENGJEN_ESPEAKNG_DATA_DIRECTORY as
 # `<globalVars.appDir>/synthDrivers`; without real espeak-ng phonemization
-# data there, sonata-grpc.exe aborts with "Failed to initialize eSpeak-ng".
+# data there, dengjen-tts-grpc.exe aborts with "Failed to initialize eSpeak-ng".
 # Build a real app directory whose synthDrivers subfolder holds the same
 # espeak-ng-data espeakng_loader vendors for test_grpc_contract.py.
 _APP_DIR = tempfile.mkdtemp()

@@ -45,7 +45,7 @@ reviews:
     # 3. gRPC client & subprocess management
     - path: "addon/synthDrivers/dengjen_neural_voices/adapters/sonata_grpc/**"
       instructions: |
-        - The sonata-grpc.exe subprocess is spawned detached on a free port; verify port selection has no race and the process handle/stdout/stderr are closed or piped without leaking file descriptors.
+        - The dengjen-tts-grpc.exe subprocess is spawned detached on a free port; verify port selection has no race and the process handle/stdout/stderr are closed or piped without leaking file descriptors.
         - Confirm the vcruntime140_1.dll presence check happens before every spawn attempt, with a clear user-facing error if missing, not a raw crash.
         - Ensure gRPC channel/connection objects are closed on error paths, not just the happy path.
 

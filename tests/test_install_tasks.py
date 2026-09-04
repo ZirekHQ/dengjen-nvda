@@ -1,7 +1,7 @@
 # coding: utf-8
 """
 Tests for installTasks.py — the uninstall hook that force-kills a leftover
-sonata-grpc server process.
+dengjen-tts-grpc server process.
 
 `_temporary_import_psutil` and therefore `onUninstall` are not exercised: they
 copy the vendored psutil out of lib/ and import it, and that copy is a Windows
@@ -18,7 +18,7 @@ install_tasks = load_module_from_path(
     "_install_tasks_under_test", os.path.join(REPO_ROOT, "addon", "installTasks.py")
 )
 
-GRPC_EXE = os.path.join(install_tasks.BIN_DIR, "sonata-grpc.exe")
+GRPC_EXE = os.path.join(install_tasks.BIN_DIR, "dengjen-tts-grpc.exe")
 
 
 class _FakeProcess:
@@ -81,39 +81,39 @@ class TestModulePaths:
         assert not hasattr(install_tasks, "_PIPER_SYNTH_DIR")
 
 
-class TestForceKillSonataGrpcServer:
+class TestForceKillDengjenGrpcServer:
     def test_kills_a_matching_server_process(self, samefile_by_path):
-        proc = _FakeProcess("sonata-grpc.exe", GRPC_EXE, pid=42)
+        proc = _FakeProcess("dengjen-tts-grpc.exe", GRPC_EXE, pid=42)
         psutil = _FakePsutil([proc])
-        install_tasks.force_kill_sonata_grpc_server(psutil)
+        install_tasks.force_kill_dengjen_grpc_server(psutil)
         assert proc.killed
 
     def test_matches_the_process_name_case_insensitively(self, samefile_by_path):
-        proc = _FakeProcess("SONATA-GRPC.EXE", GRPC_EXE)
+        proc = _FakeProcess("DENGJEN-TTS-GRPC.EXE", GRPC_EXE)
         psutil = _FakePsutil([proc])
-        install_tasks.force_kill_sonata_grpc_server(psutil)
+        install_tasks.force_kill_dengjen_grpc_server(psutil)
         assert proc.killed
 
     def test_ignores_unrelated_processes(self, samefile_by_path):
         other = _FakeProcess("firefox", "/usr/bin/firefox")
         psutil = _FakePsutil([other])
-        install_tasks.force_kill_sonata_grpc_server(psutil)
+        install_tasks.force_kill_dengjen_grpc_server(psutil)
         assert not other.killed
 
     def test_does_not_kill_a_same_named_exe_from_another_location(
         self, samefile_by_path
     ):
-        impostor = _FakeProcess("sonata-grpc.exe", "/tmp/elsewhere/sonata-grpc.exe")
+        impostor = _FakeProcess("dengjen-tts-grpc.exe", "/tmp/elsewhere/dengjen-tts-grpc.exe")
         psutil = _FakePsutil([impostor])
-        install_tasks.force_kill_sonata_grpc_server(psutil)
+        install_tasks.force_kill_dengjen_grpc_server(psutil)
         assert not impostor.killed
 
     def test_kills_only_the_matching_process_among_several(self, samefile_by_path):
-        ours = _FakeProcess("sonata-grpc.exe", GRPC_EXE, pid=1)
-        impostor = _FakeProcess("sonata-grpc.exe", "/tmp/sonata-grpc.exe", pid=2)
+        ours = _FakeProcess("dengjen-tts-grpc.exe", GRPC_EXE, pid=1)
+        impostor = _FakeProcess("dengjen-tts-grpc.exe", "/tmp/dengjen-tts-grpc.exe", pid=2)
         unrelated = _FakeProcess("bash", "/bin/bash", pid=3)
         psutil = _FakePsutil([ours, impostor, unrelated])
-        install_tasks.force_kill_sonata_grpc_server(psutil)
+        install_tasks.force_kill_dengjen_grpc_server(psutil)
         assert ours.killed
         assert not impostor.killed
         assert not unrelated.killed
@@ -121,31 +121,31 @@ class TestForceKillSonataGrpcServer:
     def test_waits_on_the_name_matched_processes_with_a_timeout(
         self, samefile_by_path
     ):
-        ours = _FakeProcess("sonata-grpc.exe", GRPC_EXE, pid=1)
+        ours = _FakeProcess("dengjen-tts-grpc.exe", GRPC_EXE, pid=1)
         unrelated = _FakeProcess("bash", "/bin/bash", pid=2)
         psutil = _FakePsutil([ours, unrelated])
-        install_tasks.force_kill_sonata_grpc_server(psutil)
+        install_tasks.force_kill_dengjen_grpc_server(psutil)
         assert psutil.waited_for == [ours]
         assert psutil.wait_timeout == 5
 
     def test_handles_there_being_no_processes_at_all(self, samefile_by_path):
         psutil = _FakePsutil([])
-        install_tasks.force_kill_sonata_grpc_server(psutil)
+        install_tasks.force_kill_dengjen_grpc_server(psutil)
         assert psutil.waited_for == []
 
     def test_skips_a_process_whose_name_cannot_be_inspected(self, samefile_by_path):
-        unreadable = _FakeProcess("sonata-grpc.exe", GRPC_EXE, pid=1, name_error=Exception("gone"))
-        ours = _FakeProcess("sonata-grpc.exe", GRPC_EXE, pid=2)
+        unreadable = _FakeProcess("dengjen-tts-grpc.exe", GRPC_EXE, pid=1, name_error=Exception("gone"))
+        ours = _FakeProcess("dengjen-tts-grpc.exe", GRPC_EXE, pid=2)
         psutil = _FakePsutil([unreadable, ours])
-        install_tasks.force_kill_sonata_grpc_server(psutil)
+        install_tasks.force_kill_dengjen_grpc_server(psutil)
         assert not unreadable.killed
         assert ours.killed
 
     def test_skips_a_process_whose_exe_cannot_be_inspected(self, samefile_by_path):
-        unreadable = _FakeProcess("sonata-grpc.exe", GRPC_EXE, pid=1, exe_error=Exception("gone"))
-        ours = _FakeProcess("sonata-grpc.exe", GRPC_EXE, pid=2)
+        unreadable = _FakeProcess("dengjen-tts-grpc.exe", GRPC_EXE, pid=1, exe_error=Exception("gone"))
+        ours = _FakeProcess("dengjen-tts-grpc.exe", GRPC_EXE, pid=2)
         psutil = _FakePsutil([unreadable, ours])
-        install_tasks.force_kill_sonata_grpc_server(psutil)
+        install_tasks.force_kill_dengjen_grpc_server(psutil)
         assert not unreadable.killed
         assert ours.killed
 
@@ -155,16 +155,16 @@ class TestForceKillSonataGrpcServer:
             "samefile",
             lambda a, b: (_ for _ in ()).throw(FileNotFoundError()),
         )
-        proc = _FakeProcess("sonata-grpc.exe", GRPC_EXE)
+        proc = _FakeProcess("dengjen-tts-grpc.exe", GRPC_EXE)
         psutil = _FakePsutil([proc])
-        install_tasks.force_kill_sonata_grpc_server(psutil)
+        install_tasks.force_kill_dengjen_grpc_server(psutil)
         assert not proc.killed
 
     def test_one_process_failing_to_die_does_not_stop_the_others(self, samefile_by_path):
-        stubborn = _FakeProcess("sonata-grpc.exe", GRPC_EXE, pid=1, kill_error=Exception("access denied"))
-        ours = _FakeProcess("sonata-grpc.exe", GRPC_EXE, pid=2)
+        stubborn = _FakeProcess("dengjen-tts-grpc.exe", GRPC_EXE, pid=1, kill_error=Exception("access denied"))
+        ours = _FakeProcess("dengjen-tts-grpc.exe", GRPC_EXE, pid=2)
         psutil = _FakePsutil([stubborn, ours])
-        install_tasks.force_kill_sonata_grpc_server(psutil)
+        install_tasks.force_kill_dengjen_grpc_server(psutil)
         assert not stubborn.killed
         assert ours.killed
         assert psutil.waited_for == [stubborn, ours]

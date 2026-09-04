@@ -17,7 +17,7 @@ VC_REDIST_URL = "https://aka.ms/vs/17/release/vc_redist.x64.exe"
 def _vcruntime_missing():
     """Return True if vcruntime140_1.dll cannot be loaded.
 
-    sonata-grpc.exe is built with MSVC and needs the Visual C++ 2015-2022
+    dengjen-tts-grpc.exe is built with MSVC and needs the Visual C++ 2015-2022
     Redistributable (x64). On fresh Windows installs without it, Popen
     succeeds but the child process exits immediately with a missing-DLL
     dialog the user never sees from inside NVDA; the addon then logs the
@@ -72,8 +72,8 @@ from ...ports.tts_backend import (
 with import_bundled_library():
     import grpc
     from ... import aio
-    from .grpc_protos.sonata_grpc_pb2_grpc import sonata_grpcStub
-    from .grpc_protos import sonata_grpc_pb2 as msgs
+    from .grpc_protos.dengjen_grpc_pb2_grpc import DengjenGrpcStub
+    from .grpc_protos import dengjen_grpc_pb2 as msgs
 
 
 # All of the module-level state below is normally only touched from the
@@ -109,13 +109,13 @@ def start_grpc_server():
         _show_vcruntime_warning()
         return False
     SONATA_GRPC_SERVER_PORT = find_free_port()
-    grpc_server_exe = os.path.join(BIN_DIRECTORY, "sonata-grpc.exe")
+    grpc_server_exe = os.path.join(BIN_DIRECTORY, "dengjen-tts-grpc.exe")
     nvda_espeak_dir = os.path.join(globalVars.appDir, "synthDrivers")
     env = os.environ.copy()
     env.update({
-        "SONATA_GRPC_SERVER_PORT": str(SONATA_GRPC_SERVER_PORT),
-        "SONATA_ESPEAKNG_DATA_DIRECTORY": os.fspath(nvda_espeak_dir),
-        "SONATA_GRPC": "info",
+        "DENGJEN_GRPC_SERVER_PORT": str(SONATA_GRPC_SERVER_PORT),
+        "DENGJEN_ESPEAKNG_DATA_DIRECTORY": os.fspath(nvda_espeak_dir),
+        "DENGJEN_GRPC": "info",
     })
     creationflags = (
         subprocess.DETACHED_PROCESS
@@ -123,7 +123,7 @@ def start_grpc_server():
         | subprocess.REALTIME_PRIORITY_CLASS
     )
     try:
-        server_log_file = os.path.join(DENGJEN_VOICES_BASE_DIR, "logs", "sonata-grpc.log")
+        server_log_file = os.path.join(DENGJEN_VOICES_BASE_DIR, "logs", "dengjen-tts-grpc.log")
         Path(server_log_file).parent.mkdir(parents=True, exist_ok=True)
         server_stdout = SERVER_LOG_HANDLE = open(server_log_file, "wb")
     except OSError:
@@ -173,7 +173,7 @@ async def initialize():
         CHANNEL = None
     port = SONATA_GRPC_SERVER_PORT
     CHANNEL = grpc.aio.insecure_channel(f"localhost:{port}")
-    SONATA_GRPC_SERVICE = sonata_grpcStub(CHANNEL)
+    SONATA_GRPC_SERVICE = DengjenGrpcStub(CHANNEL)
 
 
 def close_channel():
@@ -215,26 +215,80 @@ def terminate():
             SERVER_LOG_HANDLE = None
 
 
+async def _clear_stale_server_state():
+    """Drop cached server/port/channel state after a failed readiness check.
+
+    start_grpc_server() caches the spawned process and its port in
+    globalVars as soon as Popen succeeds -- before anything confirms the
+    server actually bound that port and is answering RPCs. find_free_port()
+    closes its probe socket before the child starts, so another process can
+    claim the port in that gap; if that happens the child exits (or never
+    becomes reachable) and, without this, every later start_grpc_server()
+    call would keep reusing the same dead process and port forever, since
+    its cache check only looks at presence, not health.
+
+    Also clears CHANNEL/SONATA_GRPC_SERVICE: initialize() reuses a cached
+    CHANNEL outright when its loop still matches the running one, without
+    checking which port it was opened against -- leaving those set would
+    have every later RPC call reconnect to the dead port's channel even
+    after a fresh subprocess starts on a new one.
+
+    Called from check_grpc_server() -- the one place that actually
+    confirms the server is alive -- whenever that confirmation fails, so
+    the next initialize() call opens a fresh channel to a freshly spawned
+    subprocess instead. Awaits the channel's own close() directly (rather
+    than close_channel()'s thread-hop) because this always runs on the aio
+    loop already -- close_channel()'s run_coroutine_threadsafe().result()
+    would deadlock waiting on the very loop it's called from.
+    """
+    global GRPC_SERVER_PROCESS, SONATA_GRPC_SERVER_PORT, SERVER_LOG_HANDLE, CHANNEL, SONATA_GRPC_SERVICE
+    process, GRPC_SERVER_PROCESS = GRPC_SERVER_PROCESS, None
+    SONATA_GRPC_SERVER_PORT = None
+    SONATA_GRPC_SERVICE = None
+    channel, CHANNEL = CHANNEL, None
+    if channel is not None:
+        try:
+            await channel.close()
+        except Exception:
+            log.debug("Failed to close the stale GRPC channel", exc_info=True)
+    if hasattr(globalVars, "SONATA_GRPC_SERVER_PORT"):
+        del globalVars.SONATA_GRPC_SERVER_PORT
+    if hasattr(globalVars, "GRPC_SERVER_PROCESS"):
+        del globalVars.GRPC_SERVER_PROCESS
+    if process is not None:
+        try:
+            process.kill()
+        except Exception:
+            log.debug("Failed to kill an unready GRPC server process", exc_info=True)
+    if SERVER_LOG_HANDLE is not None:
+        SERVER_LOG_HANDLE.close()
+        SERVER_LOG_HANDLE = None
+
+
 @aio.asyncio_coroutine_to_concurrent_future
 async def check_grpc_server() -> str:
-    async with asyncio.timeout(SERVER_CHECK_TIMEOUT):
-        return await get_sonata_version()
+    try:
+        async with asyncio.timeout(SERVER_CHECK_TIMEOUT):
+            return await get_sonata_version()
+    except Exception:
+        await _clear_stale_server_state()
+        raise
 
 
 async def get_sonata_version():
-    resp = await SONATA_GRPC_SERVICE.GetSonataVersion(msgs.Empty())
+    resp = await SONATA_GRPC_SERVICE.GetDengjenVersion(msgs.Empty())
     return resp.version
 
 
 @aio.asyncio_coroutine_to_concurrent_future
 async def load_voice(config_path):
-    req = msgs.VoicePath(config_path=config_path)
+    req = msgs.VoiceConfigLocation(path=config_path)
     return await SONATA_GRPC_SERVICE.LoadVoice(req)
 
 
 @aio.asyncio_coroutine_to_concurrent_future
 async def get_synth_options(voice_id):
-    req = msgs.VoiceIdentifier(voice_id=voice_id)
+    req = msgs.VoiceRef(voice_key=voice_id)
     return await SONATA_GRPC_SERVICE.GetSynthesisOptions(req)
 
 
@@ -242,9 +296,9 @@ async def get_synth_options(voice_id):
 async def set_synth_options(
     voice_id, speaker=None, length_scale=None, noise_scale=None, noise_w=None
 ):
-    req = msgs.VoiceSynthesisOptions(
-        voice_id=voice_id,
-        synthesis_options=msgs.SynthesisOptions(
+    req = msgs.VoiceSynthesisSettings(
+        voice_key=voice_id,
+        synthesis_options=msgs.SynthesisSettings(
             speaker=speaker,
             length_scale=length_scale,
             noise_scale=noise_scale,
@@ -259,16 +313,16 @@ async def speak(
 ):
     speech_args = None
     if any(v is not None for v in (rate, volume, pitch, appended_silence_ms)):
-        speech_args = msgs.SpeechArgs(
+        speech_args = msgs.ProsodyControls(
             rate=rate,
             volume=volume,
             pitch=pitch,
             appended_silence_ms=appended_silence_ms,
         )
-    utterance = msgs.Utterance(
-        voice_id=voice_id,
+    utterance = msgs.SynthesisRequest(
+        voice_key=voice_id,
         text=text,
-        speech_args=speech_args,
+        prosody=speech_args,
     )
     if streaming:
         stream = SONATA_GRPC_SERVICE.SynthesizeUtteranceRealtime
@@ -289,7 +343,7 @@ async def bench(n=10000):
 class SonataGrpcBackend:
     """TTSBackend adapter over this module's process-wide gRPC client state.
 
-    A thin facade: the gRPC channel and sonata-grpc.exe subprocess are
+    A thin facade: the gRPC channel and dengjen-tts-grpc.exe subprocess are
     genuinely process-wide resources (one subprocess for the whole NVDA
     process, regardless of how many SynthDriver instances come and go), so
     this class delegates to the module-level functions/globals above rather
@@ -305,8 +359,25 @@ class SonataGrpcBackend:
     def check_version(self):
         try:
             return check_grpc_server().result(timeout=STARTUP_TIMEOUT)
-        except Exception as exc:
-            raise BackendUnavailableError(str(exc)) from exc
+        except Exception:
+            # A failure here most often means find_free_port()'s pick lost
+            # a bind race to another process -- check_grpc_server() already
+            # cleared the dead process/port/channel (_clear_stale_server_state),
+            # so a fresh initialize() spawns a genuinely new subprocess on a
+            # freshly chosen port. One retry only: this exists to smooth
+            # over a rare, transient race, not to loop indefinitely against
+            # a genuinely broken install.
+            log.warning(
+                "Dengjen GRPC server was not ready on the first attempt "
+                "(possibly lost a port-bind race); retrying once with a "
+                "fresh subprocess.",
+                exc_info=True,
+            )
+            try:
+                initialize().result(timeout=STARTUP_TIMEOUT)
+                return check_grpc_server().result(timeout=STARTUP_TIMEOUT)
+            except Exception as exc:
+                raise BackendUnavailableError(str(exc)) from exc
 
     def shutdown(self):
         try:
@@ -320,15 +391,15 @@ class SonataGrpcBackend:
         except Exception as exc:
             raise VoiceLoadError(str(exc)) from exc
         return LoadedVoice(
-            backend_voice_id=info.voice_id,
+            backend_voice_id=info.voice_key,
             supports_streaming_output=info.supports_streaming_output,
             sample_rate=info.audio.sample_rate,
             speakers=dict(info.speakers),
             defaults=SynthOptions(
-                speaker=info.synth_options.speaker,
-                length_scale=info.synth_options.length_scale,
-                noise_scale=info.synth_options.noise_scale,
-                noise_w=info.synth_options.noise_w,
+                speaker=info.synthesis_options.speaker,
+                length_scale=info.synthesis_options.length_scale,
+                noise_scale=info.synthesis_options.noise_scale,
+                noise_w=info.synthesis_options.noise_w,
             ),
         )
 
@@ -361,6 +432,6 @@ class SonataGrpcBackend:
                 appended_silence_ms=sentence_silence_ms,
                 streaming=streaming,
             ):
-                yield ret.wav_samples
+                yield ret.audio_bytes
         except Exception as exc:
             raise SynthesisError(str(exc)) from exc

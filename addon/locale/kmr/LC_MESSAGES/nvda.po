@@ -438,7 +438,7 @@ msgid "Failed to load voice {voice}. Keeping the previous voice."
 msgstr "Dengê {voice} nehat barkirin. Dengê berê tê bikaranîn."
 
 #: buildVars.py:25
-msgid "Adds fast, local neural text-to-speech voices to NVDA. Provides a synthesizer driver for Piper voice models via the Sonata engine, together with a voice manager for downloading and installing voices."
+msgid "Adds fast, local neural text-to-speech voices to NVDA. Provides a synthesizer driver for Piper voice models via the dengjen engine, together with a voice manager for downloading and installing voices."
 msgstr "Dengên metin-bo-deng ên neuronî yên bilez û herêmî li NVDA-yê zêde dike. Ji bo modelên dengî yên Piper bi rêya motora Sonata ajokarek sentezker, û ji bo daxistin û sazkirina dengan rêveberek dengan pêşkêş dike."
 
 #: buildVars.py:32
