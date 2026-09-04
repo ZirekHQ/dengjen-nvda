@@ -1,7 +1,7 @@
 # coding: utf-8
 """
-Contract test against the real, vendored sonata-grpc.exe: starts the actual
-engine binary and confirms it answers the GetSonataVersion handshake over a
+Contract test against the real, vendored dengjen-tts-grpc.exe: starts the actual
+engine binary and confirms it answers the GetDengjenVersion handshake over a
 real gRPC channel — the same call grpc_client.check_grpc_server() makes
 during NVDA startup.
 
@@ -25,13 +25,13 @@ if sys.platform != "win32":
     # A plain skipif marker would not be enough: pytest still imports this
     # module during collection, and `import grpc` below fails outright on
     # any platform other than the one the vendored lib/grpc was built for.
-    pytest.skip("sonata-grpc.exe is a Windows binary", allow_module_level=True)
+    pytest.skip("dengjen-tts-grpc.exe is a Windows binary", allow_module_level=True)
 
 import grpc
 import espeakng_loader
 
-import grpc_protos.sonata_grpc_pb2 as msgs
-import grpc_protos.sonata_grpc_pb2_grpc as pb2_grpc
+import grpc_protos.dengjen_grpc_pb2 as msgs
+import grpc_protos.dengjen_grpc_pb2_grpc as pb2_grpc
 
 from tests_contract.conftest import BIN_DIRECTORY, GRPC_SERVER_EXE
 
@@ -47,23 +47,23 @@ def _find_free_port():
 
 @pytest.fixture(scope="session")
 def grpc_server():
-    assert os.path.exists(GRPC_SERVER_EXE), f"sonata-grpc.exe not found at {GRPC_SERVER_EXE}"
+    assert os.path.exists(GRPC_SERVER_EXE), f"dengjen-tts-grpc.exe not found at {GRPC_SERVER_EXE}"
 
     port = _find_free_port()
-    log_path = os.path.join(tempfile.mkdtemp(), "sonata-grpc.log")
+    log_path = os.path.join(tempfile.mkdtemp(), "dengjen-tts-grpc.log")
     env = os.environ.copy()
     # The server needs real espeak-ng phonemization data to synthesize text
     # (not just a valid directory), or SynthesizeUtterance aborts with
     # "Failed to initialize eSpeak-ng". Production gets this for free from
     # NVDA's own bundled eSpeak NG driver; espeakng-loader vendors the same
     # data as a plain pip package for exactly this kind of standalone use.
-    # SONATA_ESPEAKNG_DATA_DIRECTORY must be the directory that *contains*
+    # DENGJEN_ESPEAKNG_DATA_DIRECTORY must be the directory that *contains*
     # an `espeak-ng-data` subfolder, not that subfolder itself.
     espeakng_data_dir = os.path.dirname(espeakng_loader.get_data_path())
     env.update({
-        "SONATA_GRPC_SERVER_PORT": str(port),
-        "SONATA_ESPEAKNG_DATA_DIRECTORY": espeakng_data_dir,
-        "SONATA_GRPC": "info",
+        "DENGJEN_GRPC_SERVER_PORT": str(port),
+        "DENGJEN_ESPEAKNG_DATA_DIRECTORY": espeakng_data_dir,
+        "DENGJEN_GRPC": "info",
     })
 
     with open(log_path, "wb") as log_file:
@@ -76,7 +76,7 @@ def grpc_server():
         )
 
     channel = grpc.insecure_channel(f"localhost:{port}")
-    stub = pb2_grpc.sonata_grpcStub(channel)
+    stub = pb2_grpc.DengjenGrpcStub(channel)
 
     deadline = time.monotonic() + STARTUP_TIMEOUT
     last_error = None
@@ -85,7 +85,7 @@ def grpc_server():
         if process.poll() is not None:
             break
         try:
-            stub.GetSonataVersion(msgs.Empty(), timeout=STARTUP_POLL_INTERVAL)
+            stub.GetDengjenVersion(msgs.Empty(), timeout=STARTUP_POLL_INTERVAL)
             ready = True
             break
         except grpc.RpcError as exc:
@@ -102,7 +102,7 @@ def grpc_server():
         with open(log_path, "rb") as log_file:
             server_log = log_file.read().decode(errors="replace")
         pytest.fail(
-            f"sonata-grpc.exe did not become ready within {STARTUP_TIMEOUT}s "
+            f"dengjen-tts-grpc.exe did not become ready within {STARTUP_TIMEOUT}s "
             f"(exit code: {process.poll()}, last gRPC error: {last_error}).\n"
             f"Server log:\n{server_log}"
         )
@@ -118,8 +118,8 @@ def grpc_server():
 
 
 class TestVersionHandshake:
-    def test_get_sonata_version_returns_a_non_empty_version_string(self, grpc_server):
-        response = grpc_server.GetSonataVersion(msgs.Empty())
+    def test_get_dengjen_version_returns_a_non_empty_version_string(self, grpc_server):
+        response = grpc_server.GetDengjenVersion(msgs.Empty())
         assert isinstance(response.version, str)
         assert response.version.strip() != ""
 
@@ -160,12 +160,12 @@ def downloaded_voice(tmp_path_factory):
 
 class TestVoiceSynthesis:
     def test_load_voice_and_synthesize_returns_non_empty_audio(self, grpc_server, downloaded_voice):
-        voice_info = grpc_server.LoadVoice(msgs.VoicePath(config_path=downloaded_voice), timeout=CALL_TIMEOUT)
-        assert voice_info.voice_id
+        voice_info = grpc_server.LoadVoice(msgs.VoiceConfigLocation(path=downloaded_voice), timeout=CALL_TIMEOUT)
+        assert voice_info.voice_key
         assert voice_info.audio.sample_rate > 0
 
-        utterance = msgs.Utterance(voice_id=voice_info.voice_id, text="xin chào")
+        utterance = msgs.SynthesisRequest(voice_key=voice_info.voice_key, text="xin chào")
         frames = list(grpc_server.SynthesizeUtterance(utterance, timeout=CALL_TIMEOUT))
 
         assert frames, "expected at least one audio frame from SynthesizeUtterance"
-        assert sum(len(frame.wav_samples) for frame in frames) > 0
+        assert sum(len(frame.audio_bytes) for frame in frames) > 0
