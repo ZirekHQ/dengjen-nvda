@@ -2,7 +2,7 @@
 """Client and server classes corresponding to protobuf-defined services."""
 import grpc
 
-import dengjen_grpc_pb2 as dengjen__grpc__pb2
+from . import dengjen_grpc_pb2 as dengjen__grpc__pb2
 
 
 class DengjenGrpcStub(object):
