@@ -36,8 +36,6 @@ class DialogListCtrl(wx.ListCtrl, listmix.ListCtrlAutoWidthMixin):
         id,
         pos=wx.DefaultPosition,
         size=wx.DefaultSize,
-        
-        
         style=wx.BORDER_SUNKEN | wx.LC_SINGLE_SEL | wx.LC_REPORT | wx.LC_VRULES,
     ):
         wx.ListCtrl.__init__(self, parent, id, pos, size, style)
@@ -82,10 +80,10 @@ class SimpleDialog(sc.SizedDialog):
 
     def getButtons(self, parent):
         btnsizer = wx.StdDialogButtonSizer()
-        
+
         ok_btn = wx.Button(self, wx.ID_OK, _("OK"))
         ok_btn.SetDefault()
-        
+
         cancel_btn = wx.Button(self, wx.ID_CANCEL, _("Cancel"))
         for btn in (ok_btn, cancel_btn):
             btnsizer.AddButton(btn)
@@ -107,10 +105,7 @@ class SnakDialog(SimpleDialog):
         self.staticMessage = wx.StaticText(parent, -1, self.message)
         self.staticMessage.SetFocusFromKbd()
         self.Bind(wx.EVT_CLOSE, self.onClose, self)
-        
-        
-        
-        
+
         self.Bind(wx.EVT_CHAR_HOOK, self.onCharHook)
         ai.Start()
 
@@ -259,9 +254,6 @@ class ImmutableObjectListView(DialogListCtrl):
                 "List is immutable. Use 'ImmutableObjectListView.set_objects' instead"
             )
 
-    
-    
-    
     def Append(self, entry):
         self.prevent_mutations()
         return super().Append(entry)

@@ -90,9 +90,7 @@ def nvda_gui(wx_app, monkeypatch):
     frame.sysTrayIcon = MagicMock()
     frame.sysTrayIcon.menu = wx.Menu()
     monkeypatch.setattr(gui, "mainFrame", frame)
-    
-    
-    
+
     monkeypatch.setattr(gui, "messageBox", MagicMock(return_value=wx.YES))
     monkeypatch.setattr(gui, "runScriptModalDialog", MagicMock())
     yield frame

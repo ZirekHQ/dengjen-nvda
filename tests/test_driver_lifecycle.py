@@ -175,12 +175,6 @@ class TestAioLifecycle:
         def worker():
             barrier.wait()
             for _ in range(_STRESS_ITERATIONS):
-                
-                
-                
-                
-                
-                
                 try:
                     aio.ensure_running()
                 except Exception as exc:
@@ -224,9 +218,7 @@ class TestAioGlobalsDoNotLeakMutableState:
                     continue
                 for alias in node.names:
                     name = alias.name
-                    
-                    
-                    
+
                     if name.isupper() and ("LOOP" in name or "EXECUTOR" in name):
                         offenders.append(f"{os.path.basename(path)}: {name}")
 

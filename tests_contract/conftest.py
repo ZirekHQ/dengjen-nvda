@@ -37,8 +37,6 @@ GRPC_CLIENT_DIR = os.path.join(_SYNTH_PKG_DIR, "adapters", "sonata_grpc")
 GRPC_SERVER_EXE = os.path.join(BIN_DIRECTORY, "dengjen-tts-grpc.exe")
 
 
-
-
 for _p in (LIB_DIRECTORY, GRPC_CLIENT_DIR):
     if _p not in sys.path:
         sys.path.insert(0, _p)

@@ -22,11 +22,6 @@ import pytest
 collect_ignore_glob = [] if sys.platform == "win32" else ["test_*.py"]
 
 
-
-
-
-
-
 RUNNER_ENVIRONMENT_ERRORS = (
     r"nvwave|WASAPI|audio (?:device|output|session|endpoint)",
     r"synthDriver|synthesi[sz]|espeak|oneCore|SAPI",

@@ -7,7 +7,6 @@ import zipfile
 
 import vendored_manifest
 
-
 url = "https://pypi.org/pypi/miniaudio/json"
 
 print("Fetching miniaudio release info from PyPI...")
@@ -26,7 +25,7 @@ releases = data["releases"][version]
 wheel_url = None
 for r in releases:
     filename = r["filename"]
-    
+
     if "cp313-cp313-win_amd64.whl" in filename:
         wheel_url = r["url"]
         break

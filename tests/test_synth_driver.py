@@ -128,9 +128,7 @@ class TestConstruction:
     def test_available_voices_use_dash_separated_language_in_the_display_name(
         self, driver
     ):
-        
-        
-        
+
         import languageHandler
 
         voice_id, display_name, lang = driver.availableVoices[VOICE_KEY]
@@ -178,7 +176,7 @@ class TestConstruction:
         try:
             assert d.tts is None
         finally:
-            d.terminate()  
+            d.terminate()
 
 
 class TestBuildSpeechTasks:
@@ -216,9 +214,7 @@ class TestBuildSpeechTasks:
         assert tasks[3].index_list == [1, 2]
 
     def test_command_flushes_pending_text_into_separate_tasks(self, driver):
-        
-        
-        
+
         seq = [
             "hello ",
             "world",
@@ -290,10 +286,7 @@ class TestProcessSpeechSequence:
             driver_module._process_speech_sequence([make_task(i) for i in range(3)])
         )
         assert ran == [0, 1, 2]
-        
-        
-        
-        
+
         assert max_active == 1
 
     def test_stops_and_debug_logs_on_cancellation(self, monkeypatch):
@@ -325,10 +318,10 @@ class TestProcessSpeechSequence:
 
         exception_mock = MagicMock()
         monkeypatch.setattr(driver_module.log, "exception", exception_mock)
-        
-        
-        
-        
+        # nvda_stubs aliases the module's CancelledError to the builtin
+        # Exception (so a plain raise can stand in for a real cancellation
+        # elsewhere); narrow it back to the real type here so a ValueError
+        # can actually reach the generic-exception branch under test.
         monkeypatch.setattr(driver_module, "CancelledError", asyncio.CancelledError)
 
         asyncio.run(driver_module._process_speech_sequence([blows_up, never_runs]))
@@ -395,18 +388,14 @@ class TestSettings:
         assert driver.noise_w == 75
 
     def test_noise_w_skips_reapplying_an_unchanged_value(self, driver, fake_backend):
-        
-        
-        
+
         driver.noise_w = 75
         fake_backend.set_synth_options_calls.clear()
         driver.noise_w = 75
         assert fake_backend.set_synth_options_calls == []
 
     def test_switching_variant_reapplies_scale_settings(self, driver, fake_backend):
-        
-        
-        
+
         driver.noise_scale = 75
         fake_backend.set_synth_options_calls.clear()
         driver.variant = driver.variant
@@ -416,11 +405,7 @@ class TestSettings:
     def test_switching_variant_reapplies_noise_w_even_when_the_cached_value_is_unchanged(
         self, driver, fake_backend
     ):
-        
-        
-        
-        
-        
+
         driver.noise_w = 75
         fake_backend.set_synth_options_calls.clear()
         driver.variant = driver.variant
@@ -458,10 +443,7 @@ class _FakeTTSRaising:
     voice = None
 
     def __init__(self):
-        
-        
-        
-        
+
         self.speech_options = MagicMock()
 
     def __setattr__(self, name, value):
@@ -515,8 +497,6 @@ class TestSetVoiceFailure:
 
         driver._set_voice("bryce")
 
-        
-        
         assert driver._SynthDriver__voice == "alex"
 
     def test_failed_load_reports_a_message_naming_the_voice(self):
@@ -541,7 +521,7 @@ class TestSetVoiceFailure:
             initial_voice=None,
         )
 
-        driver._set_voice("bryce")  
+        driver._set_voice("bryce")
 
     def test_failed_load_logs_the_exception(self):
         driver = _make_driver(

@@ -13,11 +13,7 @@ from dengjen_neural_voices.domain import tts_system
 from tests.conftest import GLOBAL_PLUGIN_PKG_DIR, load_module_from_path
 from tests.fake_tts_backend import FakeTTSBackend
 
-
-
 addonHandler.initTranslation()
-
-
 
 
 _backend = FakeTTSBackend()
@@ -94,8 +90,7 @@ class TestVoiceIdFromKey:
         assert logic.voice_id_from_key("en_US-amy+RT-medium") == "en_US-amy+RT"
 
     def test_underscored_language_survives(self):
-        
-        
+
         assert logic.voice_id_from_key("pt_BR-faber-medium") == "pt_BR-faber"
 
 
@@ -146,8 +141,7 @@ class TestGroupVoicesByLanguage:
         ]
 
     def test_languages_are_sorted_by_english_name_not_by_code(self):
-        
-        
+
         en = _language("en_US", "English")
         de = _language("de_DE", "German")
         voices = [
@@ -186,8 +180,7 @@ class TestInstalledListState:
         assert two.remove_enabled is True
 
     def test_dengjen_synth_matched_case_insensitively_by_substring(self):
-        
-        
+
         assert logic.installed_list_state([], "Dengjen_Neural_Voices").is_dengjen_synth
         assert logic.installed_list_state([], "dengjen").is_dengjen_synth
 
@@ -195,8 +188,7 @@ class TestInstalledListState:
         assert not logic.installed_list_state([], "espeak").is_dengjen_synth
 
     def test_remove_enabled_is_independent_of_the_active_synth(self):
-        
-        
+
         state = logic.installed_list_state(
             [_installed("en_US-amy-medium"), _installed("en_US-ryan-medium")],
             "espeak",

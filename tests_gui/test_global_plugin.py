@@ -52,8 +52,7 @@ def plugin(plugin_module, nvda_gui):
 
 class TestMenuLifecycle:
     def test_global_plugin_is_a_real_class(self, plugin_module):
-        
-        
+
         assert isinstance(plugin_module.GlobalPlugin, type)
 
     def test_it_appends_one_menu_item(self, plugin, nvda_gui):
@@ -84,8 +83,7 @@ class TestVoiceCheck:
         opened = []
         monkeypatch.setattr(plugin, "on_manager", lambda evt: opened.append(evt))
         plugin._perform_voice_check()
-        
-        
+
         import gui
 
         assert gui.messageBox.called
@@ -105,13 +103,6 @@ class TestVoiceCheck:
     ):
         import gui
 
-        
-        
-        
-        
-        
-        
-        
         plugin._GlobalPlugin__voice_manager_shown = True
         plugin._perform_voice_check()
         assert not gui.messageBox.called

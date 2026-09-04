@@ -1,7 +1,3 @@
-
-
-
-
 import json
 import math
 import os
@@ -203,11 +199,7 @@ def _fallback_ssl_context():
 
 
 def _is_os_trust_store_gap(exc):
-    
-    
-    
-    
-    
+
     return isinstance(exc.__cause__, ssl.SSLCertVerificationError)
 
 
@@ -248,7 +240,7 @@ def _yield_response_with_cert_fallback(method, url, **kwargs):
 
 @contextmanager
 def _follow_redirects(url, label):
-    
+
     for _redirect in range(REDIRECT_LIMIT):
         with _yield_response_with_cert_fallback("GET", url) as response:
             if response.status in REDIRECT_STATUSES:
@@ -301,14 +293,12 @@ class _BaseVoiceDownloader:
     def update_progress(self, progress):
         self.progress_dialog.Update(
             progress,
-            
             _("Downloaded: {progress}%").format(progress=progress),
         )
 
     def download(self):
         self.progress_dialog = wx.ProgressDialog(
             title=self._progress_title(),
-            
             message=_("Retrieving download information..."),
             parent=gui.mainFrame,
         )
@@ -318,10 +308,7 @@ class _BaseVoiceDownloader:
         )
 
     def done_callback(self, result):
-        
-        
-        
-        
+
         wx.CallAfter(self._on_download_complete, result)
 
     def _on_download_complete(self, result):
@@ -330,7 +317,6 @@ class _BaseVoiceDownloader:
         if not has_error:
             self.progress_dialog.Update(
                 0,
-                
                 _("Installing voice"),
             )
             try:
@@ -347,7 +333,6 @@ class _BaseVoiceDownloader:
             self.success_callback()
             retval = gui.messageBox(
                 self._success_message(),
-                
                 _("Voice downloaded"),
                 wx.YES_NO | wx.ICON_WARNING,
                 parent=gui.mainFrame,
@@ -375,8 +360,6 @@ class _BaseVoiceDownloader:
         else:
             done_callback(result)
 
-    
-
     def _download_work(self):
         raise NotImplementedError
 
@@ -395,11 +378,11 @@ class _BaseVoiceDownloader:
 
 class PiperVoiceDownloader(_BaseVoiceDownloader):
     def _progress_title(self):
-        
+
         return _("Downloading voice {voice}").format(voice=self.voice.key)
 
     def _success_message(self):
-        
+
         return _(
             "Successfully downloaded voice  {voice}.\n"
             "To use this voice, you need to restart NVDA.\n"
@@ -419,7 +402,6 @@ class PiperVoiceDownloader(_BaseVoiceDownloader):
         for file in self.voice.files:
             self.progress_dialog.Update(
                 0,
-                
                 _("Downloading file: {file}").format(file=file.name),
             )
             result = self._do_download_file(
@@ -472,13 +454,13 @@ class PiperRTVoiceDownloader(_BaseVoiceDownloader):
         super().__init__(voice, success_callback)
 
     def _progress_title(self):
-        
+
         return _("Downloading fast variant of the voice {voice}").format(
             voice=self.voice.key
         )
 
     def _success_message(self):
-        
+
         return _(
             "Successfully downloaded fast variant of the voice  {voice}.\n"
             "To use this voice, you need to restart NVDA.\n"
@@ -497,7 +479,6 @@ class PiperRTVoiceDownloader(_BaseVoiceDownloader):
         voice_name = self.rt_download_url.split("/")[-1].strip()
         self.progress_dialog.Update(
             0,
-            
             _("Downloading file: {file}").format(file=voice_name),
         )
         result = self._do_download_archive(
@@ -598,10 +579,7 @@ def install_voice_from_tar_archive(tar_path, voices_dir):
             )
             voice_key = _voice_key_from_config(config)
         voice_folder_name = Path(voices_dir).joinpath(voice_key)
-        
-        
-        
-        
+
         resolved_voices_dir = Path(voices_dir).resolve()
         resolved_voice_folder = voice_folder_name.resolve()
         if (

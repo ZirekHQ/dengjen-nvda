@@ -21,9 +21,6 @@ from dengjen_neural_voices.domain import tts_system
 
 from tests.fake_tts_backend import FakeTTSBackend
 
-
-
-
 _backend = FakeTTSBackend()
 
 

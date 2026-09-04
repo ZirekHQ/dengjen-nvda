@@ -1,6 +1,3 @@
-
-
-
 """wx-free decisions behind the voice manager UI.
 
 Imports nothing from wx, gui, winsound, miniaudio or synthDriverHandler, so
@@ -52,9 +49,7 @@ class InstalledListState:
 
 
 def installed_list_state(voices, synth_name: str) -> InstalledListState:
-    
-    
-    
+
     return InstalledListState(
         buttons_enabled=bool(voices),
         remove_enabled=len(voices) >= 2,

@@ -1,6 +1,3 @@
-
-
-
 """Core TTS domain logic: voices, speech options, providers.
 
 Imports no gRPC and no I/O-heavy NVDA module -- the one accepted exception is
@@ -269,9 +266,7 @@ class DengjenTextToSpeechSystem:
             self.speech_options = old_speech_options
 
     def shutdown(self):
-        
-        
-        
+
         pass
 
     @property

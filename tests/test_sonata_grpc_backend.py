@@ -39,13 +39,7 @@ def test_initialize_wraps_a_failure_as_backend_unavailable(monkeypatch):
 
 
 def test_check_version_wraps_a_failure_as_backend_unavailable(monkeypatch):
-    
-    
-    
-    
-    
-    
-    
+
     monkeypatch.setattr(
         sonata_grpc, "check_grpc_server", lambda: _failed_future(TimeoutError())
     )
@@ -148,7 +142,7 @@ def test_synthesize_wraps_a_failure_as_synthesis_error():
 
     async def _boom(**kwargs):
         raise RuntimeError("stream broke")
-        yield b""  
+        yield b""
 
     async def _run():
         with pytest.raises(SynthesisError):
@@ -267,16 +261,13 @@ class TestClearStaleServerState:
         monkeypatch.setattr(sonata_grpc, "CHANNEL", _FakeChannel())
         monkeypatch.setattr(sonata_grpc, "GRPC_SERVER_PROCESS", fake_process)
 
-        asyncio.run(sonata_grpc._clear_stale_server_state())  
+        asyncio.run(sonata_grpc._clear_stale_server_state())
 
         assert sonata_grpc.CHANNEL is None
         assert killed.value
 
     def test_clears_the_globalVars_cache(self):
-        
-        
-        
-        
+
         import asyncio
 
         import globalVars
@@ -317,7 +308,7 @@ class TestClearStaleServerState:
         monkeypatch.delattr(globalVars, "SONATA_GRPC_SERVER_PORT", raising=False)
         monkeypatch.delattr(globalVars, "GRPC_SERVER_PROCESS", raising=False)
 
-        asyncio.run(sonata_grpc._clear_stale_server_state())  
+        asyncio.run(sonata_grpc._clear_stale_server_state())
 
     def test_a_process_that_refuses_to_die_does_not_stop_the_cleanup(self, monkeypatch):
         import asyncio
@@ -328,7 +319,7 @@ class TestClearStaleServerState:
         )
         monkeypatch.setattr(sonata_grpc, "GRPC_SERVER_PROCESS", fake_process)
 
-        asyncio.run(sonata_grpc._clear_stale_server_state())  
+        asyncio.run(sonata_grpc._clear_stale_server_state())
 
         assert sonata_grpc.GRPC_SERVER_PROCESS is None
 

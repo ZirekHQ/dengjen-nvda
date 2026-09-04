@@ -7,8 +7,6 @@ from functools import partial, wraps
 
 from logHandler import log
 
-
-
 __all__ = ["CancelledError"]
 
 LOOP_STARTUP_TIMEOUT = 5
@@ -73,9 +71,6 @@ class AsyncEngine:
                 self._executor_is_shutdown = False
 
             if self._loop_thread is not None and self._loop_thread.is_alive():
-                
-                
-                
                 if (
                     self._loop_running.wait(timeout=LOOP_SHUTDOWN_TIMEOUT)
                     and self.is_running()

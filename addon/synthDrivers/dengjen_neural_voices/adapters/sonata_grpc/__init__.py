@@ -78,11 +78,6 @@ with import_bundled_library():
     from .grpc_protos.dengjen_grpc_pb2_grpc import DengjenGrpcStub
 
 
-
-
-
-
-
 SONATA_GRPC_SERVER_PORT = None
 GRPC_SERVER_PROCESS = None
 SERVER_LOG_HANDLE = None
@@ -131,9 +126,7 @@ def start_grpc_server():
             DENGJEN_VOICES_BASE_DIR, "logs", "dengjen-tts-grpc.log"
         )
         Path(server_log_file).parent.mkdir(parents=True, exist_ok=True)
-        
-        
-        server_stdout = SERVER_LOG_HANDLE = open(server_log_file, "wb")  
+        server_stdout = SERVER_LOG_HANDLE = open(server_log_file, "wb")  # noqa: SIM115
     except OSError:
         log.exception("Failed to open server log file for writing", exc_info=True)
         server_stdout = subprocess.DEVNULL
@@ -167,8 +160,6 @@ async def initialize():
         raise RuntimeError("Failed to start the Dengjen GRPC server")
     if CHANNEL is not None:
         try:
-            
-            
             channel_loop = getattr(CHANNEL, "_loop", None)
             if (
                 channel_loop is aio.ENGINE.event_loop
@@ -382,13 +373,6 @@ class SonataGrpcBackend:
         try:
             return check_grpc_server().result(timeout=STARTUP_TIMEOUT)
         except Exception:
-            
-            
-            
-            
-            
-            
-            
             log.warning(
                 "Dengjen GRPC server was not ready on the first attempt "
                 "(possibly lost a port-bind race); retrying once with a "

@@ -15,8 +15,6 @@ import typing
 import pytest
 
 if sys.platform != "win32":
-    
-    
     pytest.skip("real wxPython is Windows-only here", allow_module_level=True)
 
 import wx
@@ -71,8 +69,7 @@ class TestColumnDefn:
             _ = components.ColumnDefn("t", "sideways", 1, "x").alignment_flag
 
     def test_annotations_resolve(self, components):
-        
-        
+
         hints = typing.get_type_hints(components.ColumnDefn)
         assert "string_converter" in hints
 
@@ -120,8 +117,7 @@ class TestImmutableObjectListView:
             mutate(list_view)
         assert list_view.ItemCount == 2
         assert list_view.GetItemText(0, 0) == "amy"
-        
-        
+
         assert list_view.GetColumnCount() == 2
 
     def test_the_guard_re_arms_after_set_objects(self, list_view):
@@ -141,15 +137,12 @@ class TestImmutableObjectListView:
         objects = [_Exploding()]
         with pytest.raises(ValueError, match="boom"):
             list_view.set_objects(objects)
-        
-        
+
         with pytest.raises(RuntimeError, match="List is immutable"):
             list_view.DeleteAllItems()
 
     def test_labels_cannot_be_edited_in_place(self, list_view):
-        
-        
-        
+
         assert not list_view.GetWindowStyleFlag() & wx.LC_EDIT_LABELS
         list_view.set_objects([_Row("amy", "medium")])
         with pytest.raises(RuntimeError, match="List is immutable"):
@@ -161,7 +154,6 @@ class TestImmutableObjectListView:
         assert list_view.GetFocusedItem() == wx.NOT_FOUND
         list_view.set_focused_item(99)
         assert list_view.GetFocusedItem() == wx.NOT_FOUND
-        
-        
+
         list_view.set_focused_item(0)
         assert list_view.GetFocusedItem() == 0

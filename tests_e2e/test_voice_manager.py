@@ -24,11 +24,6 @@ VOICE_MANAGER_TITLE = "dengjen voice manager"
 VOICE_DOWNLOADED_TITLE = "Voice downloaded"
 
 
-
-
-
-
-
 _VOICE_MANAGER_DIALOG = (
     "next(w for w in wx.GetTopLevelWindows() if hasattr(w, 'notebookCtrl'))"
 )
@@ -63,18 +58,13 @@ def test_the_no_voice_modal_appears_and_no_declines_it(
     startup when no voice is installed (__init__.py:58-74). This is exactly
     the behavior tests_gui/test_global_plugin.py cannot prove, since it
     mocks gui.messageBox so the call never actually blocks."""
-    nvda.restart()  
+    nvda.restart()
 
     before = nvda.speech.index()
     nvda.speech.wait_for(NO_VOICE_MODAL_TEXT, timeout=15, since=before)
 
-    nvda.keys.press("n")  
+    nvda.keys.press("n")
 
-    
-    
-    
-    
-    
     wait_until(
         lambda: (
             voice_manager_state(nvda, "dialog.GetTitle() if dialog else ''")
@@ -102,25 +92,17 @@ def downloaded_voice_key(nvda_session, addon_under_test):
     nvda_session is the same underlying NvdaClient nvda wraps with a
     per-test reset()."""
     nvda = nvda_session
-    nvda.restart()  
+    nvda.restart()
     before = nvda.speech.index()
     nvda.speech.wait_for(NO_VOICE_MODAL_TEXT, timeout=15, since=before)
-    nvda.keys.press("y")  
+    nvda.keys.press("y")
 
     nvda.speech.wait_for(VOICE_MANAGER_TITLE, timeout=10, since=before)
-    
-    
-    
-    
-    
-    
-    
-    
-    
+
     before = nvda.speech.index()
     press_until(
         nvda,
-        "control+tab",  
+        "control+tab",
         lambda: (
             voice_manager_state(
                 nvda, f"{_VOICE_MANAGER_DIALOG}.notebookCtrl.GetSelection()"
@@ -143,14 +125,8 @@ def downloaded_voice_key(nvda_session, addon_under_test):
         description="the online language list to populate",
     )
 
-    
-    
-    
-    
-    
-    
-    nvda.keys.press("tab")  
-    nvda.keys.press("downArrow")  
+    nvda.keys.press("tab")
+    nvda.keys.press("downArrow")
     wait_until(
         lambda: (
             voice_manager_state(
@@ -163,12 +139,6 @@ def downloaded_voice_key(nvda_session, addon_under_test):
         description="voices for the selected language to list",
     )
 
-    
-    
-    
-    
-    
-    
     rt_index = voice_manager_state(
         nvda,
         "next("
@@ -183,11 +153,7 @@ def downloaded_voice_key(nvda_session, addon_under_test):
         "no voice for the first language has a fast (RT) variant"
     )
 
-    
-    
-    
-    
-    nvda.keys.press("tab")  
+    nvda.keys.press("tab")
     for _ in range(rt_index):
         nvda.keys.press("downArrow")
 
@@ -196,24 +162,17 @@ def downloaded_voice_key(nvda_session, addon_under_test):
         f"{_VOICE_MANAGER_DIALOG}.notebookCtrl.GetPage(1).voices_list.get_selected().key",
     )
 
-    nvda.keys.press_all(
-        "tab", "tab", "tab"
-    )  
+    nvda.keys.press_all("tab", "tab", "tab")
     before = nvda.speech.index()
-    nvda.keys.press("space")  
+    nvda.keys.press("space")
 
     nvda.speech.wait_for(
         "voice downloaded|successfully downloaded", timeout=90, since=before
     )
-    
-    
-    
-    
-    
-    
+
     press_until(
         nvda,
-        "n",  
+        "n",
         lambda: (
             voice_manager_state(nvda, "dialog.GetTitle() if dialog else ''")
             != VOICE_DOWNLOADED_TITLE
@@ -221,14 +180,6 @@ def downloaded_voice_key(nvda_session, addon_under_test):
         description="the voice-downloaded message box to close",
     )
 
-    
-    
-    
-    
-    
-    
-    
-    
     if not voice_manager_state(
         nvda, "dialog is not None and hasattr(dialog, 'notebookCtrl')"
     ):
@@ -241,19 +192,8 @@ def downloaded_voice_key(nvda_session, addon_under_test):
             description="focus to return to the voice manager dialog",
         )
 
-    
-    
-    
-    
-    
     nvda.wait_until_idle(timeout=15)
 
-    
-    
-    
-    
-    
-    
     lang, name, quality = online_key.split("-")
     return f"{lang}-{name}+RT-{quality}"
 
@@ -262,27 +202,12 @@ def test_downloading_the_fast_variant_voice_installs_it(
     nvda, downloaded_voice_key, assert_no_unexpected_errors
 ):
     """Depends on downloaded_voice_key leaving the voice manager dialog open on the Download tab."""
-    
-    
-    
-    
-    
-    
-    nvda.wait_until_idle(
-        timeout=15
-    )  
 
-    
-    
-    
-    
-    
-    
-    
-    
+    nvda.wait_until_idle(timeout=15)
+
     press_until(
         nvda,
-        "control+tab",  
+        "control+tab",
         lambda: (
             voice_manager_state(
                 nvda, f"{_VOICE_MANAGER_DIALOG}.notebookCtrl.GetSelection()"
@@ -309,7 +234,7 @@ def test_the_downloaded_voice_produces_real_speech(
 ):
     nvda.config.set(["speech", "synth"], ADDON_NAME)
     nvda.config.set(["speech", ADDON_NAME, "voice"], downloaded_voice_key)
-    nvda.restart()  
+    nvda.restart()
 
     before = nvda.speech.index()
     phrase = "dengjen testkit smoke phrase"

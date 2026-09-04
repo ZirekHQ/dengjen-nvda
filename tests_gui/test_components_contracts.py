@@ -17,8 +17,6 @@ from concurrent.futures import Future
 import pytest
 
 if sys.platform != "win32":
-    
-    
     pytest.skip("real wxPython is Windows-only here", allow_module_level=True)
 
 import wx
@@ -47,10 +45,7 @@ class _PendingExecutor:
 def _fire_char_hook(dialog, keycode):
     event = wx.KeyEvent(wx.EVT_CHAR_HOOK.typeId)
     event.SetKeyCode(keycode)
-    
-    
-    
-    
+    event.SetId(dialog.GetId())
     event.SetEventObject(dialog)
     dialog.ProcessEvent(event)
     return event
@@ -83,7 +78,7 @@ def _annotatable(module):
 
 def test_every_annotation_in_components_resolves(components):
     swept = list(_annotatable(components))
-    
+
     assert {"ColumnDefn", "AsyncSnakDialog.__init__"} <= {o.__qualname__ for o in swept}
 
     unresolvable = {}
@@ -117,20 +112,18 @@ class TestSnakDialogKeyboard:
     def test_escape_asks_the_dismiss_callback(self, dismissable):
         dialog, calls = dismissable
         _fire_char_hook(dialog, wx.WXK_ESCAPE)
-        
-        
+
         assert calls == ["asked"]
 
     def test_another_key_is_ignored(self, dismissable):
         dialog, calls = dismissable
         _fire_char_hook(dialog, ord("a"))
-        
+
         assert calls == []
 
     def test_escape_is_swallowed_rather_than_passed_on(self, dismissable):
         dialog, _ = dismissable
-        
-        
+
         assert _fire_char_hook(dialog, wx.WXK_ESCAPE).GetSkipped() is False
         assert _fire_char_hook(dialog, ord("a")).GetSkipped() is True
 
@@ -138,12 +131,7 @@ class TestSnakDialogKeyboard:
         self, dismissable
     ):
         dialog, _ = dismissable
-        
-        
-        
-        
-        
-        
+
         assert dialog.staticMessage.AcceptsFocus() is False
         assert dialog.staticMessage.AcceptsFocusFromKeyboard() is False
 
@@ -154,9 +142,7 @@ class TestSnakDialogKeyboard:
             event.SetEventObject(dialog)
             event.SetCanVeto(True)
             dialog.ProcessEvent(event)
-            
-            
-            
+
             assert event.GetVeto() is True
         finally:
             dialog.Destroy()
@@ -164,9 +150,7 @@ class TestSnakDialogKeyboard:
 
 class TestAsyncSnakDialog:
     def test_done_callback_receives_the_completed_future(self, components):
-        
-        
-        
+
         dialog = components.AsyncSnakDialog.__new__(components.AsyncSnakDialog)
         dialog.snak_dg = None
         received = []
@@ -176,8 +160,6 @@ class TestAsyncSnakDialog:
         future.set_result("voices")
         dialog.on_future_completed(future)
 
-        
-        
         assert received == [future]
         assert received[0].result() == "voices"
 
@@ -192,12 +174,8 @@ class TestAsyncSnakDialog:
             message="Retrieving voices list. Please wait...",
         )
 
-        
-        
         assert dialog.future is executor.future
         assert not received
 
-        
-        
         executor.future.set_result("voices")
         assert received == [executor.future]

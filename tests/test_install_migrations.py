@@ -243,9 +243,7 @@ class TestWarnIfOldAddonInstalled:
         assert "Sonata" in shown[0][0][0]
 
     def test_shows_the_warning_via_wx_CallAfter_not_directly(self, monkeypatch):
-        
-        
-        
+
         call_after_calls = []
         monkeypatch.setattr(
             install_tasks.wx,

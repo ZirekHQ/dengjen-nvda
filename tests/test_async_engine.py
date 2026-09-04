@@ -220,13 +220,7 @@ class TestTaskHelpers:
     def test_create_task_closes_the_coroutine_when_the_loop_is_gone(
         self, engine, monkeypatch
     ):
-        
-        
-        
-        
-        
-        
-        
+
         monkeypatch.setattr(engine, "ensure_running", lambda: None)
         fake_coro = MagicMock()
 

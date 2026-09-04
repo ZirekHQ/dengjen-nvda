@@ -132,12 +132,10 @@ def install(*, stub_wx: bool = True) -> None:
     # 2. NVDA internal stubs
     # -----------------------------------------------------------------------
 
-    
     _stub_module(
         "globalVars", appArgs=types.SimpleNamespace(configPath="/tmp/nvda_test_config")
     )
 
-    
     def _normalize_language(lang: str) -> str:
         """Port of NVDA's languageHandler.normalizeLanguage: dash -> underscore,
         lowercase language, uppercase dialect. Kept in sync with NVDA's real
@@ -154,7 +152,6 @@ def install(*, stub_wx: bool = True) -> None:
 
     _stub_module("languageHandler", normalizeLanguage=_normalize_language)
 
-    
     class _FakeConfSection(dict):
         def __missing__(self, key):
             val = _FakeConfSection()
@@ -176,13 +173,10 @@ def install(*, stub_wx: bool = True) -> None:
     _fake_conf["speech"]["dengjen_neural_voices"] = _FakeConfSection()
     _stub_module("config", conf=_fake_conf)
 
-    
     _stub_module("configobj", ConfigObj=MagicMock())
 
-    
     _stub_module("logHandler", log=MagicMock())
 
-    
     class _AutoPropertyMeta(type):
         """Stand-in for NVDA's baseObject.AutoPropertyObject: turns `_get_x`/
         `_set_x` method pairs into a real `x` property. The real SynthDriver's
@@ -223,9 +217,6 @@ def install(*, stub_wx: bool = True) -> None:
         def _percentToParam(self, percent, min_val, max_val):
             return min_val + (max_val - min_val) * percent / 100
 
-    
-    
-    
     _default_synth = types.SimpleNamespace(name="espeak", voice="default")
 
     _stub_module(
@@ -237,7 +228,6 @@ def install(*, stub_wx: bool = True) -> None:
         getSynth=lambda: _default_synth,
     )
 
-    
     _stub_module("autoSettingsUtils")
     _stub_module(
         "autoSettingsUtils.driverSetting",
@@ -245,7 +235,6 @@ def install(*, stub_wx: bool = True) -> None:
         NumericDriverSetting=MagicMock(return_value=MagicMock()),
     )
 
-    
     class _FakeWavePlayer:
         def __init__(self, *args, **kwargs):
             pass
@@ -273,7 +262,6 @@ def install(*, stub_wx: bool = True) -> None:
 
     _stub_module("nvwave", WavePlayer=_FakeWavePlayer)
 
-    
     _say_all = MagicMock()
     _say_all.isRunning.return_value = False
     _speech_mod = _stub_module("speech")
@@ -291,12 +279,6 @@ def install(*, stub_wx: bool = True) -> None:
         PitchCommand=type("PitchCommand", (), {"newValue": 50}),
     )
 
-    
-    
-    
-    
-    
-    
     builtins._ = lambda message: message
 
     def _init_translation():
@@ -309,15 +291,9 @@ def install(*, stub_wx: bool = True) -> None:
         getAvailableAddons=list,
     )
 
-    
     if stub_wx:
-        
-        
         _stub_module(
             "wx",
-            
-            
-            
             ID_ANY=0,
             YES=1,
             NO=2,
@@ -364,7 +340,6 @@ def install(*, stub_wx: bool = True) -> None:
     if _SYNTH_DIR not in sys.path:
         sys.path.insert(0, _SYNTH_DIR)
 
-    
     _pkg = types.ModuleType("dengjen_neural_voices")
     _pkg.__path__ = [_SYNTH_PKG_DIR]
     _pkg.__package__ = "dengjen_neural_voices"
@@ -379,7 +354,6 @@ def install(*, stub_wx: bool = True) -> None:
     # 4. Stub intra-package submodules that have platform/runtime dependencies
     # -----------------------------------------------------------------------
 
-    
     _aio = _stub_module("dengjen_neural_voices.aio")
     _aio.initialize = MagicMock()
     _aio.ensure_running = MagicMock()
@@ -389,17 +363,11 @@ def install(*, stub_wx: bool = True) -> None:
     _aio.asyncio_cancel_task = MagicMock()
     _aio.asyncio_coroutine_to_concurrent_future = lambda f: f
     _aio.run_in_executor = MagicMock()
-    
-    
-    
-    
+
     _aio.ENGINE = types.SimpleNamespace(executor=None, event_loop=MagicMock())
 
     def _call_threaded(func):
-        
-        
-        
-        
+
         def wrapper(*args, **kwargs):
             _aio.ensure_running()
             try:
@@ -424,28 +392,12 @@ def install(*, stub_wx: bool = True) -> None:
         package="dengjen_neural_voices.domain",
     )
 
-    
-    
-    
-    
-    
     _pkg.DengjenTextToSpeechSystem = sys.modules[
         "dengjen_neural_voices.domain.tts_system"
     ].DengjenTextToSpeechSystem
     _pkg.DENGJEN_VOICES_DIR = sys.modules[
         "dengjen_neural_voices.domain.tts_system"
     ].DENGJEN_VOICES_DIR
-
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
 
     if _GLOBAL_PLUGIN_DIR not in sys.path:
         sys.path.insert(0, _GLOBAL_PLUGIN_DIR)

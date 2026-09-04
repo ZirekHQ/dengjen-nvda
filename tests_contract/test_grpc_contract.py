@@ -21,9 +21,6 @@ import urllib.request
 import pytest
 
 if sys.platform != "win32":
-    
-    
-    
     pytest.skip("dengjen-tts-grpc.exe is a Windows binary", allow_module_level=True)
 
 import espeakng_loader
@@ -52,13 +49,7 @@ def grpc_server():
     port = _find_free_port()
     log_path = os.path.join(tempfile.mkdtemp(), "dengjen-tts-grpc.log")
     env = os.environ.copy()
-    
-    
-    
-    
-    
-    
-    
+
     espeakng_data_dir = os.path.dirname(espeakng_loader.get_data_path())
     env.update(
         {
@@ -124,11 +115,6 @@ class TestVersionHandshake:
         response = grpc_server.GetDengjenVersion(msgs.Empty())
         assert isinstance(response.version, str)
         assert response.version.strip() != ""
-
-
-
-
-
 
 
 VOICE_KEY = "vi_VN-vivos-x_low"

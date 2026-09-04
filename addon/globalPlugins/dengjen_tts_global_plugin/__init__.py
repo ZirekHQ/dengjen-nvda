@@ -32,7 +32,6 @@ finally:
 del _DIR, _ADDON_ROOT, _TTS_MODULE_DIR
 
 
-
 __all__ = [
     "DENGJEN_VOICES_DIR",
     "DengjenTextToSpeechSystem",
@@ -53,9 +52,7 @@ class GlobalPlugin(globalPluginHandler.GlobalPlugin):
         core.postNvdaStartup.register(self._voice_checker)
         self.itemHandle = gui.mainFrame.sysTrayIcon.menu.Append(
             wx.ID_ANY,
-            
             _("Dengjen &voice manager..."),
-            
             _("Open the voice manager to preview, install or download dengjen voices"),
         )
         gui.mainFrame.sysTrayIcon.menu.Bind(
@@ -76,13 +73,11 @@ class GlobalPlugin(globalPluginHandler.GlobalPlugin):
             )
         ):
             retval = gui.messageBox(
-                
                 _(
                     "No Dengjen voice was found.\n"
                     "You can preview and download voices from the voice manager.\n"
                     "Do you want to open the voice manager now?"
                 ),
-                
                 _("Dengjen Neural Voices"),
                 wx.YES_NO | wx.ICON_WARNING,
             )

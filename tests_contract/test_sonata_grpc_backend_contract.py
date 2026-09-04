@@ -21,21 +21,6 @@ if sys.platform != "win32":
     pytest.skip("dengjen-tts-grpc.exe is a Windows binary", allow_module_level=True)
 
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 _APP_DIR = tempfile.mkdtemp()
 _SYNTH_DRIVERS_DIR = os.path.join(_APP_DIR, "synthDrivers")
 shutil.copytree(
@@ -72,12 +57,6 @@ sys.modules.setdefault(
 )
 
 from tests_contract.conftest import REPO_ROOT
-
-
-
-
-
-
 
 _SYNTH_PKG_DIR = os.path.join(
     REPO_ROOT, "addon", "synthDrivers", "dengjen_neural_voices"
@@ -136,11 +115,6 @@ class TestSonataGrpcBackendContract:
         assert loaded.backend_voice_id
         assert loaded.sample_rate > 0
 
-        
-        
-        
-        
-        
         @aio.asyncio_coroutine_to_concurrent_future
         async def _collect():
             chunks = []

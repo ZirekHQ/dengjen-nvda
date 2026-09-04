@@ -137,10 +137,7 @@ class TestInstalledPanelControls:
         panel.voices_list.set_objects([installed_voice])
         panel.voices_list.set_focused_item(0)
         _fire_button(panel, panel.model_card_button)
-        
-        
-        
-        
+
         assert gui.messageBox.called
         assert gui.messageBox.call_args.args[1] == "Not found"
 
@@ -155,10 +152,7 @@ class TestInstalledPanelControls:
     def test_remove_voice_button_reaches_on_remove_voice(
         self, panel, voice_manager, monkeypatch, installed_voice
     ):
-        
-        
-        
-        
+
         monkeypatch.setattr(voice_manager.shutil, "rmtree", MagicMock())
         panel.voices_list.set_objects([installed_voice])
         panel.voices_list.set_focused_item(0)
@@ -166,8 +160,7 @@ class TestInstalledPanelControls:
         assert voice_manager.shutil.rmtree.called
 
     def test_add_voice_button_reaches_on_install_voice_from_tar(self, panel):
-        
-        
+
         add_voice_button = _find_child_of_type(panel, CommandLinkButton)
         _fire_button(panel, add_voice_button)
         assert gui.runScriptModalDialog.called
@@ -186,10 +179,7 @@ class TestOnlinePanelControls:
         assert panel.download_rt_btn is not None
 
     def test_speaker_choice_starts_disabled(self, panel):
-        
-        
-        
-        
+
         assert panel.speaker_choice.IsThisEnabled() is False
 
     def test_buttons_panel_starts_disabled(self, panel):
@@ -217,14 +207,9 @@ class TestOnlinePanelControls:
         panel.voices_list.set_objects([voice])
         panel.voices_list.set_focused_item(0)
         _fire_list_item_selected(panel, panel.voices_list, 0)
-        
-        
-        
-        
-        
-        
+
         assert panel.download_std_btn.IsThisEnabled() is expected_std_enabled
-        
+
         assert panel.download_rt_btn.IsThisEnabled() is False
 
     def test_language_selection_populates_voices_and_enables_buttons(
@@ -233,7 +218,7 @@ class TestOnlinePanelControls:
         panel.set_voices(online_voices)
         event = wx.CommandEvent(wx.EVT_CHOICE.typeId, panel.language_choice.GetId())
         event.SetEventObject(panel.language_choice)
-        event.SetInt(0)  
+        event.SetInt(0)
         panel.ProcessEvent(event)
         assert panel.voices_list.ItemCount == 1
         assert panel.buttons_panel.IsEnabled() is True
@@ -255,8 +240,7 @@ class TestOnlinePanelControls:
         monkeypatch.setattr(
             voice_manager.voice_download, "THREAD_POOL_EXECUTOR", sync_executor
         )
-        
-        
+
         refresh_btn = _find_child_of_type(panel, wx.Button)
         _fire_button(panel, refresh_btn)
         assert calls == [{"force_online": True}]
@@ -264,10 +248,7 @@ class TestOnlinePanelControls:
     def test_the_wait_toast_it_raises_can_be_dismissed(
         self, panel, voice_manager, monkeypatch
     ):
-        
-        
-        
-        
+
         captured = {}
         monkeypatch.setattr(
             voice_manager, "AsyncSnakDialog", lambda **kwargs: captured.update(kwargs)
@@ -285,22 +266,16 @@ class TestOnlinePanelControls:
         panel.voices_list.set_objects([selected_voice])
         panel.voices_list.set_focused_item(0)
         _fire_button(panel, panel.preview_btn)
-        
-        
-        
+
         assert calls == [selected_voice.get_preview_url(speaker_idx=0)]
-        
-        
-        
+
         assert panel._preview_active is False
         assert "Preview" in panel.preview_btn.GetLabel()
 
     def test_preview_button_resets_state_when_the_engine_is_shut_down(
         self, panel, voice_manager, monkeypatch, online_voices
     ):
-        
-        
-        
+
         class _RejectingExecutor:
             def submit(self, fn, *args, **kwargs):
                 raise RuntimeError("executor is shut down")
@@ -319,10 +294,7 @@ class TestOnlinePanelControls:
     def test_download_std_button_reaches_on_download(
         self, panel, voice_manager, monkeypatch, online_voices
     ):
-        
-        
-        
-        
+
         downloader_cls = MagicMock()
         monkeypatch.setattr(
             voice_manager.voice_download, "PiperVoiceDownloader", downloader_cls
@@ -353,15 +325,11 @@ class TestKeyboardAccess:
     ever have reached the control (#97)."""
 
     def test_every_button_carries_an_access_key(self, dialog):
-        
-        
-        
+
         buttons = list(_buttons(dialog))
-        
+
         assert len(buttons) >= 9
         assert [
-            
-            
             button.GetLabel().splitlines()[0]
             for button in buttons
             if _access_key(button) is None
@@ -369,21 +337,18 @@ class TestKeyboardAccess:
 
     @pytest.mark.parametrize("page", [0, 1])
     def test_access_keys_do_not_collide_on_a_page(self, dialog, page):
-        
-        
-        
+
         hidden = _access_keys(dialog.notebookCtrl.GetPage(1 - page))
         visible = _access_keys(dialog)
         for key in hidden:
             visible.remove(key)
-        
+
         assert len(visible) >= 3
         assert len(visible) == len(set(visible)), sorted(visible)
 
     @pytest.mark.parametrize("page", [0, 1])
     def test_the_voices_list_is_reachable_by_tab(self, dialog, page):
-        
-        
+
         panel = dialog.notebookCtrl.GetPage(page)
         assert _reachable_by_tab(panel.voices_list) is True
 
@@ -391,17 +356,14 @@ class TestKeyboardAccess:
         assert _reachable_by_tab(dialog.FindWindowById(wx.ID_CANCEL)) is True
 
     def test_a_disabled_button_is_not_reachable_by_tab(self, dialog):
-        
-        
+
         panel = dialog.notebookCtrl.GetPage(1)
         assert panel.buttons_panel.IsEnabled() is False
         assert _reachable_by_tab(panel.download_std_btn) is False
 
     def test_the_installed_pages_controls_all_precede_the_close_button(self, dialog):
         panel = dialog.notebookCtrl.GetPage(0)
-        
-        
-        
+
         panel.buttons_panel.Enable()
         order = _tab_order_from(panel.voices_list)
         close = dialog.FindWindowById(wx.ID_CANCEL)
@@ -415,8 +377,7 @@ class TestKeyboardAccess:
         )
 
     def test_the_download_pages_controls_all_precede_the_close_button(self, dialog):
-        
-        
+
         dialog.notebookCtrl.SetSelection(1)
         panel = dialog.notebookCtrl.GetPage(1)
         panel.buttons_panel.Enable()
@@ -429,12 +390,10 @@ class TestKeyboardAccess:
             panel.preview_btn,
             panel.download_std_btn,
             panel.download_rt_btn,
-            _find_child_of_type(panel, wx.Button),  
+            _find_child_of_type(panel, wx.Button),
             close,
         )
-        
-        
-        
+
         assert panel.speaker_choice.GetId() not in order
 
 
@@ -457,9 +416,7 @@ class TestNotebookPageChanged:
             voice_manager.voice_download, "THREAD_POOL_EXECUTOR", sync_executor
         )
         online_panel = dialog.notebookCtrl.GetPage(1)
-        
-        
-        
+
         dialog.notebookCtrl.SetSelection(1)
         assert calls == [{"force_online": False}]
         assert online_panel.language_choice.GetCount() == 2
@@ -495,23 +452,20 @@ def _tab_order_from(control, limit=15):
 
 
 def _reachable_by_tab(window):
-    
-    
-    
-    
+
     return window.AcceptsFocusFromKeyboard() and window.IsEnabled()
 
 
 def _buttons(window):
     for child in window.GetChildren():
-        if isinstance(child, wx.Button):  
+        if isinstance(child, wx.Button):
             yield child
         else:
             yield from _buttons(child)
 
 
 def _access_key(button):
-    
+
     match = re.search(r"&(\w)", button.GetLabel().replace("&&", ""))
     return match.group(1).lower() if match else None
 

@@ -31,9 +31,6 @@ from dengjen_neural_voices.domain import tts_system
 
 from tests.conftest import GLOBAL_PLUGIN_PKG_DIR, load_module_from_path
 
-
-
-
 addonHandler.initTranslation()
 
 voice_download = load_module_from_path(
@@ -282,11 +279,8 @@ class TestVoiceInfoRegex:
     @pytest.mark.parametrize(
         "stem,name",
         [
-            
-            
             ("pl_PL-mls_6892-low", "mls_6892"),
             ("fr_FR-mls_1840-low", "mls_1840"),
-            
             ("en_US-amy+RT-medium", "amy+RT"),
             ("en_US-lessac+RT-medium", "lessac+RT"),
         ],
@@ -319,10 +313,10 @@ class TestVoiceKeyDerivation:
     @pytest.mark.parametrize(
         "stem",
         [
-            "aivars",  
-            "voice",  
-            "aivars-medium",  
-            "en-foo-banana",  
+            "aivars",
+            "voice",
+            "aivars-medium",
+            "en-foo-banana",
         ],
     )
     def test_from_filename_returns_none_when_it_does_not_match(self, stem):
@@ -340,8 +334,6 @@ class TestVoiceKeyDerivation:
                 "en_US-lessac-medium",
             ),
             (
-                
-                
                 {
                     "language": {"code": "en_US"},
                     "dataset": "my-dataset",
@@ -429,9 +421,7 @@ class TestInstallVoiceFromTarArchive:
             tmp_path,
             "archive.tar.gz",
             {
-                "weird-name.onnx": json.dumps(
-                    config
-                ).encode(),  
+                "weird-name.onnx": json.dumps(config).encode(),
                 "weird-name.onnx.json": json.dumps(config).encode(),
             },
         )
@@ -493,11 +483,7 @@ class TestSelectNotInstalledVoices:
     def test_calls_the_real_backend_threaded_call_without_raising(
         self, tmp_path, monkeypatch
     ):
-        
-        
-        
-        
-        
+
         monkeypatch.setattr(tts_system, "DENGJEN_VOICES_DIR", str(tmp_path / "voices"))
         voices = {"en_US-lessac-medium": self._voice_dict(has_rt_variant=False)}
         result = voice_download._select_not_installed_voices(voices)
@@ -1080,9 +1066,7 @@ class TestDownloadWiresProgressDialogToInstall:
     def test_standard_and_rt_failure_messages_differ(
         self, tmp_path, monkeypatch, sync_executor, progress_dialog
     ):
-        
-        
-        
+
         voices_dir = tmp_path / "voices"
         monkeypatch.setattr(voice_download, "DENGJEN_VOICES_DIR", str(voices_dir))
         messagebox_mock = MagicMock()

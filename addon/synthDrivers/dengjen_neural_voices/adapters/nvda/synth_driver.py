@@ -1,6 +1,3 @@
-
-
-
 import typing
 from asyncio.exceptions import CancelledError as AsyncioCancelledError
 from collections import OrderedDict
@@ -131,10 +128,8 @@ def speaker_setting():
     """Factory function for creating speaker setting."""
     return DriverSetting(
         "speaker",
-        
         _("&Speaker"),
         availableInSettingsRing=True,
-        
         displayName=_("Speaker"),
     )
 
@@ -194,8 +189,7 @@ class SynthDriver(NvdaSynthDriver):
 
     def __init__(self):
         super().__init__()
-        
-        
+
         self._current_task = None
         self._rateBoost = False
         self.tts = None
@@ -213,10 +207,6 @@ class SynthDriver(NvdaSynthDriver):
             )
             return
         except Exception:
-            
-            
-            
-            
             log.exception(
                 "Unexpected error initializing Dengjen services. Synthesizer will not be available.",
                 exc_info=True,
@@ -283,7 +273,7 @@ class SynthDriver(NvdaSynthDriver):
             if item_type is str:
                 text_list.append(item)
                 continue
-            
+
             if any(text_list):
                 speech_seq.append(self._create_speech_task(text_list))
                 text_list.clear()
@@ -381,9 +371,6 @@ class SynthDriver(NvdaSynthDriver):
     def _get_voice(self):
         return self._get_variant_independent_voice_id(self.tts.voice)
 
-    
-    
-    
     _SCALE_SETTINGS: typing.ClassVar = {
         "noise_scale": {
             "factor_attr": "_noise_scale_factor",
@@ -441,13 +428,7 @@ class SynthDriver(NvdaSynthDriver):
         setattr(self, factor_attr, value)
 
     def _reapply_scale_settings(self):
-        
-        
-        
-        
-        
-        
-        
+
         for name in self._SCALE_SETTINGS:
             self._set_scale_factor(name, self._get_scale_factor(name), force=True)
 
@@ -477,9 +458,6 @@ class SynthDriver(NvdaSynthDriver):
         except Exception:
             log.exception(f"Failed to load voice `{value}`")
             ui.message(
-                
-                
-                
                 _("Failed to load voice {voice}. Keeping the previous voice.").format(
                     voice=self.availableVoices[value].displayName
                 )
@@ -531,9 +509,7 @@ class SynthDriver(NvdaSynthDriver):
         DengjenConfig.setdefault(self.voice, {})["variant"] = value
         voice = self.tts.speech_options.voice
         self._player = self._get_or_create_player(voice.sample_rate)
-        
-        
-        
+
         self._reapply_scale_settings()
 
     def _getAvailableVariants(self):

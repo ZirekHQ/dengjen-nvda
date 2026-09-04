@@ -1,17 +1,3 @@
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 """
 The sized controls default HIG compliant sizers under the hood and provides
 a simple interface for customizing those sizers.
@@ -60,11 +46,6 @@ import wx
 import wx.lib.scrolledpanel as sp
 
 
-
-
-
-
-
 halign = {
     "left": wx.ALIGN_LEFT,
     "center": wx.ALIGN_CENTER_HORIZONTAL,
@@ -111,7 +92,6 @@ def GetDefaultBorder(self):
     if wx.Platform == "__WXMAC__":
         border = 6
     elif wx.Platform == "__WXMSW__":
-        
         pnt = self.ConvertDialogToPixels(wx.Point(4, 4))
         border = pnt[0] // 2
     elif wx.Platform == "__WXGTK__":
@@ -203,16 +183,8 @@ def SetSizerProp(self, prop, value):
         flag = flag | halign[value]
     elif lprop == "valign":
         flag = flag | valign[value]
-    
-    
-    
-    
-    
-    
-    
-    
+
     elif lprop == "border":
-        
         dirs, amount = value
         if dirs == "all":
             dirs = ["all"]
@@ -229,13 +201,10 @@ def SetSizerProp(self, prop, value):
         else:
             flag = flag | misc_flags[lprop]
 
-    
-    
     if lprop in ["expand", "proportion"] and isinstance(sizer, wx.FlexGridSizer):
         cols = sizer.GetCols()
         rows = sizer.GetRows()
-        
-        
+
         itemnum = self.GetParent().GetChildren().index(self)
 
         col = 0
@@ -357,7 +326,6 @@ def GetDefaultPanelBorder(self):
     return 0
 
 
-
 wx.Dialog.GetDialogBorder = GetDialogBorder
 wx.Panel.GetDefaultHIGBorder = GetDefaultPanelBorder
 wx.Notebook.GetDefaultHIGBorder = GetDefaultPanelBorder
@@ -393,21 +361,11 @@ class SizedParent:
 
         sizer = self.GetSizer()
         if sizer:
-            
-            
-            
-            
-            
-            
             nolog = wx.LogNull()
             item = sizer.Add(child)
             del nolog
             item.SetUserData({"HGrow": 0, "VGrow": 0})
 
-            
-            
-            
-            
             child.SetDefaultSizerProps()
 
     def GetSizerType(self):
@@ -440,7 +398,6 @@ class SizedParent:
 
         elif type == "form":
             sizer = wx.FlexGridSizer(0, 2, 0, 0)
-            
 
         elif type == "grid":
             sizer = wx.FlexGridSizer(0, 0, 0, 0)
@@ -478,11 +435,6 @@ class SizedParent:
 
         props = {}
         for child in self.GetChildren():
-            
-            
-            
-            
-            
             csp = child.GetSizerProps()
             if csp is not None:
                 props[child.GetId()] = csp
@@ -500,7 +452,7 @@ class SizedParent:
         """
         for child in self.GetChildren():
             csp = props.get(child.GetId(), None)
-            
+
             if csp is not None:
                 self.GetSizer().Add(child)
                 child.SetSizerProps(csp)
@@ -642,7 +594,6 @@ class SizedDialog(wx.Dialog):
             sizer, 0, wx.EXPAND | wx.BOTTOM | wx.RIGHT, self.GetDialogBorder()
         )
 
-        
         cancel = self.FindWindow(wx.ID_CANCEL)
         no = self.FindWindow(wx.ID_NO)
         if no and cancel:
@@ -675,8 +626,7 @@ class SizedFrame(wx.Frame):
         wx.Frame.__init__(self, *args, **kwargs)
 
         self.borderLen = 12
-        
-        
+
         self.mainPanel = SizedPanel(self, -1)
 
         mysizer = wx.BoxSizer(wx.VERTICAL)
