@@ -1,4 +1,3 @@
-# coding: utf-8
 """Shared TTSBackend test double.
 
 A plain class, not a MagicMock() spec -- consistent with this project's
@@ -13,14 +12,22 @@ from dengjen_neural_voices.ports.tts_backend import LoadedVoice, SynthOptions
 
 
 class FakeTTSBackend:
-    def __init__(self, *, version="1.0.0-fake", default_loaded_voice=None, synthesize_chunks=(b"",)):
+    def __init__(
+        self,
+        *,
+        version="1.0.0-fake",
+        default_loaded_voice=None,
+        synthesize_chunks=(b"",),
+    ):
         self.version = version
         self.default_loaded_voice = default_loaded_voice or LoadedVoice(
             backend_voice_id="fake-remote-id",
             supports_streaming_output=False,
             sample_rate=22050,
             speakers={},
-            defaults=SynthOptions(speaker=None, length_scale=1.0, noise_scale=0.667, noise_w=0.8),
+            defaults=SynthOptions(
+                speaker=None, length_scale=1.0, noise_scale=0.667, noise_w=0.8
+            ),
         )
         self.synthesize_chunks = list(synthesize_chunks)
         self.voices_by_config_path = {}
@@ -68,7 +75,9 @@ class FakeTTSBackend:
         if self._raise_on_load_voice is not None:
             raise self._raise_on_load_voice
         loaded = self.voices_by_config_path.get(config_path, self.default_loaded_voice)
-        self._synth_options_by_voice_id.setdefault(loaded.backend_voice_id, loaded.defaults)
+        self._synth_options_by_voice_id.setdefault(
+            loaded.backend_voice_id, loaded.defaults
+        )
         return loaded
 
     def get_synth_options(self, backend_voice_id):
@@ -81,7 +90,16 @@ class FakeTTSBackend:
         updates = {k: v for k, v in kwargs.items() if v is not None}
         self._synth_options_by_voice_id[backend_voice_id] = replace(current, **updates)
 
-    async def synthesize(self, backend_voice_id, text, rate, volume, pitch, sentence_silence_ms, streaming):
+    async def synthesize(
+        self,
+        backend_voice_id,
+        text,
+        rate,
+        volume,
+        pitch,
+        sentence_silence_ms,
+        streaming,
+    ):
         self.synthesize_calls.append((backend_voice_id, text))
         if self._raise_on_synthesize is not None:
             raise self._raise_on_synthesize

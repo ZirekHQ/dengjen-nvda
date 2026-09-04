@@ -1,4 +1,3 @@
-# coding: utf-8
 """conftest.py for the real-NVDA e2e layer.
 
 Deliberately not part of tests/ or tests_gui/: this tree needs a real NVDA
@@ -15,7 +14,8 @@ import re
 import sys
 import time
 import warnings
-from typing import Any, Callable
+from collections.abc import Callable
+from typing import Any
 
 import pytest
 
@@ -41,7 +41,9 @@ def check_no_unexpected_errors(client, *, since: int = 0) -> None:
     """nvda.log.assert_no_errors(), minus what a headless runner logs by itself."""
     environmental, unexpected = [], []
     for record in client.log.errors(since=since):
-        target = environmental if _RUNNER_ENVIRONMENT.search(record.message) else unexpected
+        target = (
+            environmental if _RUNNER_ENVIRONMENT.search(record.message) else unexpected
+        )
         target.append(record)
 
     if environmental:
@@ -98,7 +100,9 @@ def voice_manager_state(nvda, expr: str) -> Any:
     allow-eval = true in pyproject.toml.
     """
     return nvda.eval(
-        "(lambda wx, dialog: " + expr + ")(__import__('wx'), __import__('wx').GetActiveWindow())"
+        "(lambda wx, dialog: "
+        + expr
+        + ")(__import__('wx'), __import__('wx').GetActiveWindow())"
     )
 
 
@@ -118,7 +122,11 @@ def press_until(
     for attempt in range(attempts):
         nvda.keys.press(gesture)
         try:
-            wait_until(predicate, timeout=timeout, description=description or f"{gesture!r} to land")
+            wait_until(
+                predicate,
+                timeout=timeout,
+                description=description or f"{gesture!r} to land",
+            )
             return
         except AssertionError:
             if attempt == attempts - 1:

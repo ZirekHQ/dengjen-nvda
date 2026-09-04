@@ -1,5 +1,3 @@
-# coding: utf-8
-
 # Copyright (c) 2023 Musharraf Omer
 # This file is covered by the GNU General Public License.
 
@@ -23,7 +21,6 @@ import shutil
 import addonHandler
 import globalVars
 from logHandler import log
-
 
 __all__ = [
     "OLD_ADDON_NAME",
@@ -96,9 +93,7 @@ def copy_voices_from_old_dir(config_path=None):
     )
     copied = []
     for key in importable_voice_keys(config_path):
-        shutil.copytree(
-            os.path.join(old_voices, key), os.path.join(new_voices, key)
-        )
+        shutil.copytree(os.path.join(old_voices, key), os.path.join(new_voices, key))
         copied.append(key)
     if copied:
         log.info(f"Copied {len(copied)} voice(s) from {old_voices}")
@@ -128,9 +123,7 @@ def migrate_voices_directory(config_path=None, addons=None):
     if not os.path.isdir(old_dir):
         return False
     if is_old_addon_installed(addons):
-        log.debug(
-            f"Skipping voices migration: {OLD_ADDON_NAME} is still installed"
-        )
+        log.debug(f"Skipping voices migration: {OLD_ADDON_NAME} is still installed")
         return False
     # Not os.path.exists: the synth driver creates an empty tree here on every
     # load, so existence alone would refuse the migration for good.

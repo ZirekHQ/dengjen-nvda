@@ -1,4 +1,3 @@
-# coding: utf-8
 """
 Tests for voice_download.py: the piper-voice metadata parsing, voice-key
 derivation, tar-archive install, and the non-GUI parts of the download
@@ -19,7 +18,6 @@ import hashlib
 import io
 import json
 import os
-import shutil
 import ssl
 import tarfile
 from concurrent.futures import Future
@@ -27,12 +25,11 @@ from contextlib import contextmanager
 from http.client import HTTPException
 from unittest.mock import MagicMock
 
+import addonHandler
 import pytest
-
-from tests.conftest import GLOBAL_PLUGIN_PKG_DIR, load_module_from_path
 from dengjen_neural_voices.domain import tts_system
 
-import addonHandler
+from tests.conftest import GLOBAL_PLUGIN_PKG_DIR, load_module_from_path
 
 # In production this runs once, in the package __init__.py, before anything
 # that uses `_(...)` is ever imported. We load voice_download.py directly
@@ -136,9 +133,14 @@ def _piper_voice(key="en_US-lessac-medium", has_rt_variant=False, files=None):
 
 class TestPiperVoiceDataclasses:
     def test_file_derives_name_and_download_url_from_path(self):
-        f = PiperVoiceFile(file_path="en/en_US-lessac-medium.onnx", size_in_bytes=10, md5hash="x")
+        f = PiperVoiceFile(
+            file_path="en/en_US-lessac-medium.onnx", size_in_bytes=10, md5hash="x"
+        )
         assert f.name == "en_US-lessac-medium.onnx"
-        assert f.download_url == f"{voice_download.PIPER_VOICE_DOWNLOAD_URL_PREFIX}/en/en_US-lessac-medium.onnx"
+        assert (
+            f.download_url
+            == f"{voice_download.PIPER_VOICE_DOWNLOAD_URL_PREFIX}/en/en_US-lessac-medium.onnx"
+        )
 
     @pytest.mark.parametrize(
         "path,expected",
@@ -174,8 +176,12 @@ class TestPiperVoiceDataclasses:
 
     def test_language_description_includes_native_name_when_not_english(self):
         lang = PiperVoiceLanguage(
-            code="de_DE", family="de", region="DE",
-            name_native="Deutsch", name_english="German", country_english="Germany",
+            code="de_DE",
+            family="de",
+            region="DE",
+            name_native="Deutsch",
+            name_english="German",
+            country_english="Germany",
         )
         assert lang.description == "German (Germany) , de-DE, Deutsch"
 
@@ -191,8 +197,12 @@ class TestPiperVoiceDataclasses:
                 "num_speakers": 1,
                 "speaker_id_map": {},
                 "language": {
-                    "code": "de_DE", "family": "de", "region": "DE",
-                    "name_native": "Deutsch", "name_english": "German", "country_english": "Germany",
+                    "code": "de_DE",
+                    "family": "de",
+                    "region": "DE",
+                    "name_native": "Deutsch",
+                    "name_english": "German",
+                    "country_english": "Germany",
                 },
                 "files": {"de/thorsten.onnx": {"size_bytes": 5, "md5_digest": "a"}},
                 "has_rt_variant": False,
@@ -206,8 +216,12 @@ class TestPiperVoiceDataclasses:
                 "num_speakers": 1,
                 "speaker_id_map": {},
                 "language": {
-                    "code": "en_US", "family": "en", "region": "US",
-                    "name_native": "English", "name_english": "English", "country_english": "United States",
+                    "code": "en_US",
+                    "family": "en",
+                    "region": "US",
+                    "name_native": "English",
+                    "name_english": "English",
+                    "country_english": "United States",
                 },
                 "files": {"en/lessac.onnx": {"size_bytes": 5, "md5_digest": "b"}},
                 "has_rt_variant": True,
@@ -247,7 +261,12 @@ class TestVoiceInfoRegex:
         [
             ("en_US-lessac-medium", "en_US", "lessac", "medium"),
             ("en_US-amy-medium", "en_US", "amy", "medium"),
-            ("en_GB-southern_english_female-low", "en_GB", "southern_english_female", "low"),
+            (
+                "en_GB-southern_english_female-low",
+                "en_GB",
+                "southern_english_female",
+                "low",
+            ),
             ("vi_VN-vivos-x_low", "vi_VN", "vivos", "x_low"),
             ("de_DE-thorsten-medium", "de_DE", "thorsten", "medium"),
         ],
@@ -300,10 +319,10 @@ class TestVoiceKeyDerivation:
     @pytest.mark.parametrize(
         "stem",
         [
-            "aivars",              # upstream #47 — no separators at all
-            "voice",               # single word
-            "aivars-medium",       # missing language part
-            "en-foo-banana",       # quality not in {high,medium,low,x-low,x_low}
+            "aivars",  # upstream #47 — no separators at all
+            "voice",  # single word
+            "aivars-medium",  # missing language part
+            "en-foo-banana",  # quality not in {high,medium,low,x-low,x_low}
         ],
     )
     def test_from_filename_returns_none_when_it_does_not_match(self, stem):
@@ -313,13 +332,21 @@ class TestVoiceKeyDerivation:
         "config,expected",
         [
             (
-                {"language": {"code": "en-us"}, "dataset": "lessac", "audio": {"quality": "medium"}},
+                {
+                    "language": {"code": "en-us"},
+                    "dataset": "lessac",
+                    "audio": {"quality": "medium"},
+                },
                 "en_US-lessac-medium",
             ),
             (
                 # Dashes inside dataset/quality would break the X-Y-Z voice_key
                 # structure if left unreplaced (upstream #47's fallback path).
-                {"language": {"code": "en_US"}, "dataset": "my-dataset", "audio": {"quality": "x-low"}},
+                {
+                    "language": {"code": "en_US"},
+                    "dataset": "my-dataset",
+                    "audio": {"quality": "x-low"},
+                },
                 "en_US-my_dataset-x_low",
             ),
         ],
@@ -356,13 +383,19 @@ def _make_tar(tmp_path, name, members):
 
 class TestInstallVoiceFromTarArchive:
     def test_installs_a_single_onnx_voice_deriving_key_from_filename(self, tmp_path):
-        tar_path = _make_tar(tmp_path, "voice.tar.gz", {
-            "en_US-lessac-medium.onnx": b"model-bytes",
-            "en_US-lessac-medium.onnx.json": b"{}",
-            "MODEL_CARD": b"card",
-        })
+        tar_path = _make_tar(
+            tmp_path,
+            "voice.tar.gz",
+            {
+                "en_US-lessac-medium.onnx": b"model-bytes",
+                "en_US-lessac-medium.onnx.json": b"{}",
+                "MODEL_CARD": b"card",
+            },
+        )
         voices_dir = tmp_path / "voices"
-        voice_key = voice_download.install_voice_from_tar_archive(str(tar_path), str(voices_dir))
+        voice_key = voice_download.install_voice_from_tar_archive(
+            str(tar_path), str(voices_dir)
+        )
         assert voice_key == "en_US-lessac-medium"
         installed = voices_dir / voice_key
         assert (installed / "en_US-lessac-medium.onnx").read_bytes() == b"model-bytes"
@@ -370,27 +403,49 @@ class TestInstallVoiceFromTarArchive:
         assert (installed / "MODEL_CARD").read_bytes() == b"card"
 
     def test_multi_onnx_archive_derives_key_from_the_archive_filename(self, tmp_path):
-        tar_path = _make_tar(tmp_path, "en_US-lessac-medium.tar.gz", {
-            "std/en_US-lessac-medium.onnx": b"a",
-            "rt/en_US-lessac+RT-medium.onnx": b"b",
-            "std/en_US-lessac-medium.onnx.json": b"{}",
-        })
-        voice_key = voice_download.install_voice_from_tar_archive(str(tar_path), str(tmp_path / "voices"))
+        tar_path = _make_tar(
+            tmp_path,
+            "en_US-lessac-medium.tar.gz",
+            {
+                "std/en_US-lessac-medium.onnx": b"a",
+                "rt/en_US-lessac+RT-medium.onnx": b"b",
+                "std/en_US-lessac-medium.onnx.json": b"{}",
+            },
+        )
+        voice_key = voice_download.install_voice_from_tar_archive(
+            str(tar_path), str(tmp_path / "voices")
+        )
         assert voice_key == "en_US-lessac-medium"
 
-    def test_falls_back_to_config_derived_key_when_filename_does_not_match(self, tmp_path):
-        config = {"language": {"code": "en_US"}, "dataset": "custom", "audio": {"quality": "medium"}}
-        tar_path = _make_tar(tmp_path, "archive.tar.gz", {
-            "weird-name.onnx": json.dumps(config).encode(),  # content unused for onnx
-            "weird-name.onnx.json": json.dumps(config).encode(),
-        })
-        voice_key = voice_download.install_voice_from_tar_archive(str(tar_path), str(tmp_path / "voices"))
+    def test_falls_back_to_config_derived_key_when_filename_does_not_match(
+        self, tmp_path
+    ):
+        config = {
+            "language": {"code": "en_US"},
+            "dataset": "custom",
+            "audio": {"quality": "medium"},
+        }
+        tar_path = _make_tar(
+            tmp_path,
+            "archive.tar.gz",
+            {
+                "weird-name.onnx": json.dumps(
+                    config
+                ).encode(),  # content unused for onnx
+                "weird-name.onnx.json": json.dumps(config).encode(),
+            },
+        )
+        voice_key = voice_download.install_voice_from_tar_archive(
+            str(tar_path), str(tmp_path / "voices")
+        )
         assert voice_key == "en_US-custom-medium"
 
     def test_raises_when_required_files_are_missing(self, tmp_path):
         tar_path = _make_tar(tmp_path, "voice.tar.gz", {"MODEL_CARD": b"card"})
         with pytest.raises(FileNotFoundError):
-            voice_download.install_voice_from_tar_archive(str(tar_path), str(tmp_path / "voices"))
+            voice_download.install_voice_from_tar_archive(
+                str(tar_path), str(tmp_path / "voices")
+            )
 
 
 class TestSelectNotInstalledVoices:
@@ -403,6 +458,7 @@ class TestSelectNotInstalledVoices:
                 "load_piper_voices_from_nvda_config_dir",
                 classmethod(lambda cls, backend: fake_voices),
             )
+
         return _set
 
     def _voice_dict(self, has_rt_variant):
@@ -418,7 +474,9 @@ class TestSelectNotInstalledVoices:
         voices = {"en_US-lessac-medium": self._voice_dict(has_rt_variant=False)}
         assert voice_download._select_not_installed_voices(voices) == []
 
-    def test_includes_standard_installed_voice_that_still_has_an_rt_variant_to_offer(self, installed):
+    def test_includes_standard_installed_voice_that_still_has_an_rt_variant_to_offer(
+        self, installed
+    ):
         installed(["en_US-lessac-medium"])
         voices = {"en_US-lessac-medium": self._voice_dict(has_rt_variant=True)}
         result = voice_download._select_not_installed_voices(voices)
@@ -432,7 +490,9 @@ class TestSelectNotInstalledVoices:
         result = voice_download._select_not_installed_voices(voices)
         assert len(result) == 1
 
-    def test_calls_the_real_backend_threaded_call_without_raising(self, tmp_path, monkeypatch):
+    def test_calls_the_real_backend_threaded_call_without_raising(
+        self, tmp_path, monkeypatch
+    ):
         # Regression test for a TypeError: load_piper_voices_from_nvda_config_dir
         # requires a backend argument, and this caller (voice_download.py:594)
         # was missing it. Deliberately does NOT monkeypatch
@@ -456,7 +516,9 @@ class TestVoicesCache:
     def test_get_voices_from_cache_returns_none_when_file_is_missing(self, cache_path):
         assert voice_download._get_voices_from_cache() is None
 
-    def test_get_available_voices_uses_the_cache_without_going_online(self, cache_path, monkeypatch):
+    def test_get_available_voices_uses_the_cache_without_going_online(
+        self, cache_path, monkeypatch
+    ):
         cache_path.write_text(json.dumps({}), encoding="utf-8")
         fake_request = _FakeMureq()
         monkeypatch.setattr(voice_download, "request", fake_request)
@@ -469,23 +531,34 @@ class TestVoicesCache:
         assert result == []
         assert fake_request.get_urls == []
 
-    def test_get_available_voices_refreshes_from_both_endpoints_when_forced(self, cache_path, monkeypatch):
+    def test_get_available_voices_refreshes_from_both_endpoints_when_forced(
+        self, cache_path, monkeypatch
+    ):
         std_payload = {
             "en_US-lessac-medium": {
-                "key": "en_US-lessac-medium", "name": "lessac", "quality": "medium",
-                "num_speakers": 1, "speaker_id_map": {},
+                "key": "en_US-lessac-medium",
+                "name": "lessac",
+                "quality": "medium",
+                "num_speakers": 1,
+                "speaker_id_map": {},
                 "language": {
-                    "code": "en_US", "family": "en", "region": "US",
-                    "name_native": "English", "name_english": "English", "country_english": "United States",
+                    "code": "en_US",
+                    "family": "en",
+                    "region": "US",
+                    "name_native": "English",
+                    "name_english": "English",
+                    "country_english": "United States",
                 },
                 "files": {"en/lessac.onnx": {"size_bytes": 5, "md5_digest": "a"}},
             }
         }
         rt_payload = {"some-rt-entry": {"base": "en_US-lessac-medium"}}
-        fake_request = _FakeMureq(get_responses=[
-            _FakeResponse(status=200, json_data=std_payload),
-            _FakeResponse(status=200, json_data=rt_payload),
-        ])
+        fake_request = _FakeMureq(
+            get_responses=[
+                _FakeResponse(status=200, json_data=std_payload),
+                _FakeResponse(status=200, json_data=rt_payload),
+            ]
+        )
         monkeypatch.setattr(voice_download, "request", fake_request)
         monkeypatch.setattr(
             voice_download.DengjenTextToSpeechSystem,
@@ -499,14 +572,21 @@ class TestVoicesCache:
             voice_download.PIPER_VOICE_LIST_URL,
             voice_download.RT_VOICE_LIST_URL,
         ]
-        assert json.loads(cache_path.read_text(encoding="utf-8"))["en_US-lessac-medium"]["has_rt_variant"] is True
+        assert (
+            json.loads(cache_path.read_text(encoding="utf-8"))["en_US-lessac-medium"][
+                "has_rt_variant"
+            ]
+            is True
+        )
 
 
 def _cert_verification_error():
     """An HTTPException as mureq wraps a TLS trust-store failure, i.e. with
     the original ssl.SSLCertVerificationError preserved as __cause__."""
     exc = HTTPException("certificate verify failed")
-    exc.__cause__ = ssl.SSLCertVerificationError("unable to get local issuer certificate")
+    exc.__cause__ = ssl.SSLCertVerificationError(
+        "unable to get local issuer certificate"
+    )
     return exc
 
 
@@ -521,14 +601,20 @@ class TestCertVerificationFallback:
         monkeypatch.setattr(voice_download, "_fallback_ssl_context", lambda: sentinel)
         return sentinel
 
-    def test_get_retries_with_fallback_context_on_cert_error(self, monkeypatch, fallback_context):
-        fake_request = _FakeMureq(get_responses=[
-            _cert_verification_error(),
-            _FakeResponse(status=200, json_data={"ok": True}),
-        ])
+    def test_get_retries_with_fallback_context_on_cert_error(
+        self, monkeypatch, fallback_context
+    ):
+        fake_request = _FakeMureq(
+            get_responses=[
+                _cert_verification_error(),
+                _FakeResponse(status=200, json_data={"ok": True}),
+            ]
+        )
         monkeypatch.setattr(voice_download, "request", fake_request)
 
-        result = voice_download._get_with_cert_fallback("https://example.com/voices.json")
+        result = voice_download._get_with_cert_fallback(
+            "https://example.com/voices.json"
+        )
 
         assert result.json() == {"ok": True}
         assert len(fake_request.get_calls) == 2
@@ -544,26 +630,36 @@ class TestCertVerificationFallback:
 
         assert len(fake_request.get_calls) == 1
 
-    def test_yield_response_retries_with_fallback_context_on_cert_error(self, monkeypatch, fallback_context):
-        fake_request = _FakeMureq(stream_responses=[
-            _cert_verification_error(),
-            _FakeResponse(status=200, body=b"voice-bytes"),
-        ])
+    def test_yield_response_retries_with_fallback_context_on_cert_error(
+        self, monkeypatch, fallback_context
+    ):
+        fake_request = _FakeMureq(
+            stream_responses=[
+                _cert_verification_error(),
+                _FakeResponse(status=200, body=b"voice-bytes"),
+            ]
+        )
         monkeypatch.setattr(voice_download, "request", fake_request)
 
-        with voice_download._yield_response_with_cert_fallback("GET", "https://example.com/voice.onnx") as response:
+        with voice_download._yield_response_with_cert_fallback(
+            "GET", "https://example.com/voice.onnx"
+        ) as response:
             assert response.read() == b"voice-bytes"
 
         assert len(fake_request.yield_calls) == 2
         assert "ssl_context" not in fake_request.yield_calls[0]
         assert fake_request.yield_calls[1]["ssl_context"] is fallback_context
 
-    def test_yield_response_does_not_retry_on_unrelated_http_exception(self, monkeypatch):
+    def test_yield_response_does_not_retry_on_unrelated_http_exception(
+        self, monkeypatch
+    ):
         fake_request = _FakeMureq(stream_responses=[HTTPException("connection reset")])
         monkeypatch.setattr(voice_download, "request", fake_request)
 
         with pytest.raises(HTTPException, match="connection reset"):
-            with voice_download._yield_response_with_cert_fallback("GET", "https://example.com/voice.onnx"):
+            with voice_download._yield_response_with_cert_fallback(
+                "GET", "https://example.com/voice.onnx"
+            ):
                 pass
 
         assert len(fake_request.yield_calls) == 1
@@ -579,35 +675,61 @@ class TestPiperVoiceDownloaderFileTransfer:
     actually surface — HuggingFace serves every file through a redirect."""
 
     def _file(self, body):
-        return PiperVoiceFile(file_path="en/en_US-lessac-medium.onnx", size_in_bytes=len(body), md5hash="unused")
+        return PiperVoiceFile(
+            file_path="en/en_US-lessac-medium.onnx",
+            size_in_bytes=len(body),
+            md5hash="unused",
+        )
 
     def test_downloads_and_hashes_a_direct_200_response(self, tmp_path, monkeypatch):
         body = b"piper-model-bytes"
-        fake_request = _FakeMureq(stream_responses=[
-            _FakeResponse(status=200, headers={"Content-Type": "application/octet-stream"}, body=body),
-        ])
+        fake_request = _FakeMureq(
+            stream_responses=[
+                _FakeResponse(
+                    status=200,
+                    headers={"Content-Type": "application/octet-stream"},
+                    body=body,
+                ),
+            ]
+        )
         monkeypatch.setattr(voice_download, "request", fake_request)
         file = self._file(body)
-        result_file, target, digest = PiperVoiceDownloader._do_download_file(file, str(tmp_path), MagicMock())
+        result_file, target, digest = PiperVoiceDownloader._do_download_file(
+            file, str(tmp_path), MagicMock()
+        )
         assert result_file is file
         assert open(target, "rb").read() == body
         assert digest == hashlib.md5(body).hexdigest()
 
     def test_follows_a_redirect_before_downloading(self, tmp_path, monkeypatch):
         body = b"redirected-bytes"
-        fake_request = _FakeMureq(stream_responses=[
-            _FakeResponse(status=302, headers={"Location": "https://example.com/final.onnx"}),
-            _FakeResponse(status=200, headers={"Content-Type": "application/octet-stream"}, body=body),
-        ])
+        fake_request = _FakeMureq(
+            stream_responses=[
+                _FakeResponse(
+                    status=302, headers={"Location": "https://example.com/final.onnx"}
+                ),
+                _FakeResponse(
+                    status=200,
+                    headers={"Content-Type": "application/octet-stream"},
+                    body=body,
+                ),
+            ]
+        )
         monkeypatch.setattr(voice_download, "request", fake_request)
         file = self._file(body)
-        __, target, __ = PiperVoiceDownloader._do_download_file(file, str(tmp_path), MagicMock())
+        __, target, __ = PiperVoiceDownloader._do_download_file(
+            file, str(tmp_path), MagicMock()
+        )
         assert open(target, "rb").read() == body
         assert len(fake_request.yield_urls) == 2
 
     def test_raises_after_too_many_redirects(self, tmp_path, monkeypatch):
-        redirect = _FakeResponse(status=302, headers={"Location": "https://example.com/again"})
-        fake_request = _FakeMureq(stream_responses=[redirect] * voice_download.REDIRECT_LIMIT)
+        redirect = _FakeResponse(
+            status=302, headers={"Location": "https://example.com/again"}
+        )
+        fake_request = _FakeMureq(
+            stream_responses=[redirect] * voice_download.REDIRECT_LIMIT
+        )
         monkeypatch.setattr(voice_download, "request", fake_request)
         file = self._file(b"x")
         callback = MagicMock()
@@ -615,7 +737,9 @@ class TestPiperVoiceDownloaderFileTransfer:
             PiperVoiceDownloader._do_download_file(file, str(tmp_path), callback)
 
     def test_raises_on_redirect_without_a_location_header(self, tmp_path, monkeypatch):
-        fake_request = _FakeMureq(stream_responses=[_FakeResponse(status=302, headers={})])
+        fake_request = _FakeMureq(
+            stream_responses=[_FakeResponse(status=302, headers={})]
+        )
         monkeypatch.setattr(voice_download, "request", fake_request)
         file = self._file(b"x")
         callback = MagicMock()
@@ -623,9 +747,13 @@ class TestPiperVoiceDownloaderFileTransfer:
             PiperVoiceDownloader._do_download_file(file, str(tmp_path), callback)
 
     def test_raises_on_wrong_content_type(self, tmp_path, monkeypatch):
-        fake_request = _FakeMureq(stream_responses=[
-            _FakeResponse(status=200, headers={"Content-Type": "text/html"}, body=b"<html/>"),
-        ])
+        fake_request = _FakeMureq(
+            stream_responses=[
+                _FakeResponse(
+                    status=200, headers={"Content-Type": "text/html"}, body=b"<html/>"
+                ),
+            ]
+        )
         monkeypatch.setattr(voice_download, "request", fake_request)
         file = self._file(b"x")
         callback = MagicMock()
@@ -640,16 +768,26 @@ class TestPiperVoiceDownloaderFileTransfer:
         with pytest.raises(RuntimeError, match="Download failed"):
             PiperVoiceDownloader._do_download_file(file, str(tmp_path), callback)
 
-    def test_download_voice_files_collects_a_result_per_file(self, tmp_path, monkeypatch):
+    def test_download_voice_files_collects_a_result_per_file(
+        self, tmp_path, monkeypatch
+    ):
         bodies = [b"one", b"two"]
         files = [
-            PiperVoiceFile(file_path=f"en/f{i}.onnx", size_in_bytes=len(b), md5hash="unused")
+            PiperVoiceFile(
+                file_path=f"en/f{i}.onnx", size_in_bytes=len(b), md5hash="unused"
+            )
             for i, b in enumerate(bodies)
         ]
-        fake_request = _FakeMureq(stream_responses=[
-            _FakeResponse(status=200, headers={"Content-Type": "application/octet-stream"}, body=b)
-            for b in bodies
-        ])
+        fake_request = _FakeMureq(
+            stream_responses=[
+                _FakeResponse(
+                    status=200,
+                    headers={"Content-Type": "application/octet-stream"},
+                    body=b,
+                )
+                for b in bodies
+            ]
+        )
         monkeypatch.setattr(voice_download, "request", fake_request)
         voice = _piper_voice(files=files)
         downloader = PiperVoiceDownloader(voice, success_callback=MagicMock())
@@ -664,14 +802,20 @@ class TestPiperVoiceDownloaderDoneCallback:
         src = tmp_path / "downloaded.onnx"
         src.write_bytes(body)
         digest = hashlib.md5(body).hexdigest()
-        file = PiperVoiceFile(file_path="en/en_US-lessac-medium.onnx", size_in_bytes=len(body), md5hash=digest)
+        file = PiperVoiceFile(
+            file_path="en/en_US-lessac-medium.onnx",
+            size_in_bytes=len(body),
+            md5hash=digest,
+        )
         return file, str(src), digest
 
     def test_success_copies_files_and_offers_a_restart(self, tmp_path, monkeypatch):
         voices_dir = tmp_path / "voices"
         monkeypatch.setattr(voice_download, "DENGJEN_VOICES_DIR", str(voices_dir))
         monkeypatch.setattr(voice_download.wx, "YES", "YES")
-        monkeypatch.setattr(voice_download.gui, "messageBox", MagicMock(return_value="YES"))
+        monkeypatch.setattr(
+            voice_download.gui, "messageBox", MagicMock(return_value="YES")
+        )
         restart_mock = MagicMock()
         monkeypatch.setattr(voice_download.core, "restart", restart_mock)
 
@@ -687,7 +831,9 @@ class TestPiperVoiceDownloaderDoneCallback:
         downloader.success_callback.assert_called_once()
         restart_mock.assert_called_once()
 
-    def test_hash_mismatch_does_not_install_and_reports_failure(self, tmp_path, monkeypatch):
+    def test_hash_mismatch_does_not_install_and_reports_failure(
+        self, tmp_path, monkeypatch
+    ):
         voices_dir = tmp_path / "voices"
         monkeypatch.setattr(voice_download, "DENGJEN_VOICES_DIR", str(voices_dir))
         messagebox_mock = MagicMock()
@@ -708,7 +854,9 @@ class TestPiperVoiceDownloaderDoneCallback:
     def test_copy_failure_reports_failure_without_crashing(self, tmp_path, monkeypatch):
         voices_dir = tmp_path / "voices"
         monkeypatch.setattr(voice_download, "DENGJEN_VOICES_DIR", str(voices_dir))
-        monkeypatch.setattr(voice_download.shutil, "copy", MagicMock(side_effect=IOError("disk full")))
+        monkeypatch.setattr(
+            voice_download.shutil, "copy", MagicMock(side_effect=OSError("disk full"))
+        )
         messagebox_mock = MagicMock()
         monkeypatch.setattr(voice_download.gui, "messageBox", messagebox_mock)
 
@@ -722,7 +870,9 @@ class TestPiperVoiceDownloaderDoneCallback:
         downloader.success_callback.assert_not_called()
         messagebox_mock.assert_called_once()
 
-    def test_an_exception_result_is_reported_without_touching_disk(self, tmp_path, monkeypatch):
+    def test_an_exception_result_is_reported_without_touching_disk(
+        self, tmp_path, monkeypatch
+    ):
         voices_dir = tmp_path / "voices"
         monkeypatch.setattr(voice_download, "DENGJEN_VOICES_DIR", str(voices_dir))
         messagebox_mock = MagicMock()
@@ -748,39 +898,58 @@ class TestPiperRTVoiceDownloader:
 
     def test_do_download_archive_streams_to_a_file(self, tmp_path, monkeypatch):
         body = b"archive-bytes"
-        fake_request = _FakeMureq(stream_responses=[
-            _FakeResponse(status=200, headers={"Content-Length": str(len(body))}, body=body),
-        ])
+        fake_request = _FakeMureq(
+            stream_responses=[
+                _FakeResponse(
+                    status=200, headers={"Content-Length": str(len(body))}, body=body
+                ),
+            ]
+        )
         monkeypatch.setattr(voice_download, "request", fake_request)
         target = PiperRTVoiceDownloader._do_download_archive(
-            "https://example.com/voice.tar.gz", "voice.tar.gz", str(tmp_path), MagicMock()
+            "https://example.com/voice.tar.gz",
+            "voice.tar.gz",
+            str(tmp_path),
+            MagicMock(),
         )
         assert open(target, "rb").read() == body
 
-    def test_success_installs_the_archive_and_offers_a_restart(self, tmp_path, monkeypatch):
+    def test_success_installs_the_archive_and_offers_a_restart(
+        self, tmp_path, monkeypatch
+    ):
         voices_dir = tmp_path / "voices"
         monkeypatch.setattr(voice_download, "DENGJEN_VOICES_DIR", str(voices_dir))
         monkeypatch.setattr(voice_download.wx, "YES", "YES")
-        monkeypatch.setattr(voice_download.gui, "messageBox", MagicMock(return_value="YES"))
+        monkeypatch.setattr(
+            voice_download.gui, "messageBox", MagicMock(return_value="YES")
+        )
         restart_mock = MagicMock()
         monkeypatch.setattr(voice_download.core, "restart", restart_mock)
 
-        tar_path = _make_tar(tmp_path, "en_US-lessac-medium.tar.gz", {
-            "en_US-lessac+RT-medium.onnx": b"rt-model",
-            "en_US-lessac+RT-medium.onnx.json": b"{}",
-        })
+        tar_path = _make_tar(
+            tmp_path,
+            "en_US-lessac-medium.tar.gz",
+            {
+                "en_US-lessac+RT-medium.onnx": b"rt-model",
+                "en_US-lessac+RT-medium.onnx.json": b"{}",
+            },
+        )
         voice = _piper_voice(key="en_US-lessac-medium", has_rt_variant=True)
         downloader = PiperRTVoiceDownloader(voice, success_callback=MagicMock())
         downloader.progress_dialog = MagicMock()
 
         downloader.done_callback(str(tar_path))
 
-        installed = voices_dir / "en_US-lessac+RT-medium" / "en_US-lessac+RT-medium.onnx"
+        installed = (
+            voices_dir / "en_US-lessac+RT-medium" / "en_US-lessac+RT-medium.onnx"
+        )
         assert installed.read_bytes() == b"rt-model"
         downloader.success_callback.assert_called_once()
         restart_mock.assert_called_once()
 
-    def test_extraction_failure_is_reported_without_crashing(self, tmp_path, monkeypatch):
+    def test_extraction_failure_is_reported_without_crashing(
+        self, tmp_path, monkeypatch
+    ):
         voices_dir = tmp_path / "voices"
         monkeypatch.setattr(voice_download, "DENGJEN_VOICES_DIR", str(voices_dir))
         messagebox_mock = MagicMock()
@@ -842,16 +1011,25 @@ class TestDownloadWiresProgressDialogToInstall:
             size_in_bytes=len(body),
             md5hash=hashlib.md5(body).hexdigest(),
         )
-        fake_request = _FakeMureq(stream_responses=[
-            _FakeResponse(status=200, headers={"Content-Type": "application/octet-stream"}, body=body),
-        ])
+        fake_request = _FakeMureq(
+            stream_responses=[
+                _FakeResponse(
+                    status=200,
+                    headers={"Content-Type": "application/octet-stream"},
+                    body=body,
+                ),
+            ]
+        )
         monkeypatch.setattr(voice_download, "request", fake_request)
         voice = _piper_voice(key="en_US-lessac-medium", files=[file])
         downloader = PiperVoiceDownloader(voice, success_callback=MagicMock())
 
         downloader.download()
 
-        assert dialog_cls.call_args.kwargs["title"] == "Downloading voice en_US-lessac-medium"
+        assert (
+            dialog_cls.call_args.kwargs["title"]
+            == "Downloading voice en_US-lessac-medium"
+        )
         installed = voices_dir / "en_US-lessac-medium" / file.name
         assert installed.read_bytes() == body
         downloader.success_callback.assert_called_once()
@@ -862,22 +1040,35 @@ class TestDownloadWiresProgressDialogToInstall:
         dialog_cls, __ = progress_dialog
         voices_dir = tmp_path / "voices"
         monkeypatch.setattr(voice_download, "DENGJEN_VOICES_DIR", str(voices_dir))
-        tar_path = _make_tar(tmp_path, "en_US-lessac-medium.tar.gz", {
-            "en_US-lessac+RT-medium.onnx": b"rt-model",
-            "en_US-lessac+RT-medium.onnx.json": b"{}",
-        })
+        tar_path = _make_tar(
+            tmp_path,
+            "en_US-lessac-medium.tar.gz",
+            {
+                "en_US-lessac+RT-medium.onnx": b"rt-model",
+                "en_US-lessac+RT-medium.onnx.json": b"{}",
+            },
+        )
         body = tar_path.read_bytes()
-        fake_request = _FakeMureq(stream_responses=[
-            _FakeResponse(status=200, headers={"Content-Length": str(len(body))}, body=body),
-        ])
+        fake_request = _FakeMureq(
+            stream_responses=[
+                _FakeResponse(
+                    status=200, headers={"Content-Length": str(len(body))}, body=body
+                ),
+            ]
+        )
         monkeypatch.setattr(voice_download, "request", fake_request)
         voice = _piper_voice(key="en_US-lessac-medium", has_rt_variant=True)
         downloader = PiperRTVoiceDownloader(voice, success_callback=MagicMock())
 
         downloader.download()
 
-        assert dialog_cls.call_args.kwargs["title"] == "Downloading fast variant of the voice en_US-lessac-medium"
-        installed = voices_dir / "en_US-lessac+RT-medium" / "en_US-lessac+RT-medium.onnx"
+        assert (
+            dialog_cls.call_args.kwargs["title"]
+            == "Downloading fast variant of the voice en_US-lessac-medium"
+        )
+        installed = (
+            voices_dir / "en_US-lessac+RT-medium" / "en_US-lessac+RT-medium.onnx"
+        )
         assert installed.read_bytes() == b"rt-model"
         downloader.success_callback.assert_called_once()
 
@@ -894,9 +1085,12 @@ class TestDownloadWiresProgressDialogToInstall:
         fake_request = _FakeMureq(stream_responses=[_FakeResponse(status=404)])
         monkeypatch.setattr(voice_download, "request", fake_request)
 
-        voice = _piper_voice(key="en_US-lessac-medium", files=[
-            PiperVoiceFile(file_path="en/f.onnx", size_in_bytes=1, md5hash="x"),
-        ])
+        voice = _piper_voice(
+            key="en_US-lessac-medium",
+            files=[
+                PiperVoiceFile(file_path="en/f.onnx", size_in_bytes=1, md5hash="x"),
+            ],
+        )
         PiperVoiceDownloader(voice, success_callback=MagicMock()).download()
         std_message = messagebox_mock.call_args.args[0]
 

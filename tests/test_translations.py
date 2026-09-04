@@ -1,4 +1,3 @@
-# coding: utf-8
 """
 Catalogue-level checks, plus the source-level check that the catalogue is
 reached at all. No NVDA, no wx -- these run on both CI legs.
@@ -20,10 +19,11 @@ import re
 
 import pytest
 
-
 _REPO_ROOT = os.path.abspath(os.path.join(os.path.dirname(__file__), os.pardir))
 _CATALOGUES = sorted(
-    glob.glob(os.path.join(_REPO_ROOT, "addon", "locale", "*", "LC_MESSAGES", "nvda.po"))
+    glob.glob(
+        os.path.join(_REPO_ROOT, "addon", "locale", "*", "LC_MESSAGES", "nvda.po")
+    )
 )
 _LOCALES = [path.split(os.sep)[-3] for path in _CATALOGUES]
 
@@ -73,7 +73,9 @@ def _po_entries(path):
         for lineno, raw in enumerate(handle, 1):
             line = raw.strip()
             if line.startswith(("msgid_plural", "msgstr[", "#~")):
-                raise AssertionError(f"{path}:{lineno}: unhandled po construct {line!r}")
+                raise AssertionError(
+                    f"{path}:{lineno}: unhandled po construct {line!r}"
+                )
             if line.startswith("msgid "):
                 if field is not None:
                     yield msgid, msgstr

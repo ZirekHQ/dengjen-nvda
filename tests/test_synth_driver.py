@@ -1,4 +1,3 @@
-# coding: utf-8
 """
 Tests for the SynthDriver itself: construction, speech sequence handling,
 flush/cancel ordering, the settings NVDA reads and writes through driver
@@ -23,20 +22,18 @@ stand-ins used here don't interfere with the on-disk fixtures above.
 
 import asyncio
 import os
+from unittest.mock import MagicMock
 
 import config
 import pytest
 import ui
-from unittest.mock import MagicMock
-
+from dengjen_neural_voices.const import FALLBACK_SPEAKER_NAME
+from dengjen_neural_voices.domain import tts_system
 from logHandler import log
+from speech.commands import BreakCommand, IndexCommand, LangChangeCommand
 
 from tests.conftest import SYNTH_PKG_DIR, load_module_from_path
 from tests.fake_tts_backend import FakeTTSBackend
-
-from dengjen_neural_voices.domain import tts_system
-from dengjen_neural_voices.const import FALLBACK_SPEAKER_NAME
-from speech.commands import BreakCommand, IndexCommand, LangChangeCommand
 
 driver_module = load_module_from_path(
     "dengjen_neural_voices.adapters.nvda.synth_driver",
@@ -141,7 +138,9 @@ class TestConstruction:
         expected_lang = languageHandler.normalizeLanguage(lang).replace("_", "-")
         assert f"({expected_lang})" in display_name
 
-    def test_loads_voices_from_disk_only_once(self, configured_voice, fake_backend, monkeypatch):
+    def test_loads_voices_from_disk_only_once(
+        self, configured_voice, fake_backend, monkeypatch
+    ):
         """A previous version called load_piper_voices_from_nvda_config_dir()
         twice back to back in __init__ for no reason."""
         real_load = driver_module.DengjenTextToSpeechSystem.load_piper_voices_from_nvda_config_dir.__func__
@@ -162,7 +161,9 @@ class TestConstruction:
         finally:
             d.terminate()
 
-    def test_backend_unavailable_leaves_the_driver_without_voices(self, configured_voice, monkeypatch):
+    def test_backend_unavailable_leaves_the_driver_without_voices(
+        self, configured_voice, monkeypatch
+    ):
         """A BackendUnavailableError from bootstrap must not raise out of
         __init__ -- the driver stays constructed but non-functional, same as
         today's broad except-Exception behavior, so NVDA can still report the
@@ -218,7 +219,12 @@ class TestBuildSpeechTasks:
         # A LangChangeCommand to the voice's own (already-default) language
         # is a no-op for tts.language, but must still split the surrounding
         # text into two SpeechTasks rather than merging it into one.
-        seq = ["hello ", "world", _lang_change_command("en_US", is_default=True), "more"]
+        seq = [
+            "hello ",
+            "world",
+            _lang_change_command("en_US", is_default=True),
+            "more",
+        ]
         tasks = driver._build_speech_tasks(seq)
         assert [type(t) for t in tasks] == [SpeechTask, SpeechTask, DoneSpeakingTask]
 
@@ -277,6 +283,7 @@ class TestProcessSpeechSequence:
                 await asyncio.sleep(0)
                 ran.append(n)
                 active -= 1
+
             return task
 
         asyncio.run(
@@ -406,7 +413,9 @@ class TestSettings:
         calls = [kwargs for _, kwargs in fake_backend.set_synth_options_calls]
         assert any("noise_scale" in kwargs for kwargs in calls)
 
-    def test_switching_variant_reapplies_noise_w_even_when_the_cached_value_is_unchanged(self, driver, fake_backend):
+    def test_switching_variant_reapplies_noise_w_even_when_the_cached_value_is_unchanged(
+        self, driver, fake_backend
+    ):
         # noise_w's skip_if_unchanged guard exists for the direct-set path
         # (avoid a redundant call when the user re-enters the same value);
         # a variant-switch reapply must bypass it, since the cached factor

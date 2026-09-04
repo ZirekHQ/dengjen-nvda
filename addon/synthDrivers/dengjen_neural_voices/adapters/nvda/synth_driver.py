@@ -1,5 +1,3 @@
-# coding: utf-8
-
 # Copyright (c) 2023 Musharraf Omer
 # This file is covered by the GNU General Public License.
 
@@ -7,30 +5,33 @@ from asyncio.exceptions import CancelledError as AsyncioCancelledError
 from collections import OrderedDict
 from contextlib import suppress
 
+import addonHandler
 import config
 import languageHandler
-import synthDriverHandler
 import ui
 from autoSettingsUtils.driverSetting import DriverSetting, NumericDriverSetting
-from nvwave import WavePlayer
 from logHandler import log
+from nvwave import WavePlayer
 from speech import sayAll
 from speech.commands import (
     BreakCommand,
     IndexCommand,
     LangChangeCommand,
+    PitchCommand,
     RateCommand,
     VolumeCommand,
-    PitchCommand,
 )
 from synthDriverHandler import (
     SynthDriver as NvdaSynthDriver,
+)
+from synthDriverHandler import (
     VoiceInfo,
     synthDoneSpeaking,
     synthIndexReached,
 )
 
 from ... import aio
+from ..._config import DengjenConfig
 from ...aio import (
     CancelledError,
     asyncio,
@@ -38,16 +39,13 @@ from ...aio import (
     asyncio_coroutine_to_concurrent_future,
     run_in_executor,
 )
-from ..._config import DengjenConfig
-from ...helpers import update_displaied_params_on_voice_change
-from ...ports.tts_backend import BackendUnavailableError
 from ...domain.tts_system import (
     DengjenTextToSpeechSystem,
     SpeakerNotFoundError,
     SpeechOptions,
 )
-
-import addonHandler
+from ...helpers import update_displaied_params_on_voice_change
+from ...ports.tts_backend import BackendUnavailableError
 
 addonHandler.initTranslation()
 
@@ -75,7 +73,7 @@ def _bootstrap_backend():
 
 
 class DoneSpeakingTask:
-    __slots__ = ["player", "on_index_reached"]
+    __slots__ = ["on_index_reached", "player"]
 
     def __init__(self, player, on_index_reached):
         self.player = player
@@ -99,7 +97,7 @@ class IndexReachedTask:
 
 
 class SpeechTask:
-    __slots__ = ["task", "player"]
+    __slots__ = ["player", "task"]
 
     def __init__(self, task, player):
         self.task = task
@@ -117,7 +115,7 @@ class SpeechTask:
 
 
 class BreakTask:
-    __slots__ = ["task", "player"]
+    __slots__ = ["player", "task"]
 
     def __init__(self, task, player):
         self.task = task
@@ -163,7 +161,6 @@ async def process_speech(speech_seq):
 
 
 class SynthDriver(NvdaSynthDriver):
-
     supportedSettings = (
         NvdaSynthDriver.VoiceSetting(),
         NvdaSynthDriver.VariantSetting(),
@@ -224,7 +221,9 @@ class SynthDriver(NvdaSynthDriver):
                 exc_info=True,
             )
             return
-        voices = DengjenTextToSpeechSystem.load_piper_voices_from_nvda_config_dir(backend)
+        voices = DengjenTextToSpeechSystem.load_piper_voices_from_nvda_config_dir(
+            backend
+        )
         if not any(voices):
             log.error(
                 "No installed voices were found for Dengjen. Synthesizer will not be available."
@@ -293,12 +292,10 @@ class SynthDriver(NvdaSynthDriver):
         if any(text_list):
             speech_seq.append(self._create_speech_task(text_list))
         if any(index_command_list):
-            speech_seq.append(IndexReachedTask(self._on_index_reached, index_command_list))
-        speech_seq.append(
-            DoneSpeakingTask(
-                self._player, self._on_index_reached
+            speech_seq.append(
+                IndexReachedTask(self._on_index_reached, index_command_list)
             )
-        )
+        speech_seq.append(DoneSpeakingTask(self._player, self._on_index_reached))
         return speech_seq
 
     def _create_speech_task(self, text_list):
@@ -387,9 +384,21 @@ class SynthDriver(NvdaSynthDriver):
     # an unchanged value). name doubles as the DengjenConfig key and the
     # attribute on tts.speech_options.voice / voice.default_scales.
     _SCALE_SETTINGS = {
-        "noise_scale": {"factor_attr": "_noise_scale_factor", "multiplier": 3, "skip_if_unchanged": False},
-        "length_scale": {"factor_attr": "_length_scale_factor", "multiplier": 2, "skip_if_unchanged": False},
-        "noise_w": {"factor_attr": "_noise_w_factor", "multiplier": 3, "skip_if_unchanged": True},
+        "noise_scale": {
+            "factor_attr": "_noise_scale_factor",
+            "multiplier": 3,
+            "skip_if_unchanged": False,
+        },
+        "length_scale": {
+            "factor_attr": "_length_scale_factor",
+            "multiplier": 2,
+            "skip_if_unchanged": False,
+        },
+        "noise_w": {
+            "factor_attr": "_noise_w_factor",
+            "multiplier": 3,
+            "skip_if_unchanged": True,
+        },
     }
 
     def _get_scale_factor(self, name):
@@ -406,14 +415,28 @@ class SynthDriver(NvdaSynthDriver):
     def _set_scale_factor(self, name, value, force=False):
         spec = self._SCALE_SETTINGS[name]
         factor_attr = spec["factor_attr"]
-        if not force and spec["skip_if_unchanged"] and getattr(self, factor_attr, None) == value:
+        if (
+            not force
+            and spec["skip_if_unchanged"]
+            and getattr(self, factor_attr, None) == value
+        ):
             return
         voice = self.tts.speech_options.voice
         default = getattr(voice.default_scales, name)
         if value == 50:
             setattr(voice, name, default)
         else:
-            setattr(voice, name, max(0.1, round(self._percentToParam(value, 0.0, default * spec["multiplier"]), 2)))
+            setattr(
+                voice,
+                name,
+                max(
+                    0.1,
+                    round(
+                        self._percentToParam(value, 0.0, default * spec["multiplier"]),
+                        2,
+                    ),
+                ),
+            )
         setattr(self, factor_attr, value)
 
     def _reapply_scale_settings(self):

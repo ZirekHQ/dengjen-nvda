@@ -1,4 +1,3 @@
-# coding: utf-8
 """
 Tests for SonataGrpcBackend's TTSBackend surface: that it correctly
 translates the underlying module-level gRPC calls' failures into the
@@ -9,8 +8,7 @@ dengjen-tts-grpc.exe) are covered by tests_contract/, not here.
 from concurrent.futures import Future
 
 import pytest
-
-import dengjen_neural_voices.adapters.sonata_grpc as sonata_grpc
+from dengjen_neural_voices.adapters import sonata_grpc
 from dengjen_neural_voices.ports.tts_backend import (
     BackendUnavailableError,
     SynthesisError,
@@ -33,7 +31,9 @@ def _resolved_future(value):
 
 
 def test_initialize_wraps_a_failure_as_backend_unavailable(monkeypatch):
-    monkeypatch.setattr(sonata_grpc, "initialize", lambda: _failed_future(RuntimeError("no port")))
+    monkeypatch.setattr(
+        sonata_grpc, "initialize", lambda: _failed_future(RuntimeError("no port"))
+    )
     with pytest.raises(BackendUnavailableError):
         backend.initialize()
 
@@ -46,8 +46,12 @@ def test_check_version_wraps_a_failure_as_backend_unavailable(monkeypatch):
     # .result() can't call -- caught by check_version()'s except, so this
     # test would still pass, but only after leaking an unawaited-coroutine
     # RuntimeWarning into the test output.
-    monkeypatch.setattr(sonata_grpc, "check_grpc_server", lambda: _failed_future(TimeoutError()))
-    monkeypatch.setattr(sonata_grpc, "initialize", lambda: _failed_future(RuntimeError("no port")))
+    monkeypatch.setattr(
+        sonata_grpc, "check_grpc_server", lambda: _failed_future(TimeoutError())
+    )
+    monkeypatch.setattr(
+        sonata_grpc, "initialize", lambda: _failed_future(RuntimeError("no port"))
+    )
     with pytest.raises(BackendUnavailableError):
         backend.check_version()
 
@@ -71,7 +75,9 @@ def test_check_version_retries_once_after_a_failed_handshake_and_succeeds(monkey
     assert len(attempts) == 2
 
 
-def test_check_version_gives_up_as_backend_unavailable_after_one_failed_retry(monkeypatch):
+def test_check_version_gives_up_as_backend_unavailable_after_one_failed_retry(
+    monkeypatch,
+):
     """The retry is bounded: a second consecutive failure still surfaces as
     BackendUnavailableError rather than looping indefinitely."""
     attempts = []
@@ -90,7 +96,11 @@ def test_check_version_gives_up_as_backend_unavailable_after_one_failed_retry(mo
 
 
 def test_load_voice_wraps_a_failure_as_voice_load_error(monkeypatch):
-    monkeypatch.setattr(sonata_grpc, "load_voice", lambda path: _failed_future(RuntimeError("bad proto")))
+    monkeypatch.setattr(
+        sonata_grpc,
+        "load_voice",
+        lambda path: _failed_future(RuntimeError("bad proto")),
+    )
     with pytest.raises(VoiceLoadError):
         backend.load_voice("/tmp/v/config.json")
 
@@ -99,9 +109,12 @@ def test_load_voice_maps_the_response_fields(monkeypatch):
     class _FakeInfo:
         voice_key = "v1"
         supports_streaming_output = True
+
         class audio:
             sample_rate = 22050
+
         speakers = {"0": "Alice"}
+
         class synthesis_options:
             speaker = "Alice"
             length_scale = 1.0
@@ -122,7 +135,9 @@ def test_load_voice_maps_the_response_fields(monkeypatch):
 
 def test_set_synth_options_wraps_a_failure_as_voice_load_error(monkeypatch):
     monkeypatch.setattr(
-        sonata_grpc, "set_synth_options", lambda voice_id, **kw: _failed_future(RuntimeError("boom"))
+        sonata_grpc,
+        "set_synth_options",
+        lambda voice_id, **kw: _failed_future(RuntimeError("boom")),
     )
     with pytest.raises(VoiceLoadError):
         backend.set_synth_options("v1", noise_scale=0.5)
@@ -137,10 +152,13 @@ def test_synthesize_wraps_a_failure_as_synthesis_error():
 
     async def _run():
         with pytest.raises(SynthesisError):
-            async for _ in backend.synthesize("v1", "hi", None, None, None, None, False):
+            async for _ in backend.synthesize(
+                "v1", "hi", None, None, None, None, False
+            ):
                 pass
 
     import dengjen_neural_voices.adapters.sonata_grpc as mod
+
     orig = mod.speak
     mod.speak = _boom
     try:
@@ -165,10 +183,13 @@ def test_synthesize_yields_audio_bytes_not_the_raw_message():
     async def _run():
         return [
             chunk
-            async for chunk in backend.synthesize("v1", "hi", None, None, None, None, False)
+            async for chunk in backend.synthesize(
+                "v1", "hi", None, None, None, None, False
+            )
         ]
 
     import dengjen_neural_voices.adapters.sonata_grpc as mod
+
     orig = mod.speak
     mod.speak = _fake_speak
     try:
@@ -198,7 +219,9 @@ class TestClearStaleServerState:
         import types
 
         killed = types.SimpleNamespace(value=False)
-        fake_process = types.SimpleNamespace(kill=lambda: setattr(killed, "value", True))
+        fake_process = types.SimpleNamespace(
+            kill=lambda: setattr(killed, "value", True)
+        )
         monkeypatch.setattr(sonata_grpc, "GRPC_SERVER_PROCESS", fake_process)
         monkeypatch.setattr(sonata_grpc, "SONATA_GRPC_SERVER_PORT", 12345)
 
@@ -227,7 +250,9 @@ class TestClearStaleServerState:
         assert sonata_grpc.CHANNEL is None
         assert sonata_grpc.SONATA_GRPC_SERVICE is None
 
-    def test_a_channel_that_fails_to_close_does_not_stop_the_rest_of_the_cleanup(self, monkeypatch):
+    def test_a_channel_that_fails_to_close_does_not_stop_the_rest_of_the_cleanup(
+        self, monkeypatch
+    ):
         import asyncio
         import types
 
@@ -236,7 +261,9 @@ class TestClearStaleServerState:
                 raise Exception("channel already broken")
 
         killed = types.SimpleNamespace(value=False)
-        fake_process = types.SimpleNamespace(kill=lambda: setattr(killed, "value", True))
+        fake_process = types.SimpleNamespace(
+            kill=lambda: setattr(killed, "value", True)
+        )
         monkeypatch.setattr(sonata_grpc, "CHANNEL", _FakeChannel())
         monkeypatch.setattr(sonata_grpc, "GRPC_SERVER_PROCESS", fake_process)
 
@@ -251,6 +278,7 @@ class TestClearStaleServerState:
         # (not delattr) undoes its own patches -- it would raise trying to
         # restore an attribute the code under test already removed.
         import asyncio
+
         import globalVars
 
         globalVars.SONATA_GRPC_SERVER_PORT = 12345
@@ -266,7 +294,9 @@ class TestClearStaleServerState:
         import types
 
         closed = types.SimpleNamespace(value=False)
-        fake_handle = types.SimpleNamespace(close=lambda: setattr(closed, "value", True))
+        fake_handle = types.SimpleNamespace(
+            close=lambda: setattr(closed, "value", True)
+        )
         monkeypatch.setattr(sonata_grpc, "SERVER_LOG_HANDLE", fake_handle)
 
         asyncio.run(sonata_grpc._clear_stale_server_state())
@@ -276,6 +306,7 @@ class TestClearStaleServerState:
 
     def test_is_a_noop_when_nothing_is_cached(self, monkeypatch):
         import asyncio
+
         import globalVars
 
         monkeypatch.setattr(sonata_grpc, "GRPC_SERVER_PROCESS", None)

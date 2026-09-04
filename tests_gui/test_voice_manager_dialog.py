@@ -1,4 +1,3 @@
-# coding: utf-8
 """
 Construction and event-wiring smoke tests for voice_manager.py against real
 wxPython.
@@ -31,9 +30,9 @@ import pytest
 if sys.platform != "win32":
     pytest.skip("real wxPython is Windows-only here", allow_module_level=True)
 
+import gui
 import wx
 from wx.adv import CommandLinkButton
-import gui
 
 
 @pytest.fixture
@@ -61,9 +60,7 @@ def espeak_synth(voice_manager, monkeypatch):
     synth = MagicMock()
     synth.name = "espeak"
     synth.voice = "en"
-    monkeypatch.setattr(
-        voice_manager.synthDriverHandler, "getSynth", lambda: synth
-    )
+    monkeypatch.setattr(voice_manager.synthDriverHandler, "getSynth", lambda: synth)
     return synth
 
 
@@ -251,7 +248,9 @@ class TestOnlinePanelControls:
             return []
 
         monkeypatch.setattr(
-            voice_manager.voice_download, "get_available_voices", fake_get_available_voices
+            voice_manager.voice_download,
+            "get_available_voices",
+            fake_get_available_voices,
         )
         monkeypatch.setattr(
             voice_manager.voice_download, "THREAD_POOL_EXECUTOR", sync_executor
@@ -325,7 +324,9 @@ class TestOnlinePanelControls:
         # for this fixture's file-less voice, would mkdir a real directory
         # under DENGJEN_VOICES_DIR on the runner.
         downloader_cls = MagicMock()
-        monkeypatch.setattr(voice_manager.voice_download, "PiperVoiceDownloader", downloader_cls)
+        monkeypatch.setattr(
+            voice_manager.voice_download, "PiperVoiceDownloader", downloader_cls
+        )
         panel.voices_list.set_objects([online_voices[0]])
         panel.voices_list.set_focused_item(0)
         _fire_button(panel, panel.download_std_btn)
@@ -336,7 +337,9 @@ class TestOnlinePanelControls:
         self, panel, voice_manager, monkeypatch, online_voices
     ):
         downloader_cls = MagicMock()
-        monkeypatch.setattr(voice_manager.voice_download, "PiperRTVoiceDownloader", downloader_cls)
+        monkeypatch.setattr(
+            voice_manager.voice_download, "PiperRTVoiceDownloader", downloader_cls
+        )
         panel.voices_list.set_objects([online_voices[0]])
         panel.voices_list.set_focused_item(0)
         _fire_button(panel, panel.download_rt_btn)
@@ -446,7 +449,9 @@ class TestNotebookPageChanged:
             return online_voices
 
         monkeypatch.setattr(
-            voice_manager.voice_download, "get_available_voices", fake_get_available_voices
+            voice_manager.voice_download,
+            "get_available_voices",
+            fake_get_available_voices,
         )
         monkeypatch.setattr(
             voice_manager.voice_download, "THREAD_POOL_EXECUTOR", sync_executor

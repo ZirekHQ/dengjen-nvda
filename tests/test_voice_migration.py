@@ -1,4 +1,3 @@
-# coding: utf-8
 """Tests for the 4.0.0 voices-directory migration
 (addon/synthDrivers/dengjen_neural_voices/voice_migration.py).
 
@@ -17,9 +16,9 @@ import os
 from unittest.mock import MagicMock
 
 import pytest
-
+from dengjen_neural_voices import voice_migration
 from dengjen_neural_voices.domain import tts_system
-import dengjen_neural_voices.voice_migration as voice_migration
+
 from tests.fake_tts_backend import FakeTTSBackend
 
 # These tests only assert on voice keys and on-disk migration side effects,
@@ -96,9 +95,7 @@ class TestMigrateVoicesDirectoryRetry:
         new_voice = _write_voice(tmp_path / "dengjen", payload=b"newer model")
         _write_voice(tmp_path / "sonata")
         assert voice_migration.migrate_voices_directory(str(tmp_path)) is False
-        assert (
-            new_voice / "en_US-amy-medium.onnx"
-        ).read_bytes() == b"newer model"
+        assert (new_voice / "en_US-amy-medium.onnx").read_bytes() == b"newer model"
         assert (tmp_path / "sonata" / "voices" / "piper").is_dir()
 
     def test_a_move_blocked_by_open_files_can_succeed_on_a_later_attempt(
@@ -107,6 +104,7 @@ class TestMigrateVoicesDirectoryRetry:
         _write_voice(tmp_path / "sonata")
 
         with monkeypatch.context() as locked:
+
             def _in_use(src, dst):
                 raise PermissionError("file in use")
 
@@ -228,7 +226,11 @@ class TestMigrationRunsOnVoiceEnumeration:
 
     def test_enumerating_voices_migrates_the_old_directory(self, config_dir):
         _write_voice(config_dir / "sonata")
-        voices = tts_system.DengjenTextToSpeechSystem.load_piper_voices_from_nvda_config_dir(_backend)
+        voices = (
+            tts_system.DengjenTextToSpeechSystem.load_piper_voices_from_nvda_config_dir(
+                _backend
+            )
+        )
         assert [v.key for v in voices] == ["en_US-amy-medium"]
         assert not (config_dir / "sonata").exists()
 
@@ -238,15 +240,22 @@ class TestMigrationRunsOnVoiceEnumeration:
         _write_voice(config_dir / "sonata")
 
         with monkeypatch.context() as locked:
+
             def _in_use(src, dst):
                 raise PermissionError("file in use")
 
             locked.setattr(voice_migration.os, "rename", _in_use)
             assert (
-                tts_system.DengjenTextToSpeechSystem.load_piper_voices_from_nvda_config_dir(_backend)
+                tts_system.DengjenTextToSpeechSystem.load_piper_voices_from_nvda_config_dir(
+                    _backend
+                )
                 == []
             )
             assert os.path.isdir(config_dir / "dengjen" / "voices" / "piper")
 
-        voices = tts_system.DengjenTextToSpeechSystem.load_piper_voices_from_nvda_config_dir(_backend)
+        voices = (
+            tts_system.DengjenTextToSpeechSystem.load_piper_voices_from_nvda_config_dir(
+                _backend
+            )
+        )
         assert [v.key for v in voices] == ["en_US-amy-medium"]

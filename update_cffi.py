@@ -1,9 +1,9 @@
-import urllib.request
+import glob
 import json
-import zipfile
 import os
 import shutil
-import glob
+import urllib.request
+import zipfile
 
 import vendored_manifest
 
@@ -11,7 +11,7 @@ import vendored_manifest
 url = "https://pypi.org/pypi/cffi/json"
 
 print("Fetching cffi release info from PyPI...")
-req = urllib.request.Request(url, headers={'User-Agent': 'Mozilla/5.0'})
+req = urllib.request.Request(url, headers={"User-Agent": "Mozilla/5.0"})
 try:
     with urllib.request.urlopen(req) as response:
         data = json.loads(response.read().decode())
@@ -32,7 +32,9 @@ for r in releases:
         break
 
 if not wheel_url:
-    print(f"Could not find a Python 3.13 64-bit Windows wheel for cffi version {version}.")
+    print(
+        f"Could not find a Python 3.13 64-bit Windows wheel for cffi version {version}."
+    )
     exit(1)
 
 print(f"Downloading {wheel_url}...")
@@ -46,11 +48,15 @@ except Exception as e:
 print("Extracting cffi...")
 extract_dir = "cffi_extracted"
 backend_pyd_name = None
-with zipfile.ZipFile(wheel_path, 'r') as z:
+with zipfile.ZipFile(wheel_path, "r") as z:
     for info in z.infolist():
-        if info.filename.startswith("cffi/") or info.filename.startswith("_cffi_backend"):
+        if info.filename.startswith("cffi/") or info.filename.startswith(
+            "_cffi_backend"
+        ):
             z.extract(info, extract_dir)
-            if info.filename.startswith("_cffi_backend") and info.filename.endswith(".pyd"):
+            if info.filename.startswith("_cffi_backend") and info.filename.endswith(
+                ".pyd"
+            ):
                 backend_pyd_name = info.filename
 
 if backend_pyd_name is None:
@@ -70,7 +76,10 @@ if os.path.exists(cffi_target):
     shutil.rmtree(cffi_target)
 
 print(f"Installing new 64-bit Python 3.13 cffi to {target_dir}...")
-shutil.copy(os.path.join(extract_dir, backend_pyd_name), os.path.join(target_dir, backend_pyd_name))
+shutil.copy(
+    os.path.join(extract_dir, backend_pyd_name),
+    os.path.join(target_dir, backend_pyd_name),
+)
 shutil.copytree(os.path.join(extract_dir, "cffi"), cffi_target)
 
 print("Cleaning up...")

@@ -1,4 +1,3 @@
-# coding: utf-8
 """
 Contract test against the real, vendored dengjen-tts-grpc.exe: starts the actual
 engine binary and confirms it answers the GetDengjenVersion handshake over a
@@ -27,9 +26,8 @@ if sys.platform != "win32":
     # any platform other than the one the vendored lib/grpc was built for.
     pytest.skip("dengjen-tts-grpc.exe is a Windows binary", allow_module_level=True)
 
-import grpc
 import espeakng_loader
-
+import grpc
 import grpc_protos.dengjen_grpc_pb2 as msgs
 import grpc_protos.dengjen_grpc_pb2_grpc as pb2_grpc
 
@@ -47,7 +45,9 @@ def _find_free_port():
 
 @pytest.fixture(scope="session")
 def grpc_server():
-    assert os.path.exists(GRPC_SERVER_EXE), f"dengjen-tts-grpc.exe not found at {GRPC_SERVER_EXE}"
+    assert os.path.exists(GRPC_SERVER_EXE), (
+        f"dengjen-tts-grpc.exe not found at {GRPC_SERVER_EXE}"
+    )
 
     port = _find_free_port()
     log_path = os.path.join(tempfile.mkdtemp(), "dengjen-tts-grpc.log")
@@ -60,11 +60,13 @@ def grpc_server():
     # DENGJEN_ESPEAKNG_DATA_DIRECTORY must be the directory that *contains*
     # an `espeak-ng-data` subfolder, not that subfolder itself.
     espeakng_data_dir = os.path.dirname(espeakng_loader.get_data_path())
-    env.update({
-        "DENGJEN_GRPC_SERVER_PORT": str(port),
-        "DENGJEN_ESPEAKNG_DATA_DIRECTORY": espeakng_data_dir,
-        "DENGJEN_GRPC": "info",
-    })
+    env.update(
+        {
+            "DENGJEN_GRPC_SERVER_PORT": str(port),
+            "DENGJEN_ESPEAKNG_DATA_DIRECTORY": espeakng_data_dir,
+            "DENGJEN_GRPC": "info",
+        }
+    )
 
     with open(log_path, "wb") as log_file:
         process = subprocess.Popen(
@@ -138,7 +140,10 @@ CALL_TIMEOUT = 30
 
 
 def _download(url, target_path):
-    with urllib.request.urlopen(url, timeout=DOWNLOAD_TIMEOUT) as response, open(target_path, "wb") as f:
+    with (
+        urllib.request.urlopen(url, timeout=DOWNLOAD_TIMEOUT) as response,
+        open(target_path, "wb") as f,
+    ):
         f.write(response.read())
 
 
@@ -159,12 +164,18 @@ def downloaded_voice(tmp_path_factory):
 
 
 class TestVoiceSynthesis:
-    def test_load_voice_and_synthesize_returns_non_empty_audio(self, grpc_server, downloaded_voice):
-        voice_info = grpc_server.LoadVoice(msgs.VoiceConfigLocation(path=downloaded_voice), timeout=CALL_TIMEOUT)
+    def test_load_voice_and_synthesize_returns_non_empty_audio(
+        self, grpc_server, downloaded_voice
+    ):
+        voice_info = grpc_server.LoadVoice(
+            msgs.VoiceConfigLocation(path=downloaded_voice), timeout=CALL_TIMEOUT
+        )
         assert voice_info.voice_key
         assert voice_info.audio.sample_rate > 0
 
-        utterance = msgs.SynthesisRequest(voice_key=voice_info.voice_key, text="xin chào")
+        utterance = msgs.SynthesisRequest(
+            voice_key=voice_info.voice_key, text="xin chào"
+        )
         frames = list(grpc_server.SynthesizeUtterance(utterance, timeout=CALL_TIMEOUT))
 
         assert frames, "expected at least one audio frame from SynthesizeUtterance"

@@ -1,4 +1,3 @@
-# coding: utf-8
 """
 Contract tests for components.py that are not about a specific widget:
 AsyncSnakDialog's done-callback protocol, SnakDialog's Escape handling, and a
@@ -182,9 +181,7 @@ class TestAsyncSnakDialog:
         assert received == [future]
         assert received[0].result() == "voices"
 
-    def test_future_is_the_submitted_future_and_stays_wired(
-        self, components, nvda_gui
-    ):
+    def test_future_is_the_submitted_future_and_stays_wired(self, components, nvda_gui):
         executor = _PendingExecutor()
         received = []
         dialog = components.AsyncSnakDialog(

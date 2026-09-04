@@ -1,6 +1,4 @@
-# coding: utf-8
 import pytest
-
 from dengjen_neural_voices.ports.tts_backend import (
     BackendError,
     BackendUnavailableError,
@@ -19,7 +17,9 @@ def test_synth_options_is_frozen():
 
 
 def test_loaded_voice_carries_defaults_as_synth_options():
-    defaults = SynthOptions(speaker=None, length_scale=1.0, noise_scale=0.5, noise_w=0.8)
+    defaults = SynthOptions(
+        speaker=None, length_scale=1.0, noise_scale=0.5, noise_w=0.8
+    )
     voice = LoadedVoice(
         backend_voice_id="v1",
         supports_streaming_output=True,

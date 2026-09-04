@@ -1,22 +1,19 @@
-# coding: utf-8
-
 # Copyright (c) 2023 Musharraf Omer
 # This file is covered by the GNU General Public License.
 
 from __future__ import annotations
 
-import dataclasses
 import contextlib
+import dataclasses
 import typing
 from concurrent.futures import Future
 
-import wx
-import wx.lib.mixins.listctrl as listmix
-from . import sized_controls as sc
-
-
 import addonHandler
 import gui
+import wx
+import wx.lib.mixins.listctrl as listmix
+
+from . import sized_controls as sc
 
 addonHandler.initTranslation()
 
@@ -250,7 +247,7 @@ class ImmutableObjectListView(DialogListCtrl):
         if set_focus:
             self.set_focused_item(focus_item)
 
-    def get_selected(self) -> typing.Optional[typing.Any]:
+    def get_selected(self) -> typing.Any | None:
         """Return the currently selected object or None."""
         idx = self.GetFocusedItem()
         if idx != wx.NOT_FOUND:

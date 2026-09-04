@@ -1,5 +1,3 @@
-# coding: utf-8
-
 # Copyright (c) 2023 Musharraf Omer
 # This file is covered by the GNU General Public License.
 
@@ -12,7 +10,6 @@ import shutil
 import ssl
 import tarfile
 import tempfile
-import typing
 import urllib.parse
 from contextlib import ExitStack, contextmanager
 from dataclasses import dataclass
@@ -21,37 +18,45 @@ from fnmatch import fnmatch
 from functools import lru_cache, partial
 from hashlib import md5
 from http.client import HTTPException
-from io import BytesIO
 
-import wx
 import addonHandler
 import core
 import gui
+import wx
 from languageHandler import normalizeLanguage
 from logHandler import log
 
 addonHandler.initTranslation()
 
-from . import DengjenTextToSpeechSystem, helpers, DENGJEN_VOICES_DIR, SonataGrpcBackend
+from . import DENGJEN_VOICES_DIR, DengjenTextToSpeechSystem, SonataGrpcBackend, helpers
 
 with helpers.import_bundled_library():
-    import mureq as request
     from concurrent.futures import ThreadPoolExecutor
     from pathlib import Path
 
+    import mureq as request
 
-PIPER_VOICE_LIST_URL = "https://huggingface.co/rhasspy/piper-voices/raw/v1.0.0/voices.json"
-PIPER_VOICE_DOWNLOAD_URL_PREFIX = "https://huggingface.co/rhasspy/piper-voices/resolve/v1.0.0"
+
+PIPER_VOICE_LIST_URL = (
+    "https://huggingface.co/rhasspy/piper-voices/raw/v1.0.0/voices.json"
+)
+PIPER_VOICE_DOWNLOAD_URL_PREFIX = (
+    "https://huggingface.co/rhasspy/piper-voices/resolve/v1.0.0"
+)
 PIPER_SAMPLES_URL_PREFIX = "https://rhasspy.github.io/piper-samples/samples"
 PIPER_VOICES_JSON_LOCAL_CACHE = os.path.join(DENGJEN_VOICES_DIR, "piper-voices.json")
-RT_VOICE_LIST_URL = "https://huggingface.co/datasets/mush42/piper-rt/raw/main/voices.json"
-RT_VOICE_DOWNLOAD_URL_PREFIX = "https://huggingface.co/datasets/mush42/piper-rt/resolve/main"
+RT_VOICE_LIST_URL = (
+    "https://huggingface.co/datasets/mush42/piper-rt/raw/main/voices.json"
+)
+RT_VOICE_DOWNLOAD_URL_PREFIX = (
+    "https://huggingface.co/datasets/mush42/piper-rt/resolve/main"
+)
 
 VOICE_INFO_REGEX = re.compile(
     r"(?P<language>[a-z]+(_|-)?([a-z]+)?)(-|_)"
     r"(?P<name>[a-z0-9_]+(\+RT)?)(-|_)"
     r"(?P<quality>(high|medium|low|x-low|x_low))",
-    re.I
+    re.IGNORECASE,
 )
 THREAD_POOL_EXECUTOR = ThreadPoolExecutor()
 REDIRECT_STATUSES = (301, 302, 303, 307, 308)
@@ -132,9 +137,9 @@ class PiperVoice:
     name: str
     quality: PiperVoiceQualityLevel
     num_speakers: int
-    speaker_id_map: typing.Dict[str, int]
+    speaker_id_map: dict[str, int]
     language: PiperVoiceLanguage
-    files: typing.List[PiperVoiceFile]
+    files: list[PiperVoiceFile]
     has_rt_variant: bool = False
     standard_variant_installed: bool = False
     fast_variant_installed: bool = False
@@ -145,12 +150,14 @@ class PiperVoice:
 
         for data in voice_data:
             file_list = []
-            for (path, finfo) in data["files"].items():
-                file_list.append(PiperVoiceFile(
-                    file_path=path,
-                    size_in_bytes=finfo["size_bytes"],
-                    md5hash=finfo["md5_digest"]
-                ))
+            for path, finfo in data["files"].items():
+                file_list.append(
+                    PiperVoiceFile(
+                        file_path=path,
+                        size_in_bytes=finfo["size_bytes"],
+                        md5hash=finfo["md5_digest"],
+                    )
+                )
             lang_info = data["language"]
             language = PiperVoiceLanguage(
                 code=lang_info["code"],
@@ -160,18 +167,20 @@ class PiperVoice:
                 name_english=lang_info["name_english"],
                 country_english=lang_info["country_english"],
             )
-            retval.append(cls(
-                key=data["key"],
-                name=data["name"],
-                quality=PiperVoiceQualityLevel(data["quality"]),
-                num_speakers=data["num_speakers"],
-                speaker_id_map=data["speaker_id_map"],
-                language=language,
-                files=file_list,
-                has_rt_variant=data["has_rt_variant"],
-                standard_variant_installed=data["standard_variant_installed"],
-                fast_variant_installed=data["fast_variant_installed"]
-            ))
+            retval.append(
+                cls(
+                    key=data["key"],
+                    name=data["name"],
+                    quality=PiperVoiceQualityLevel(data["quality"]),
+                    num_speakers=data["num_speakers"],
+                    speaker_id_map=data["speaker_id_map"],
+                    language=language,
+                    files=file_list,
+                    has_rt_variant=data["has_rt_variant"],
+                    standard_variant_installed=data["standard_variant_installed"],
+                    fast_variant_installed=data["fast_variant_installed"],
+                )
+            )
 
         retval.sort(key=lambda v: v.language.family)
         return retval
@@ -208,7 +217,10 @@ def _get_with_cert_fallback(url, **kwargs):
     except HTTPException as e:
         if not _is_os_trust_store_gap(e):
             raise
-        log.debug("OS trust store missing a root CA; retrying with the vendored CA bundle", exc_info=True)
+        log.debug(
+            "OS trust store missing a root CA; retrying with the vendored CA bundle",
+            exc_info=True,
+        )
         return request.get(url, ssl_context=_fallback_ssl_context(), **kwargs)
 
 
@@ -216,13 +228,20 @@ def _get_with_cert_fallback(url, **kwargs):
 def _yield_response_with_cert_fallback(method, url, **kwargs):
     with ExitStack() as stack:
         try:
-            response = stack.enter_context(request.yield_response(method, url, **kwargs))
+            response = stack.enter_context(
+                request.yield_response(method, url, **kwargs)
+            )
         except HTTPException as e:
             if not _is_os_trust_store_gap(e):
                 raise
-            log.debug("OS trust store missing a root CA; retrying with the vendored CA bundle", exc_info=True)
+            log.debug(
+                "OS trust store missing a root CA; retrying with the vendored CA bundle",
+                exc_info=True,
+            )
             response = stack.enter_context(
-                request.yield_response(method, url, ssl_context=_fallback_ssl_context(), **kwargs)
+                request.yield_response(
+                    method, url, ssl_context=_fallback_ssl_context(), **kwargs
+                )
             )
         yield response
 
@@ -231,7 +250,7 @@ def _yield_response_with_cert_fallback(method, url, **kwargs):
 def _follow_redirects(url, label):
     # mureq does not follow redirects, and HuggingFace serves every file as one.
     for _redirect in range(REDIRECT_LIMIT):
-        with _yield_response_with_cert_fallback('GET', url) as response:
+        with _yield_response_with_cert_fallback("GET", url) as response:
             if response.status in REDIRECT_STATUSES:
                 location = response.getheader("Location")
                 if not location:
@@ -240,11 +259,15 @@ def _follow_redirects(url, label):
                 continue
 
             if response.status != 200:
-                raise RuntimeError(f"Download failed for {label} (status {response.status})")
+                raise RuntimeError(
+                    f"Download failed for {label} (status {response.status})"
+                )
 
             content_type = response.getheader("Content-Type", "").lower()
             if "text/html" in content_type or "xml" in content_type:
-                raise RuntimeError(f"Wrong content-type while downloading {label}: {content_type}")
+                raise RuntimeError(
+                    f"Wrong content-type while downloading {label}: {content_type}"
+                )
 
             yield response
             return
@@ -290,7 +313,9 @@ class _BaseVoiceDownloader:
             parent=gui.mainFrame,
         )
         self.progress_dialog.CenterOnScreen()
-        THREAD_POOL_EXECUTOR.submit(self._download_work).add_done_callback(partial(self._done_callback_wrapper, self.done_callback))
+        THREAD_POOL_EXECUTOR.submit(self._download_work).add_done_callback(
+            partial(self._done_callback_wrapper, self.done_callback)
+        )
 
     def done_callback(self, result):
         # add_done_callback (and so _done_callback_wrapper) runs on the
@@ -306,7 +331,7 @@ class _BaseVoiceDownloader:
             self.progress_dialog.Update(
                 0,
                 # Translators: message shown in the voice download progress dialog
-                _("Installing voice")
+                _("Installing voice"),
             )
             try:
                 self._install(result)
@@ -337,9 +362,7 @@ class _BaseVoiceDownloader:
                 parent=gui.mainFrame,
             )
             error = install_error if install_error is not None else result
-            log.error(
-                f"Failed to download voice.\nException: {error}", exc_info=error
-            )
+            log.error(f"Failed to download voice.\nException: {error}", exc_info=error)
 
     @staticmethod
     def _done_callback_wrapper(done_callback, future):
@@ -397,16 +420,18 @@ class PiperVoiceDownloader(_BaseVoiceDownloader):
             self.progress_dialog.Update(
                 0,
                 # Translators: message shown in progress dialog
-                _("Downloading file: {file}").format(file=file.name)
+                _("Downloading file: {file}").format(file=file.name),
             )
-            result = self._do_download_file(file, self.temp_download_dir.name, self.update_progress)
+            result = self._do_download_file(
+                file, self.temp_download_dir.name, self.update_progress
+            )
             retvals.append(result)
 
         return retvals
 
     @classmethod
     def _do_download_file(cls, file, download_dir, progress_callback):
-        target_file = os.path.join(download_dir, file.file_path.replace('/', os.sep))
+        target_file = os.path.join(download_dir, file.file_path.replace("/", os.sep))
         os.makedirs(os.path.dirname(target_file), exist_ok=True)
 
         hasher = md5(usedforsecurity=False)
@@ -422,10 +447,7 @@ class PiperVoiceDownloader(_BaseVoiceDownloader):
         return (file, target_file, hasher.hexdigest())
 
     def _install(self, result):
-        hashes = {
-            file.name: (file.md5hash, md5hash)
-            for (file, __, md5hash) in result
-        }
+        hashes = {file.name: (file.md5hash, md5hash) for (file, __, md5hash) in result}
         if not all(expected == actual for expected, actual in hashes.values()):
             log.error("File hashes do not match")
             raise _VoiceInstallError
@@ -437,7 +459,7 @@ class PiperVoiceDownloader(_BaseVoiceDownloader):
             dst = os.path.join(voice_dir, file.name)
             try:
                 shutil.copy(src, dst)
-            except IOError:
+            except OSError:
                 log.exception(f"Failed to copy file: {file}", exc_info=True)
                 copy_failed = True
         if copy_failed:
@@ -451,7 +473,9 @@ class PiperRTVoiceDownloader(_BaseVoiceDownloader):
 
     def _progress_title(self):
         # Translators: title of a progress dialog
-        return _("Downloading fast variant of the voice {voice}").format(voice=self.voice.key)
+        return _("Downloading fast variant of the voice {voice}").format(
+            voice=self.voice.key
+        )
 
     def _success_message(self):
         # Translators: content of a message box
@@ -474,13 +498,20 @@ class PiperRTVoiceDownloader(_BaseVoiceDownloader):
         self.progress_dialog.Update(
             0,
             # Translators: message shown in progress dialog
-            _("Downloading file: {file}").format(file=voice_name)
+            _("Downloading file: {file}").format(file=voice_name),
         )
-        result = self._do_download_archive(self.rt_download_url, voice_name, self.temp_download_dir.name, self.update_progress)
+        result = self._do_download_archive(
+            self.rt_download_url,
+            voice_name,
+            self.temp_download_dir.name,
+            self.update_progress,
+        )
         return result
 
     @classmethod
-    def _do_download_archive(cls, download_url, voice_name, download_dir, progress_callback):
+    def _do_download_archive(
+        cls, download_url, voice_name, download_dir, progress_callback
+    ):
         target_file = os.path.join(download_dir, voice_name)
         with _follow_redirects(download_url, voice_name) as response:
             _stream_to_file(
@@ -510,11 +541,13 @@ def _voice_key_from_filename(stem):
     if m is None:
         return None
     info = m.groupdict()
-    return "-".join([
-        normalizeLanguage(info["language"]),
-        info["name"].replace("-", "_"),
-        info["quality"].replace("-", "_"),
-    ])
+    return "-".join(
+        [
+            normalizeLanguage(info["language"]),
+            info["name"].replace("-", "_"),
+            info["quality"].replace("-", "_"),
+        ]
+    )
 
 
 def _voice_key_from_config(config):
@@ -539,24 +572,20 @@ def _voice_key_from_config(config):
             "file to follow that convention, or ensure the bundled config "
             "JSON carries those fields."
         )
-    return "-".join([
-        normalizeLanguage(language),
-        str(dataset).replace("-", "_"),
-        str(quality).replace("-", "_"),
-    ])
+    return "-".join(
+        [
+            normalizeLanguage(language),
+            str(dataset).replace("-", "_"),
+            str(quality).replace("-", "_"),
+        ]
+    )
 
 
 def install_voice_from_tar_archive(tar_path, voices_dir):
     with tarfile.open(tar_path) as tar:
         filenames = {f.name: f for f in tar.getmembers()}
-        onnx_files = list(filter(
-            lambda pth: fnmatch(pth, "*.onnx"),
-            filenames
-        ))
-        config_files = list(filter(
-            lambda pth: fnmatch(pth, "*.json"),
-            filenames
-        ))
+        onnx_files = list(filter(lambda pth: fnmatch(pth, "*.onnx"), filenames))
+        config_files = list(filter(lambda pth: fnmatch(pth, "*.json"), filenames))
         if not (onnx_files and config_files):
             raise FileNotFoundError("Required files not found in archive")
         if len(onnx_files) == 1:
@@ -564,7 +593,9 @@ def install_voice_from_tar_archive(tar_path, voices_dir):
         else:
             voice_key = _voice_key_from_filename(Path(tar_path).stem[:-4])
         if voice_key is None:
-            config = json.loads(tar.extractfile(filenames[config_files[0]]).read().decode("utf-8"))
+            config = json.loads(
+                tar.extractfile(filenames[config_files[0]]).read().decode("utf-8")
+            )
             voice_key = _voice_key_from_config(config)
         voice_folder_name = Path(voices_dir).joinpath(voice_key)
         # voice_key can come from _voice_key_from_config(), which is built
@@ -573,8 +604,13 @@ def install_voice_from_tar_archive(tar_path, voices_dir):
         # voice folder outside voices_dir (e.g. a path separator or "..").
         resolved_voices_dir = Path(voices_dir).resolve()
         resolved_voice_folder = voice_folder_name.resolve()
-        if resolved_voice_folder != resolved_voices_dir and resolved_voices_dir not in resolved_voice_folder.parents:
-            raise ValueError(f"Voice key resolves outside the voices directory: {voice_key!r}")
+        if (
+            resolved_voice_folder != resolved_voices_dir
+            and resolved_voices_dir not in resolved_voice_folder.parents
+        ):
+            raise ValueError(
+                f"Voice key resolves outside the voices directory: {voice_key!r}"
+            )
         voice_folder_name.mkdir(parents=True, exist_ok=True)
         voice_folder_name = os.fspath(voice_folder_name)
         files_to_extract = [*onnx_files, *config_files]
@@ -591,10 +627,12 @@ def install_voice_from_tar_archive(tar_path, voices_dir):
 
 
 def _select_not_installed_voices(voices):
-    installed_voices = DengjenTextToSpeechSystem.load_piper_voices_from_nvda_config_dir(SonataGrpcBackend())
+    installed_voices = DengjenTextToSpeechSystem.load_piper_voices_from_nvda_config_dir(
+        SonataGrpcBackend()
+    )
     installed_voice_keys = {voice.key for voice in installed_voices}
     not_installed = []
-    for (key, value) in voices.items():
+    for key, value in voices.items():
         std_key, rt_key = DengjenTextToSpeechSystem.get_voice_variants(key)
         value["standard_variant_installed"] = std_key in installed_voice_keys
         value["fast_variant_installed"] = rt_key in installed_voice_keys
@@ -623,10 +661,7 @@ def _refresh_voices_cache():
     std_voices = std_resp.json()
     rt_resp = _get_with_cert_fallback(RT_VOICE_LIST_URL)
     rt_resp.raise_for_status()
-    rt_voice_names = {
-        vdata["base"]
-        for vdata in rt_resp.json().values()
-    }
+    rt_voice_names = {vdata["base"] for vdata in rt_resp.json().values()}
     voice_list = {}
     for vname, vdata in std_voices.items():
         vdata["has_rt_variant"] = vname in rt_voice_names
@@ -645,4 +680,3 @@ def get_available_voices(force_online=False):
     if voices is None:
         raise RuntimeError("Failed to read the voice list cache that was just written")
     return voices
-

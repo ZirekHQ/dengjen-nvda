@@ -1,4 +1,3 @@
-# coding: utf-8
 """
 Tests for aio module lifecycle resilience and re-initialization behavior.
 """
@@ -6,13 +5,13 @@ Tests for aio module lifecycle resilience and re-initialization behavior.
 import ast
 import asyncio
 import gc
-import os
 import glob
+import importlib.util
+import os
 import threading
 import time
 import types
 import warnings
-import importlib.util
 
 _STRESS_THREADS = 8
 _STRESS_ITERATIONS = 40
@@ -87,16 +86,13 @@ def _settled_loop_thread_count(timeout=2):
     """Loop-thread count once stopped threads have had a chance to exit."""
     deadline = time.monotonic() + timeout
     while True:
-        count = len(
-            [t for t in threading.enumerate() if t.name == _LOOP_THREAD_NAME]
-        )
+        count = len([t for t in threading.enumerate() if t.name == _LOOP_THREAD_NAME])
         if count <= 1 or time.monotonic() > deadline:
             return count
         time.sleep(0.05)
 
 
 class TestAioLifecycle:
-
     def setup_method(self):
         aio.initialize()
 
@@ -244,7 +240,6 @@ class TestAioGlobalsDoNotLeakMutableState:
 
 
 class TestGrpcChannelTeardown:
-
     def setup_method(self):
         aio.initialize()
 
@@ -311,7 +306,8 @@ class TestSynthDriverShimReexport:
         shim_tree = ast.parse(shim_source, filename=_SHIM_INIT_PATH)
 
         import_nodes = [
-            node for node in ast.walk(shim_tree)
+            node
+            for node in ast.walk(shim_tree)
             if isinstance(node, ast.ImportFrom)
             and node.level == 1
             and node.module == "adapters.nvda.synth_driver"
@@ -333,11 +329,10 @@ class TestSynthDriverShimReexport:
             target_source = f.read()
         target_tree = ast.parse(target_source, filename=_SYNTH_DRIVER_PATH)
         defined_names = {
-            node.name for node in ast.walk(target_tree)
+            node.name
+            for node in ast.walk(target_tree)
             if isinstance(node, (ast.ClassDef, ast.FunctionDef, ast.AsyncFunctionDef))
         }
         assert "SynthDriver" in defined_names, (
             f"{_SYNTH_DRIVER_PATH} no longer defines SynthDriver"
         )
-
-

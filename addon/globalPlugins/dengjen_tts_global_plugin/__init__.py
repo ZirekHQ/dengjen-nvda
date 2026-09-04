@@ -1,19 +1,15 @@
-# coding: utf-8
-
 # Copyright (c) 2023 Musharraf Omer
 # This file is covered by the GNU General Public License.
 
 import os
 import sys
 
-import wx
-
-import core
-import gui
-import globalPluginHandler
-from logHandler import log
-
 import addonHandler
+import core
+import globalPluginHandler
+import gui
+import wx
+from logHandler import log
 
 addonHandler.initTranslation()
 
@@ -23,10 +19,13 @@ _ADDON_ROOT = os.path.abspath(os.path.join(_DIR, os.pardir, os.pardir))
 _TTS_MODULE_DIR = os.path.join(_ADDON_ROOT, "synthDrivers")
 sys.path.insert(0, _TTS_MODULE_DIR)
 try:
-    from dengjen_neural_voices import helpers
-    from dengjen_neural_voices import aio
-    from dengjen_neural_voices import voice_migration
-    from dengjen_neural_voices import DengjenTextToSpeechSystem, DENGJEN_VOICES_DIR
+    from dengjen_neural_voices import (
+        DENGJEN_VOICES_DIR,
+        DengjenTextToSpeechSystem,
+        aio,
+        helpers,
+        voice_migration,
+    )
     from dengjen_neural_voices.adapters.sonata_grpc import SonataGrpcBackend
 finally:
     sys.path.remove(_TTS_MODULE_DIR)
@@ -48,7 +47,9 @@ class GlobalPlugin(globalPluginHandler.GlobalPlugin):
             # Translators: Dengjen's voice manager menu item help
             _("Open the voice manager to preview, install or download dengjen voices"),
         )
-        gui.mainFrame.sysTrayIcon.menu.Bind(wx.EVT_MENU, self.on_manager, self.itemHandle)
+        gui.mainFrame.sysTrayIcon.menu.Bind(
+            wx.EVT_MENU, self.on_manager, self.itemHandle
+        )
 
     def on_manager(self, event):
         manager_dialog = DengjenVoiceManagerDialog()
@@ -58,7 +59,11 @@ class GlobalPlugin(globalPluginHandler.GlobalPlugin):
     def _perform_voice_check(self):
         if self.__voice_manager_shown:
             return
-        if not any(DengjenTextToSpeechSystem.load_piper_voices_from_nvda_config_dir(SonataGrpcBackend())):
+        if not any(
+            DengjenTextToSpeechSystem.load_piper_voices_from_nvda_config_dir(
+                SonataGrpcBackend()
+            )
+        ):
             retval = gui.messageBox(
                 # Translators: message telling the user that no voice is installed
                 _(

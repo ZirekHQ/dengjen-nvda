@@ -1,5 +1,3 @@
-# coding: utf-8
-
 # Copyright (c) 2023 Musharraf Omer
 # This file is covered by the GNU General Public License.
 
@@ -17,6 +15,6 @@ bundled deps into that hot path instead of staying lazily imported at the
 point of use."""
 
 from .adapters.nvda.synth_driver import SynthDriver
-from .domain.tts_system import DengjenTextToSpeechSystem, DENGJEN_VOICES_DIR
+from .domain.tts_system import DENGJEN_VOICES_DIR, DengjenTextToSpeechSystem
 
-__all__ = ["SynthDriver", "DengjenTextToSpeechSystem", "DENGJEN_VOICES_DIR"]
+__all__ = ["DENGJEN_VOICES_DIR", "DengjenTextToSpeechSystem", "SynthDriver"]
