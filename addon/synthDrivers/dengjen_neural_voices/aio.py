@@ -2,10 +2,14 @@ import asyncio
 import os
 import threading
 import typing as t
-from concurrent.futures import Future, ThreadPoolExecutor
+from concurrent.futures import CancelledError, Future, ThreadPoolExecutor
 from functools import partial, wraps
 
 from logHandler import log
+
+# Re-exported for synth_driver.py, which reaches this via `from ...aio import ...`
+# rather than importing concurrent.futures directly.
+__all__ = ["CancelledError"]
 
 LOOP_STARTUP_TIMEOUT = 5
 LOOP_SHUTDOWN_TIMEOUT = 2
