@@ -3,7 +3,7 @@
 ## Reporting a Vulnerability
 
 Report security vulnerabilities privately using GitHub's
-[private vulnerability reporting](https://github.com/austek/dengjen-nvda/security/advisories/new)
+[private vulnerability reporting](https://github.com/ZirekHQ/dengjen-nvda/security/advisories/new)
 feature, rather than opening a public issue.
 
 You should expect an initial response within a week. If the issue is
