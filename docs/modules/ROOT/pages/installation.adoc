@@ -1,0 +1,24 @@
+= Installation
+
+== Downloading the add-on
+
+You can find the add-on package under the assets section of the
+https://github.com/austek/dengjen-nvda/releases/latest[release page].
+
+== Adding voices
+
+The add-on is just a driver — it comes with no voices by default. You need to download and
+install the voices you want from the voice manager.
+
+Upon installing the add-on and restarting NVDA, the add-on will ask you to download and install
+at least one voice, and it will give you the option to open the voice manager.
+
+You can also open the voice manager from NVDA's main menu.
+
+NOTE: We recommend choosing the `low` or `medium` quality voices for your target language(s),
+because they generally provide better responsiveness. For additional responsiveness, you can
+choose to download the `fast` variant of a voice at a cost of slightly lower speech quality.
+
+You can also install voices from local archives. After obtaining the voice's file, open the
+voice manager, in the installed tab, click the button labeled `Install from local file`. Choose
+the voice file and wait for the voice to install.
