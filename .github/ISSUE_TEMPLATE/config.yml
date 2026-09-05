@@ -1,11 +1,11 @@
 blank_issues_enabled: false
 contact_links:
   - name: Installation help / general usage
-    url: https://github.com/austek/dengjen-nvda/blob/main/readme.md
+    url: https://github.com/ZirekHQ/dengjen-nvda/blob/main/readme.md
     about: Start here for how to install the add-on and download voices.
   - name: NVDA add-ons community list
     url: https://nvda-addons.groups.io/g/nvda-addons
     about: General NVDA add-on discussion, announcements, and user-to-user help.
   - name: Upstream sonata-nvda (read-only)
     url: https://github.com/mush42/sonata-nvda
-    about: The original repository. No longer actively maintained — this fork is the active maintenance source.
+    about: The original repository. No longer actively maintained — this project is the active maintenance source.

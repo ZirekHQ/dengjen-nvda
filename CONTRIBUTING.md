@@ -1,12 +1,12 @@
-# Contributing to Dengjen Neural Voices (maintenance fork)
+# Contributing to Dengjen Neural Voices
 
-This is a maintenance fork of [mush42/sonata-nvda](https://github.com/mush42/sonata-nvda). The upstream author can no longer maintain the project ([announcement](https://nvda-addons.groups.io/g/nvda-addons/message/27636)); this fork carries compatibility fixes and minor improvements so the add-on keeps working on current NVDA releases.
+This project began as a maintenance fork of [mush42/sonata-nvda](https://github.com/mush42/sonata-nvda). The original author could no longer maintain it ([announcement](https://nvda-addons.groups.io/g/nvda-addons/message/27636)); this project has carried compatibility fixes and minor improvements since, keeping the add-on working on current NVDA releases.
 
 Contributions are welcome.
 
 ## Reporting a bug
 
-Use the **Bug report** template at <https://github.com/austek/dengjen-nvda/issues/new/choose>. The template asks for NVDA version, add-on version, OS, voice tested, steps to reproduce, and an NVDA log slice — please fill in as much as you can. Bugs filed without that info almost always end up labelled `needs-reproducer` until they have it.
+Use the **Bug report** template at <https://github.com/ZirekHQ/dengjen-nvda/issues/new/choose>. The template asks for NVDA version, add-on version, OS, voice tested, steps to reproduce, and an NVDA log slice — please fill in as much as you can. Bugs filed without that info almost always end up labelled `needs-reproducer` until they have it.
 
 For installation questions or general usage help, check the [readme](readme.md) first and then ask on the [NVDA add-ons community list](https://nvda-addons.groups.io/g/nvda-addons).
 
@@ -120,7 +120,7 @@ Each script fetches the matching `cp313-win_amd64` wheel from PyPI and swaps the
 
 Use the pull request template. Link the issue with `Closes #N` in the PR body — GitHub will auto-close the issue when the PR merges.
 
-Conventions used in this fork:
+Conventions used in this project:
 
 - **Commit messages**: short imperative subject, blank line, then a body that explains *why*. Reference the relevant issue or upstream report (e.g. "Closes #5", "mirrored from upstream mush42/sonata-nvda#30").
 - **PR titles**: same conventional-commits style as the lead commit (`fix:`, `feat:`, `chore:`, `docs:`).
