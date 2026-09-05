@@ -1,0 +1,28 @@
+= Troubleshooting
+
+*Dengjen is missing from NVDA's synthesizer list, or fails to load.* The two usual causes are
+the missing Visual C++ redistributable described in xref:index.adoc[Requirements], and having no
+voices installed — the driver deliberately refuses to load when it cannot find at least one
+voice. Open the voice manager from NVDA's main menu, install a voice, then restart NVDA.
+
+*A voice I just downloaded is not offered in NVDA's voice list.* Restart NVDA. A download
+refreshes the voice manager's own list, but NVDA may still be holding the voice set it loaded at
+startup.
+
+*A preview or the voice list fails with a connection error.* Both are fetched from the internet.
+Check your connection, then use `Refresh voices list` on the Download tab to retry.
+
+*"You cannot remove the currently active voice!"* Switch NVDA to a different voice, or a
+different synthesizer, and then remove it.
+
+*Speech is slow to start or stutters.* Prefer the `low` or `medium` quality voices, and consider
+the `fast` variant of your voice. Higher quality models need noticeably more processing per
+utterance.
+
+== Reporting issues
+
+For anything else, NVDA's log usually says what went wrong: `NVDA menu` > `Tools` > `View log`.
+
+Please report bugs and feature requests on the
+https://github.com/ZirekHQ/dengjen-nvda/issues[issue tracker], and include the log
+along with your NVDA version and the voice you were using.

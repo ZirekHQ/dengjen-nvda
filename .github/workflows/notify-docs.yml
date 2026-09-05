@@ -1,0 +1,50 @@
+name: Notify docs site
+
+on:
+  release:
+    types: [published]
+  workflow_dispatch:
+    inputs:
+      ref:
+        description: Ref or tag to notify about (defaults to the current ref)
+        required: false
+        type: string
+
+permissions:
+  contents: read
+
+jobs:
+  dispatch:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Resolve ref
+        id: resolve
+        env:
+          EVENT_NAME: ${{ github.event_name }}
+          RELEASE_TAG: ${{ github.event.release.tag_name }}
+          INPUT_REF: ${{ inputs.ref }}
+          REF_NAME: ${{ github.ref_name }}
+        run: |
+          if [ "$EVENT_NAME" = "release" ]; then
+            ref="$RELEASE_TAG"
+          else
+            ref="${INPUT_REF:-$REF_NAME}"
+          fi
+          if [[ "$ref" == *$'\n'* ]]; then
+            echo "::error::resolved ref contains newline characters" >&2
+            exit 1
+          fi
+          echo "ref=$ref" >> "$GITHUB_OUTPUT"
+
+      - name: Dispatch update to docs site
+        uses: peter-evans/repository-dispatch@ff45666b9427631e3450c54a1bcbee4d9ff4d7c0 # v3
+        with:
+          token: ${{ secrets.DOCS_DISPATCH_TOKEN }}
+          repository: ZirekHQ/ZirekHQ.github.io
+          event-type: update-docs
+          client-payload: |-
+            {
+              "repository": ${{ toJSON(github.repository) }},
+              "ref": ${{ toJSON(steps.resolve.outputs.ref) }},
+              "actor": ${{ toJSON(github.actor) }}
+            }
