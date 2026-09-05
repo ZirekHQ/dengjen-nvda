@@ -1,0 +1,40 @@
+name: Notify docs site
+
+on:
+  release:
+    types: [published]
+  workflow_dispatch:
+    inputs:
+      ref:
+        description: Ref or tag to notify about (defaults to the current ref)
+        required: false
+        type: string
+
+permissions:
+  contents: read
+
+jobs:
+  dispatch:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Resolve ref
+        id: resolve
+        run: |
+          if [ "${{ github.event_name }}" = "release" ]; then
+            echo "ref=${{ github.event.release.tag_name }}" >> "$GITHUB_OUTPUT"
+          else
+            echo "ref=${{ inputs.ref || github.ref_name }}" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Dispatch update to docs site
+        uses: peter-evans/repository-dispatch@v3
+        with:
+          token: ${{ secrets.DOCS_DISPATCH_TOKEN }}
+          repository: ZirekHQ/ZirekHQ.github.io
+          event-type: update-docs
+          client-payload: |-
+            {
+              "repository": "${{ github.repository }}",
+              "ref": "${{ steps.resolve.outputs.ref }}",
+              "actor": "${{ github.actor }}"
+            }
