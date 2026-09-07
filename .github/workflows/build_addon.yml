@@ -194,15 +194,22 @@ jobs:
     # $RESOLVED_VERSION placeholder rarely matches the real tag prepare-release.yml computes) as
     # PRs merge to main. That draft's content is real signal and shouldn't be silently discarded
     # just because tag-and-release.yml, not a human publishing the draft, is what cuts the tag
-    # now. There's at most one open draft at a time by construction (release-drafter maintains a
-    # single rolling draft), so grabbing the first is unambiguous.
+    # now. Matched by a marker in its body (release-drafter.yml's template), not just "the first
+    # open draft" -- a draft created for any other reason must never be mistaken for it and
+    # deleted below.
     - name: Fetch release-drafter draft notes
       id: draft
       env:
         GH_TOKEN: ${{ github.token }}
       run: |
         set -euo pipefail
-        draft_tag="$(gh release list --json isDraft,tagName -q '[.[] | select(.isDraft)][0].tagName // empty')"
+        draft_tag=""
+        for candidate in $(gh release list --json isDraft,tagName -q '[.[] | select(.isDraft)][].tagName'); do
+          if gh release view "$candidate" --json body -q .body | grep -q '<!-- release-drafter:managed -->'; then
+            draft_tag="$candidate"
+            break
+          fi
+        done
         echo "tag=${draft_tag}" >> "$GITHUB_OUTPUT"
         if [ -n "$draft_tag" ]; then
           gh release view "$draft_tag" --json body -q .body > draft-notes.md

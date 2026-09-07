@@ -10,6 +10,8 @@ tag-template: 'v$RESOLVED_VERSION'
 template: |
   $CHANGES
 
+  <!-- release-drafter:managed -->
+
 categories:
   - title: '🐛 Fixes'
     labels:
