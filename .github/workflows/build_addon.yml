@@ -190,13 +190,9 @@ jobs:
     - name: Display structure of downloaded files
       run: ls -R
 
-    # release-drafter accumulates notes on a single open draft (any tag name -- its
-    # $RESOLVED_VERSION placeholder rarely matches the real tag prepare-release.yml computes) as
-    # PRs merge to main. That draft's content is real signal and shouldn't be silently discarded
-    # just because tag-and-release.yml, not a human publishing the draft, is what cuts the tag
-    # now. Matched by a marker in its body (release-drafter.yml's template), not just "the first
-    # open draft" -- a draft created for any other reason must never be mistaken for it and
-    # deleted below.
+    # release-drafter accumulates notes on one draft, tagged with a $RESOLVED_VERSION
+    # placeholder that won't match the real tag. Matched by a marker in the body, not
+    # position -- a draft created for any other reason must never be mistaken for this one.
     - name: Fetch release-drafter draft notes
       id: draft
       env:
@@ -234,10 +230,8 @@ jobs:
         fail_on_unmatched_files: true
         prerelease: ${{ contains(github.ref, '-') }}
 
-    # The draft's notes are now folded into the real release's body above -- delete the draft so
-    # it doesn't linger as an orphaned, superseded entry in the releases list. Guarded by a tag
-    # mismatch check: a draft literally named the same as this tag would mean softprops just
-    # updated it in place (nothing left to delete).
+    # Guarded by a tag-mismatch check: a draft named identically to this tag means softprops
+    # already updated it in place, nothing left to delete.
     - name: Delete superseded release-drafter draft
       if: steps.draft.outputs.tag != '' && steps.draft.outputs.tag != github.ref_name
       env:
