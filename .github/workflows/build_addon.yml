@@ -189,10 +189,33 @@ jobs:
 
     - name: Display structure of downloaded files
       run: ls -R
-      
+
+    # release-drafter accumulates notes on one draft, tagged with a $RESOLVED_VERSION
+    # placeholder that won't match the real tag. Matched by a marker in the body, not
+    # position -- a draft created for any other reason must never be mistaken for this one.
+    - name: Fetch release-drafter draft notes
+      id: draft
+      env:
+        GH_TOKEN: ${{ github.token }}
+      run: |
+        set -euo pipefail
+        draft_tag=""
+        for candidate in $(gh release list --json isDraft,tagName -q '[.[] | select(.isDraft)][].tagName'); do
+          if gh release view "$candidate" --json body -q .body | grep -q '<!-- release-drafter:managed -->'; then
+            draft_tag="$candidate"
+            break
+          fi
+        done
+        echo "tag=${draft_tag}" >> "$GITHUB_OUTPUT"
+        if [ -n "$draft_tag" ]; then
+          gh release view "$draft_tag" --json body -q .body > draft-notes.md
+        else
+          : > draft-notes.md
+        fi
+
     - name: Calculate sha256
       run: |
-        touch changelog.md
+        cat draft-notes.md > changelog.md
         echo -e "\nSHA256: " >> changelog.md
         sha256sum -- *.nvda-addon >> changelog.md
 
@@ -206,6 +229,15 @@ jobs:
         body_path: changelog.md
         fail_on_unmatched_files: true
         prerelease: ${{ contains(github.ref, '-') }}
+
+    # Guarded by a tag-mismatch check: a draft named identically to this tag means softprops
+    # already updated it in place, nothing left to delete.
+    - name: Delete superseded release-drafter draft
+      if: steps.draft.outputs.tag != '' && steps.draft.outputs.tag != github.ref_name
+      env:
+        GH_TOKEN: ${{ github.token }}
+        DRAFT_TAG: ${{ steps.draft.outputs.tag }}
+      run: gh release delete "$DRAFT_TAG" --yes
 
     - name: Store submission summary
       run: |
