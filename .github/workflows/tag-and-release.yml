@@ -1,0 +1,112 @@
+name: Tag and release
+
+# Fires on every push to main, but only acts on the commit that lands prepare-release.yml's
+# version-bump PR (identified by its exact commit subject). Every other push to main is a no-op.
+#
+# Tagging is the one irreversible step here -- build_addon.yml already triggers off `push:
+# tags: ["v*"]` and publishes the GitHub Release, so pushing the tag is the release, not a
+# precursor to one. That's why the environment:release approval gates the tag push itself,
+# rather than gating some downstream publish step the way dengjen-tts's release.yml does.
+on:
+  push:
+    branches:
+      - main
+  workflow_dispatch:
+    inputs:
+      new_tag:
+        description: "Override the vX.Y.Z tag"
+        required: false
+        type: string
+      dry_run:
+        description: "Dry Run: resolve the version but don't push a tag"
+        required: false
+        type: boolean
+        default: false
+
+permissions: {}
+
+jobs:
+  resolve:
+    runs-on: ubuntu-latest
+    # head_commit is absent on workflow_dispatch, hence the event_name check first. It's also
+    # the single new commit a squash/rebase merge produces; a push landing more than one new
+    # commit at once (not this repo's normal PR flow) would only inspect the last of them.
+    if: "github.event_name == 'workflow_dispatch' || startsWith(github.event.head_commit.message, 'chore: bump workspace version -> ')"
+    permissions:
+      contents: read
+    outputs:
+      version: ${{ steps.version.outputs.version }}
+    steps:
+      - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5.1.0
+        with:
+          persist-credentials: false
+
+      - name: Resolve addon version
+        id: version
+        env:
+          NEW_TAG: ${{ inputs.new_tag }}
+        run: |
+          set -euo pipefail
+          if [ -n "${NEW_TAG:-}" ]; then
+            version="${NEW_TAG#v}"
+            if ! echo "$version" | grep -qE '^(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)$'; then
+              echo "::error::new_tag '${NEW_TAG}' doesn't look like a vX.Y.Z tag" >&2
+              exit 1
+            fi
+          else
+            version="$(grep -oE 'addon_version="[0-9]+\.[0-9]+\.[0-9]+"' buildVars.py | grep -oE '[0-9]+\.[0-9]+\.[0-9]+')"
+            if [ -z "$version" ]; then
+              echo "::error::Couldn't find addon_version=\"X.Y.Z\" in buildVars.py" >&2
+              exit 1
+            fi
+          fi
+          echo "version=${version}" >> "$GITHUB_OUTPUT"
+
+  approve:
+    name: Approve release
+    needs: resolve
+    if: inputs.dry_run != true
+    runs-on: ubuntu-latest
+    environment: release
+    permissions: {}
+    steps:
+      - env:
+          VERSION: ${{ needs.resolve.outputs.version }}
+        run: echo "Approved v${VERSION} for release"
+
+  # always() is paired with an explicit success-or-skipped check, not a bare "run regardless" --
+  # needed because `approve` is legitimately skipped, not failed, on a dry run.
+  tag:
+    name: Push release tag
+    needs: [resolve, approve]
+    if: always() && needs.resolve.result == 'success' && (needs.approve.result == 'success' || needs.approve.result == 'skipped') && inputs.dry_run != true
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5.1.0
+        with:
+          persist-credentials: true
+
+      - name: Push release tag
+        env:
+          VERSION: ${{ needs.resolve.outputs.version }}
+        # Checked against origin, not the local clone -- checkout's shallow fetch wouldn't reliably reflect a tag pushed by an earlier attempt.
+        run: |
+          set -euo pipefail
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          existing="$(git ls-remote origin "refs/tags/v${VERSION}" | cut -f1)"
+          if [ -n "$existing" ]; then
+            if [ "$existing" != "$GITHUB_SHA" ]; then
+              echo "::error::v${VERSION} already exists on origin and points at ${existing}, not this commit (${GITHUB_SHA})" >&2
+              exit 1
+            fi
+            echo "v${VERSION} already exists on origin and points at this commit -- reusing it"
+          elif [ "$GITHUB_REF" = "refs/heads/main" ]; then
+            git tag "v${VERSION}"
+            git push origin "v${VERSION}"
+          else
+            echo "::error::Refusing to create v${VERSION} from ${GITHUB_REF} -- release tags are only created from main" >&2
+            exit 1
+          fi

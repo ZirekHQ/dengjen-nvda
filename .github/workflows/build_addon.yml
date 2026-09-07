@@ -189,10 +189,30 @@ jobs:
 
     - name: Display structure of downloaded files
       run: ls -R
-      
+
+    # release-drafter accumulates notes on a single open draft (any tag name -- its
+    # $RESOLVED_VERSION placeholder rarely matches the real tag prepare-release.yml computes) as
+    # PRs merge to main. That draft's content is real signal and shouldn't be silently discarded
+    # just because tag-and-release.yml, not a human publishing the draft, is what cuts the tag
+    # now. There's at most one open draft at a time by construction (release-drafter maintains a
+    # single rolling draft), so grabbing the first is unambiguous.
+    - name: Fetch release-drafter draft notes
+      id: draft
+      env:
+        GH_TOKEN: ${{ github.token }}
+      run: |
+        set -euo pipefail
+        draft_tag="$(gh release list --json isDraft,tagName -q '[.[] | select(.isDraft)][0].tagName // empty')"
+        echo "tag=${draft_tag}" >> "$GITHUB_OUTPUT"
+        if [ -n "$draft_tag" ]; then
+          gh release view "$draft_tag" --json body -q .body > draft-notes.md
+        else
+          : > draft-notes.md
+        fi
+
     - name: Calculate sha256
       run: |
-        touch changelog.md
+        cat draft-notes.md > changelog.md
         echo -e "\nSHA256: " >> changelog.md
         sha256sum -- *.nvda-addon >> changelog.md
 
@@ -206,6 +226,16 @@ jobs:
         body_path: changelog.md
         fail_on_unmatched_files: true
         prerelease: ${{ contains(github.ref, '-') }}
+
+    # The draft's notes are now folded into the real release's body above -- delete the draft so
+    # it doesn't linger as an orphaned, superseded entry in the releases list. Guarded by a tag
+    # mismatch check: a draft literally named the same as this tag would mean softprops just
+    # updated it in place (nothing left to delete).
+    - name: Delete superseded release-drafter draft
+      if: steps.draft.outputs.tag != '' && steps.draft.outputs.tag != github.ref_name
+      env:
+        GH_TOKEN: ${{ github.token }}
+      run: gh release delete "${{ steps.draft.outputs.tag }}" --yes
 
     - name: Store submission summary
       run: |
