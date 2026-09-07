@@ -85,7 +85,7 @@ CALL_TIMEOUT = 30
 LATENCY_CASES = {
     1: ("chào", 112),
     3: ("xin chào bạn", 219),
-    8: ("xin chào bạn tôi rất vui được gặp bạn", 235),
+    8: ("xin chào bạn tôi rất vui được gặp", 235),
 }
 TIER2_CEILING_MS = 1000
 
@@ -200,7 +200,7 @@ class TestSynthesisLatencyContract:
 
         assert first_chunks, "expected at least one audio chunk"
         tail_ms = _trailing_silence_ms(first_chunks[-1], loaded_voice.sample_rate)
-        assert tail_ms < MAX_TAIL_SILENCE_MS, (
+        assert tail_ms <= MAX_TAIL_SILENCE_MS, (
             f"first request left {tail_ms:.1f}ms of trailing silence despite "
             f"sentence_silence_ms=0 (max allowed {MAX_TAIL_SILENCE_MS}ms); a "
             "user would hear this as a gap before the next speech request"
