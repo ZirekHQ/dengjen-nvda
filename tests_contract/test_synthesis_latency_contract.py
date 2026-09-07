@@ -139,7 +139,7 @@ def loaded_voice(backend, downloaded_voice):
         async for _chunk in backend.synthesize(
             voice.backend_voice_id, "chào", None, None, None, None, False
         ):
-            break
+            pass
 
     _warm_up().result(timeout=CALL_TIMEOUT)
     return voice
