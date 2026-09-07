@@ -235,7 +235,8 @@ jobs:
       if: steps.draft.outputs.tag != '' && steps.draft.outputs.tag != github.ref_name
       env:
         GH_TOKEN: ${{ github.token }}
-      run: gh release delete "${{ steps.draft.outputs.tag }}" --yes
+        DRAFT_TAG: ${{ steps.draft.outputs.tag }}
+      run: gh release delete "$DRAFT_TAG" --yes
 
     - name: Store submission summary
       run: |
