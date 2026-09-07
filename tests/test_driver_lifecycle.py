@@ -242,6 +242,8 @@ class TestGrpcChannelTeardown:
             "aio": aio,
             "log": types.SimpleNamespace(debug=lambda *a, **k: None),
             "CHANNEL": channel,
+            "CHANNEL_PORT": 50051,
+            "DENGJEN_GRPC_SERVICE": object(),
             "CHANNEL_CLOSE_TIMEOUT": 5,
         }
         close_channel = _load_module_function(
@@ -270,6 +272,8 @@ class TestGrpcChannelTeardown:
         assert channel.close_awaited
         assert channel.closed_on_loop is aio.ENGINE.event_loop
         assert namespace["CHANNEL"] is None
+        assert namespace["CHANNEL_PORT"] is None
+        assert namespace["DENGJEN_GRPC_SERVICE"] is None
         assert _never_awaited_warnings(caught) == []
 
     def test_close_channel_discards_coroutine_when_loop_is_gone(self):
@@ -279,7 +283,15 @@ class TestGrpcChannelTeardown:
 
         assert not channel.close_awaited
         assert namespace["CHANNEL"] is None
+        assert namespace["CHANNEL_PORT"] is None
+        assert namespace["DENGJEN_GRPC_SERVICE"] is None
         assert _never_awaited_warnings(caught) == []
+
+    def test_close_channel_clears_port_and_service_even_when_already_none(self):
+        namespace, _ = self._close_channel_with(None)
+
+        assert namespace["CHANNEL_PORT"] is None
+        assert namespace["DENGJEN_GRPC_SERVICE"] is None
 
 
 class TestSynthDriverShimReexport:

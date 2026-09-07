@@ -5,6 +5,8 @@ TTSBackend port's typed errors. The gRPC calls themselves (against a real
 dengjen-tts-grpc.exe) are covered by tests_contract/, not here.
 """
 
+import os
+import types
 from concurrent.futures import Future
 
 import pytest
@@ -236,12 +238,14 @@ class TestClearStaleServerState:
                 closed.value = True
 
         monkeypatch.setattr(dengjen_grpc, "CHANNEL", _FakeChannel())
+        monkeypatch.setattr(dengjen_grpc, "CHANNEL_PORT", 50051)
         monkeypatch.setattr(dengjen_grpc, "DENGJEN_GRPC_SERVICE", object())
 
         asyncio.run(dengjen_grpc._clear_stale_server_state())
 
         assert closed.value
         assert dengjen_grpc.CHANNEL is None
+        assert dengjen_grpc.CHANNEL_PORT is None
         assert dengjen_grpc.DENGJEN_GRPC_SERVICE is None
 
     def test_a_channel_that_fails_to_close_does_not_stop_the_rest_of_the_cleanup(
@@ -445,3 +449,528 @@ class TestWaitForListeningPort:
         with pytest.raises(RuntimeError):
             dengjen_grpc._wait_for_listening_port(process, str(log_path), timeout=5)
         assert time.monotonic() - start < 1
+
+
+class _FakeStaleProc:
+    """A psutil.Process double for the abandoned-helper reaper below."""
+
+    def __init__(self, name, exe, pid=1, parent_pid=None, terminate_error=None):
+        self._name = name
+        self._exe = exe
+        self.pid = pid
+        self._parent_pid = parent_pid
+        self._terminate_error = terminate_error
+        self.terminated = False
+
+    def name(self):
+        return self._name
+
+    def exe(self):
+        return self._exe
+
+    def parent(self):
+        if self._parent_pid is None:
+            return None
+        return types.SimpleNamespace(pid=self._parent_pid)
+
+    def terminate(self):
+        if self._terminate_error is not None:
+            raise self._terminate_error
+        self.terminated = True
+
+
+class _FakePsutilModule:
+    """A psutil module double: process_iter()/wait_procs() are all the
+    reaper needs, so this stands in for `import psutil` via sys.modules."""
+
+    def __init__(self, processes):
+        self._processes = processes
+        self.wait_calls = []
+
+    def process_iter(self, attrs=None):
+        return iter(self._processes)
+
+    def wait_procs(self, processes, timeout=None):
+        self.wait_calls.append((list(processes), timeout))
+        gone = [p for p in processes if p.terminated]
+        alive = [p for p in processes if not p.terminated]
+        return gone, alive
+
+
+class TestMatchesGrpcExeAndOwnership:
+    def test_matches_same_name_and_exe_path(self, monkeypatch):
+        monkeypatch.setattr(os.path, "samefile", lambda a, b: str(a) == str(b))
+        proc = _FakeStaleProc("dengjen-tts-grpc.exe", "/x/dengjen-tts-grpc.exe")
+
+        assert dengjen_grpc._matches_grpc_exe(proc, "/x/dengjen-tts-grpc.exe")
+
+    def test_matches_the_process_name_case_insensitively(self, monkeypatch):
+        monkeypatch.setattr(os.path, "samefile", lambda a, b: True)
+        proc = _FakeStaleProc("DENGJEN-TTS-GRPC.EXE", "/x")
+
+        assert dengjen_grpc._matches_grpc_exe(proc, "/x")
+
+    def test_ignores_an_unrelated_process_name(self):
+        proc = _FakeStaleProc("firefox", "/usr/bin/firefox")
+
+        assert not dengjen_grpc._matches_grpc_exe(proc, "/x/dengjen-tts-grpc.exe")
+
+    def test_does_not_match_a_same_named_exe_from_another_location(self, monkeypatch):
+        monkeypatch.setattr(os.path, "samefile", lambda a, b: str(a) == str(b))
+        proc = _FakeStaleProc(
+            "dengjen-tts-grpc.exe", "/tmp/elsewhere/dengjen-tts-grpc.exe"
+        )
+
+        assert not dengjen_grpc._matches_grpc_exe(proc, "/x/dengjen-tts-grpc.exe")
+
+    def test_a_process_whose_name_cannot_be_read_is_not_a_match(self):
+        class _Unreadable:
+            def name(self):
+                raise Exception("gone")
+
+        assert not dengjen_grpc._matches_grpc_exe(_Unreadable(), "/x")
+
+    def test_a_stale_exe_path_is_not_a_match(self, monkeypatch):
+        monkeypatch.setattr(
+            os.path, "samefile", lambda a, b: (_ for _ in ()).throw(FileNotFoundError())
+        )
+        proc = _FakeStaleProc("dengjen-tts-grpc.exe", "/x/dengjen-tts-grpc.exe")
+
+        assert not dengjen_grpc._matches_grpc_exe(proc, "/x/dengjen-tts-grpc.exe")
+
+    def test_owned_when_the_parent_is_this_process(self):
+        proc = _FakeStaleProc("x", "/x", parent_pid=os.getpid())
+
+        assert dengjen_grpc._owned_by_this_process(proc)
+
+    def test_not_owned_when_the_parent_is_a_different_process(self):
+        proc = _FakeStaleProc("x", "/x", parent_pid=os.getpid() + 1)
+
+        assert not dengjen_grpc._owned_by_this_process(proc)
+
+    def test_not_owned_when_there_is_no_parent(self):
+        proc = _FakeStaleProc("x", "/x", parent_pid=None)
+
+        assert not dengjen_grpc._owned_by_this_process(proc)
+
+    def test_not_owned_when_the_parent_lookup_fails(self):
+        class _NoParent:
+            def parent(self):
+                raise Exception("gone")
+
+        assert not dengjen_grpc._owned_by_this_process(_NoParent())
+
+
+class TestFindStaleGrpcHelpers:
+    def test_returns_only_same_exe_processes_owned_by_this_process(self, monkeypatch):
+        monkeypatch.setattr(os.path, "samefile", lambda a, b: str(a) == str(b))
+        exe = "/x/dengjen-tts-grpc.exe"
+        ours = _FakeStaleProc(
+            "dengjen-tts-grpc.exe", exe, pid=1, parent_pid=os.getpid()
+        )
+        another_nvda_instance = _FakeStaleProc(
+            "dengjen-tts-grpc.exe", exe, pid=2, parent_pid=os.getpid() + 1
+        )
+        unrelated = _FakeStaleProc("bash", "/bin/bash", pid=3, parent_pid=os.getpid())
+        psutil = _FakePsutilModule([ours, another_nvda_instance, unrelated])
+
+        assert dengjen_grpc._find_stale_grpc_helpers(psutil, exe) == [ours]
+
+
+class TestTerminateStaleGrpcHelpers:
+    def test_is_a_noop_for_an_empty_list(self):
+        psutil = _FakePsutilModule([])
+
+        dengjen_grpc._terminate_stale_grpc_helpers(psutil, [])
+
+        assert psutil.wait_calls == []
+
+    def test_terminates_and_waits_with_the_bounded_timeout(self):
+        proc = _FakeStaleProc("dengjen-tts-grpc.exe", "/x", pid=1)
+        psutil = _FakePsutilModule([proc])
+
+        dengjen_grpc._terminate_stale_grpc_helpers(psutil, [proc])
+
+        assert proc.terminated
+        assert psutil.wait_calls == [([proc], dengjen_grpc.PROCESS_EXIT_TIMEOUT)]
+
+    def test_one_process_failing_to_terminate_does_not_stop_the_others(self):
+        stubborn = _FakeStaleProc(
+            "x", "/x", pid=1, terminate_error=Exception("access denied")
+        )
+        ours = _FakeStaleProc("x", "/x", pid=2)
+        psutil = _FakePsutilModule([stubborn, ours])
+
+        dengjen_grpc._terminate_stale_grpc_helpers(psutil, [stubborn, ours])
+
+        assert not stubborn.terminated
+        assert ours.terminated
+        assert psutil.wait_calls == [
+            ([stubborn, ours], dengjen_grpc.PROCESS_EXIT_TIMEOUT)
+        ]
+
+
+class TestReapStaleGrpcServers:
+    """_reap_stale_grpc_servers() is the entry point start_grpc_server() runs
+    off the aio loop thread. `import psutil` inside it resolves through
+    sys.modules first, so injecting a fake there (or `None`, which CPython
+    treats as an explicitly-disabled module and raises ImportError) drives
+    it without needing the real, Windows-only vendored psutil build."""
+
+    def test_logs_and_returns_when_psutil_is_unavailable(self, monkeypatch):
+        import sys
+
+        monkeypatch.setitem(sys.modules, "psutil", None)
+
+        dengjen_grpc._reap_stale_grpc_servers("/x/dengjen-tts-grpc.exe")
+
+    def test_finds_and_terminates_a_stale_same_pid_helper(self, monkeypatch):
+        import sys
+
+        monkeypatch.setattr(os.path, "samefile", lambda a, b: str(a) == str(b))
+        exe = "/x/dengjen-tts-grpc.exe"
+        proc = _FakeStaleProc(
+            "dengjen-tts-grpc.exe", exe, pid=1, parent_pid=os.getpid()
+        )
+        monkeypatch.setitem(sys.modules, "psutil", _FakePsutilModule([proc]))
+
+        dengjen_grpc._reap_stale_grpc_servers(exe)
+
+        assert proc.terminated
+
+    def test_an_exception_during_the_scan_is_logged_and_swallowed(self, monkeypatch):
+        import sys
+
+        monkeypatch.setitem(sys.modules, "psutil", _FakePsutilModule([]))
+        monkeypatch.setattr(
+            dengjen_grpc,
+            "_find_stale_grpc_helpers",
+            lambda *a, **k: (_ for _ in ()).throw(RuntimeError("scan broke")),
+        )
+
+        dengjen_grpc._reap_stale_grpc_servers("/x/dengjen-tts-grpc.exe")
+
+
+class TestClearSavedServerState:
+    def test_removes_both_attrs_when_present(self):
+        import globalVars
+
+        globalVars.DENGJEN_GRPC_SERVER_PORT = 1
+        globalVars.GRPC_SERVER_PROCESS = object()
+
+        dengjen_grpc._clear_saved_server_state()
+
+        assert not hasattr(globalVars, "DENGJEN_GRPC_SERVER_PORT")
+        assert not hasattr(globalVars, "GRPC_SERVER_PROCESS")
+
+    def test_is_a_noop_when_nothing_is_saved(self, monkeypatch):
+        import globalVars
+
+        monkeypatch.delattr(globalVars, "DENGJEN_GRPC_SERVER_PORT", raising=False)
+        monkeypatch.delattr(globalVars, "GRPC_SERVER_PROCESS", raising=False)
+
+        dengjen_grpc._clear_saved_server_state()
+
+
+class TestSavedServerIsAlive:
+    def test_true_when_saved_and_poll_reports_running(self):
+        import globalVars
+
+        globalVars.DENGJEN_GRPC_SERVER_PORT = 12345
+        globalVars.GRPC_SERVER_PROCESS = types.SimpleNamespace(poll=lambda: None)
+
+        assert dengjen_grpc._saved_server_is_alive()
+
+    def test_false_when_poll_reports_exited(self):
+        import globalVars
+
+        globalVars.DENGJEN_GRPC_SERVER_PORT = 12345
+        globalVars.GRPC_SERVER_PROCESS = types.SimpleNamespace(poll=lambda: 1)
+
+        assert not dengjen_grpc._saved_server_is_alive()
+
+    def test_false_when_nothing_is_saved(self, monkeypatch):
+        import globalVars
+
+        monkeypatch.delattr(globalVars, "DENGJEN_GRPC_SERVER_PORT", raising=False)
+        monkeypatch.delattr(globalVars, "GRPC_SERVER_PROCESS", raising=False)
+
+        assert not dengjen_grpc._saved_server_is_alive()
+
+    def test_false_when_poll_raises(self):
+        import globalVars
+
+        def _broken_poll():
+            raise OSError("no such process")
+
+        globalVars.DENGJEN_GRPC_SERVER_PORT = 12345
+        globalVars.GRPC_SERVER_PROCESS = types.SimpleNamespace(poll=_broken_poll)
+
+        assert not dengjen_grpc._saved_server_is_alive()
+
+
+class TestReapIfNeeded:
+    """_reap_if_needed() is what initialize() runs off the aio loop thread,
+    before start_grpc_server() decides whether to reuse or respawn."""
+
+    def test_skips_reaping_when_the_saved_process_is_alive(self, monkeypatch):
+        monkeypatch.setattr(dengjen_grpc, "_saved_server_is_alive", lambda: True)
+        reap_calls = []
+        monkeypatch.setattr(dengjen_grpc, "_reap_stale_grpc_servers", reap_calls.append)
+
+        dengjen_grpc._reap_if_needed("/x/dengjen-tts-grpc.exe")
+
+        assert reap_calls == []
+
+    def test_clears_state_and_reaps_when_the_saved_process_is_not_alive(
+        self, monkeypatch
+    ):
+        import globalVars
+
+        globalVars.DENGJEN_GRPC_SERVER_PORT = 12345
+        globalVars.GRPC_SERVER_PROCESS = object()
+        monkeypatch.setattr(dengjen_grpc, "_saved_server_is_alive", lambda: False)
+        reap_calls = []
+        monkeypatch.setattr(dengjen_grpc, "_reap_stale_grpc_servers", reap_calls.append)
+
+        dengjen_grpc._reap_if_needed("/x/dengjen-tts-grpc.exe")
+
+        assert not hasattr(globalVars, "DENGJEN_GRPC_SERVER_PORT")
+        assert not hasattr(globalVars, "GRPC_SERVER_PROCESS")
+        assert reap_calls == ["/x/dengjen-tts-grpc.exe"]
+
+
+class TestStartGrpcServerReusesOrClearsSavedState:
+    """start_grpc_server() used to trust a cached globalVars port/process
+    blindly. It now only reuses it once _saved_server_is_alive() confirms
+    it, and clears stale state before attempting a fresh spawn."""
+
+    def test_returns_true_and_reuses_the_saved_process_when_alive(self, monkeypatch):
+        import globalVars
+
+        fake_process = types.SimpleNamespace(poll=lambda: None)
+        globalVars.DENGJEN_GRPC_SERVER_PORT = 12345
+        globalVars.GRPC_SERVER_PROCESS = fake_process
+        monkeypatch.setattr(dengjen_grpc, "GRPC_SERVER_PROCESS", None)
+        monkeypatch.setattr(dengjen_grpc, "DENGJEN_GRPC_SERVER_PORT", None)
+
+        result = dengjen_grpc.start_grpc_server()
+
+        assert result is True
+        assert dengjen_grpc.DENGJEN_GRPC_SERVER_PORT == 12345
+        assert dengjen_grpc.GRPC_SERVER_PROCESS is fake_process
+
+    def test_clears_stale_state_before_attempting_a_fresh_spawn(self, monkeypatch):
+        import globalVars
+
+        dead_process = types.SimpleNamespace(poll=lambda: 1)
+        globalVars.DENGJEN_GRPC_SERVER_PORT = 12345
+        globalVars.GRPC_SERVER_PROCESS = dead_process
+        monkeypatch.setattr(dengjen_grpc, "_vcruntime_missing", lambda: True)
+        monkeypatch.setattr(dengjen_grpc, "_show_vcruntime_warning", lambda: None)
+
+        result = dengjen_grpc.start_grpc_server()
+
+        assert result is False
+        assert not hasattr(globalVars, "DENGJEN_GRPC_SERVER_PORT")
+        assert not hasattr(globalVars, "GRPC_SERVER_PROCESS")
+
+
+class TestInitializeReapsBeforeStarting:
+    """initialize() runs _reap_if_needed() off the aio loop thread via
+    aio.run_in_executor(), ahead of start_grpc_server() -- the reap's
+    system-wide psutil scan must never block queued gRPC calls on that
+    thread the way this module's blocking startup I/O already does, which
+    is why it (unlike start_grpc_server() itself) goes through the
+    executor instead of running inline."""
+
+    def test_reaps_via_the_executor_before_starting_the_server(self, monkeypatch):
+        import asyncio
+
+        calls = []
+
+        async def _fake_run_in_executor(func, *args, **kwargs):
+            calls.append(("reap", func, args))
+            return func(*args, **kwargs)
+
+        monkeypatch.setattr(dengjen_grpc.aio, "run_in_executor", _fake_run_in_executor)
+        monkeypatch.setattr(
+            dengjen_grpc,
+            "_reap_if_needed",
+            lambda exe: calls.append(("reap_if_needed", exe)),
+        )
+        monkeypatch.setattr(
+            dengjen_grpc,
+            "start_grpc_server",
+            lambda: (calls.append(("start", None)), False)[1],
+        )
+
+        with pytest.raises(RuntimeError):
+            asyncio.run(dengjen_grpc.initialize())
+
+        assert [c[0] for c in calls] == ["reap", "reap_if_needed", "start"]
+        assert calls[1][1].endswith("dengjen-tts-grpc.exe")
+
+
+class TestTerminateBoundedWait:
+    """terminate() used to fire-and-forget GRPC_SERVER_PROCESS.terminate().
+    It now waits up to PROCESS_EXIT_TIMEOUT, skips an already-dead process,
+    and always clears the saved globalVars state on the way out."""
+
+    def test_waits_for_the_process_to_exit_after_terminate(self, monkeypatch):
+        waited = types.SimpleNamespace(timeout=None)
+        fake_process = types.SimpleNamespace(
+            poll=lambda: None,
+            terminate=lambda: None,
+            wait=lambda timeout=None: waited.__setattr__("timeout", timeout),
+        )
+        monkeypatch.setattr(dengjen_grpc, "GRPC_SERVER_PROCESS", fake_process)
+        monkeypatch.setattr(dengjen_grpc, "close_channel", lambda: None)
+        monkeypatch.setattr(dengjen_grpc.aio, "terminate", lambda: None)
+
+        dengjen_grpc.terminate()
+
+        assert waited.timeout == dengjen_grpc.PROCESS_EXIT_TIMEOUT
+        assert dengjen_grpc.GRPC_SERVER_PROCESS is None
+
+    def test_a_hung_process_logs_a_warning_instead_of_raising(self, monkeypatch):
+        import subprocess
+
+        def _wait(timeout=None):
+            raise subprocess.TimeoutExpired(cmd="dengjen-tts-grpc.exe", timeout=timeout)
+
+        fake_process = types.SimpleNamespace(
+            poll=lambda: None, terminate=lambda: None, wait=_wait
+        )
+        monkeypatch.setattr(dengjen_grpc, "GRPC_SERVER_PROCESS", fake_process)
+        monkeypatch.setattr(dengjen_grpc, "close_channel", lambda: None)
+        monkeypatch.setattr(dengjen_grpc.aio, "terminate", lambda: None)
+
+        dengjen_grpc.terminate()
+
+        assert dengjen_grpc.GRPC_SERVER_PROCESS is None
+
+    def test_skips_terminate_and_wait_for_an_already_dead_process(self, monkeypatch):
+        calls = types.SimpleNamespace(terminate=False, wait=False)
+        fake_process = types.SimpleNamespace(
+            poll=lambda: 0,
+            terminate=lambda: calls.__setattr__("terminate", True),
+            wait=lambda timeout=None: calls.__setattr__("wait", True),
+        )
+        monkeypatch.setattr(dengjen_grpc, "GRPC_SERVER_PROCESS", fake_process)
+        monkeypatch.setattr(dengjen_grpc, "close_channel", lambda: None)
+        monkeypatch.setattr(dengjen_grpc.aio, "terminate", lambda: None)
+
+        dengjen_grpc.terminate()
+
+        assert not calls.terminate
+        assert not calls.wait
+
+    def test_clears_the_saved_globalvars_state(self, monkeypatch):
+        import globalVars
+
+        globalVars.DENGJEN_GRPC_SERVER_PORT = 1
+        globalVars.GRPC_SERVER_PROCESS = object()
+        monkeypatch.setattr(dengjen_grpc, "GRPC_SERVER_PROCESS", None)
+        monkeypatch.setattr(dengjen_grpc, "close_channel", lambda: None)
+        monkeypatch.setattr(dengjen_grpc.aio, "terminate", lambda: None)
+
+        dengjen_grpc.terminate()
+
+        assert not hasattr(globalVars, "DENGJEN_GRPC_SERVER_PORT")
+        assert not hasattr(globalVars, "GRPC_SERVER_PROCESS")
+
+
+class _FakeAioChannelForInitialize:
+    def __init__(self):
+        self._loop = None
+        self.close_awaited = False
+        self.target = None
+
+    async def close(self):
+        self.close_awaited = True
+
+
+class TestInitializeChannelPortStaleness:
+    """initialize()'s channel-reuse check used to look only at whether the
+    aio loop matched, never at whether the port the channel was opened
+    against was still the one start_grpc_server() just confirmed. #150
+    made ports OS-assigned (a fresh spawn gets a different one each
+    time), and _saved_server_is_alive()/start_grpc_server() can spawn a
+    genuine replacement for a helper that died independently without
+    start_grpc_server() itself touching CHANNEL -- so a stale channel
+    could be kept pointed at a port nothing is listening on anymore.
+    CHANNEL_PORT closes that gap."""
+
+    @staticmethod
+    def _run_initialize_with(monkeypatch, *, channel, channel_port, new_port):
+        import asyncio
+
+        created_channels = []
+
+        def _create_channel(target):
+            channel = _FakeAioChannelForInitialize()
+            channel.target = target
+            created_channels.append(channel)
+            return channel
+
+        async def _fake_run_in_executor(func, *args, **kwargs):
+            return func(*args, **kwargs)
+
+        async def _run():
+            loop = asyncio.get_running_loop()
+            channel._loop = loop
+            monkeypatch.setattr(dengjen_grpc, "CHANNEL", channel)
+            monkeypatch.setattr(dengjen_grpc, "CHANNEL_PORT", channel_port)
+            monkeypatch.setattr(dengjen_grpc, "DENGJEN_GRPC_SERVICE", "old-stub")
+            # The confirmed port of the helper start_grpc_server() decided
+            # to run with -- the same one whether it reused a live saved
+            # process or just spawned a replacement.
+            monkeypatch.setattr(dengjen_grpc, "DENGJEN_GRPC_SERVER_PORT", new_port)
+            monkeypatch.setattr(dengjen_grpc, "start_grpc_server", lambda: True)
+            monkeypatch.setattr(dengjen_grpc, "_reap_if_needed", lambda exe: None)
+            monkeypatch.setattr(
+                dengjen_grpc.aio, "run_in_executor", _fake_run_in_executor
+            )
+            monkeypatch.setattr(dengjen_grpc.aio.ENGINE, "event_loop", loop)
+            monkeypatch.setattr(
+                dengjen_grpc.grpc.aio, "insecure_channel", _create_channel
+            )
+            monkeypatch.setattr(
+                dengjen_grpc, "DengjenGrpcStub", lambda channel: f"stub-for-{channel}"
+            )
+
+            await dengjen_grpc.initialize()
+
+        asyncio.run(_run())
+        return created_channels
+
+    def test_rebuilds_the_channel_when_the_replacement_helper_gets_a_new_port(
+        self, monkeypatch
+    ):
+        old_channel = _FakeAioChannelForInitialize()
+
+        created_channels = self._run_initialize_with(
+            monkeypatch, channel=old_channel, channel_port=50051, new_port=50052
+        )
+
+        assert old_channel.close_awaited
+        assert len(created_channels) == 1
+        assert created_channels[0].target == "localhost:50052"
+        assert dengjen_grpc.CHANNEL is created_channels[0]
+        assert dengjen_grpc.CHANNEL_PORT == 50052
+        assert dengjen_grpc.DENGJEN_GRPC_SERVICE is not None
+        assert dengjen_grpc.DENGJEN_GRPC_SERVICE != "old-stub"
+
+    def test_reuses_the_channel_when_the_port_is_unchanged(self, monkeypatch):
+        channel = _FakeAioChannelForInitialize()
+
+        created_channels = self._run_initialize_with(
+            monkeypatch, channel=channel, channel_port=50051, new_port=50051
+        )
+
+        assert created_channels == []
+        assert not channel.close_awaited
+        assert dengjen_grpc.CHANNEL is channel
+        assert dengjen_grpc.CHANNEL_PORT == 50051
+        assert dengjen_grpc.DENGJEN_GRPC_SERVICE == "old-stub"

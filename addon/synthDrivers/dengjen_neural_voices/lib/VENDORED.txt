@@ -11,6 +11,11 @@ grpcio==1.80.0
 miniaudio==1.71
 
 protobuf==4.24.4
+# _psutil_windows.pyd is an abi3 wheel (one build covers cp37+), tagged
+# psutil-5.9.6-cp37-abi3-win_amd64.whl on PyPI -- easy to mis-vendor the
+# win32 build by hand since the .pyd filename itself carries no arch tag.
+# `pip download psutil==5.9.6 --platform win_amd64 --python-version 313
+# --implementation cp --abi cp313 --only-binary=:all: --no-deps` gets it.
 psutil==5.9.6
 pycparser==2.22
 mureq==0.2.0
