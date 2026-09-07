@@ -132,7 +132,17 @@ def backend():
 
 @pytest.fixture(scope="session")
 def loaded_voice(backend, downloaded_voice):
-    return backend.load_voice(downloaded_voice)
+    voice = backend.load_voice(downloaded_voice)
+
+    @aio.asyncio_coroutine_to_concurrent_future
+    async def _warm_up():
+        async for _chunk in backend.synthesize(
+            voice.backend_voice_id, "chào", None, None, None, None, False
+        ):
+            break
+
+    _warm_up().result(timeout=CALL_TIMEOUT)
+    return voice
 
 
 class TestSynthesisLatencyContract:
@@ -163,6 +173,12 @@ class TestSynthesisLatencyContract:
         )
 
     def test_no_unrequested_tail_silence_between_chunks(self, backend, loaded_voice):
+        # Mirrors domain/tts_system.py's own streaming=self.supports_streaming_output
+        # call: without it, the backend has no per-sentence chunk boundaries to
+        # inspect, and this would just measure natural end-of-utterance decay.
+        if not loaded_voice.supports_streaming_output:
+            pytest.skip("voice does not support streaming output")
+
         @aio.asyncio_coroutine_to_concurrent_future
         async def _collect():
             chunks = []
@@ -173,15 +189,21 @@ class TestSynthesisLatencyContract:
                 None,
                 None,
                 0,
-                False,
+                True,
             ):
                 chunks.append(chunk)
             return chunks
 
         chunks = _collect().result(timeout=CALL_TIMEOUT)
-        assert chunks, "expected at least one audio chunk"
+        assert len(chunks) > 1, (
+            f"expected multiple chunks for a {SENTENCE_TEXT.count('.')}-sentence "
+            "utterance to inspect inter-sentence silence; got "
+            f"{len(chunks)}"
+        )
 
-        for index, chunk in enumerate(chunks):
+        # The last chunk ends the utterance; its trailing decay is inherent to
+        # the model output, not something sentence_silence_ms controls.
+        for index, chunk in enumerate(chunks[:-1]):
             tail_ms = _trailing_silence_ms(chunk, loaded_voice.sample_rate)
             assert tail_ms < MAX_TAIL_SILENCE_MS, (
                 f"chunk {index} has {tail_ms:.1f}ms of trailing silence despite "
