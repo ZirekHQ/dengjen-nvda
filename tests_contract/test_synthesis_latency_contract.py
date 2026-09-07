@@ -173,6 +173,12 @@ class TestSynthesisLatencyContract:
             f"the {tier1_ceiling_ms}ms regression ceiling"
         )
 
+    @pytest.mark.xfail(
+        reason="dengjen-tts vocoder output carries ~200ms of unrequested "
+        "trailing silence baked into standard-voice audio, independent of "
+        "appended_silence_ms -- see ZirekHQ/dengjen-tts#184",
+        strict=False,
+    )
     def test_no_unrequested_tail_silence_between_requests(self, backend, loaded_voice):
         # A standard (non-streaming) voice loads through dengjen-tts's plain
         # VitsModel, not VitsStreamingModel -- supports_streaming_output is
