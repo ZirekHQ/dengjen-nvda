@@ -83,6 +83,12 @@ jobs:
     runs-on: ubuntu-latest
     permissions:
       contents: write
+      # GITHUB_TOKEN pushing the tag below is deliberately excluded from triggering
+      # build_addon.yml's own `push: tags:` listener (GitHub's recursion guard on
+      # actions-authored pushes), so nothing would build or publish the release
+      # without the explicit dispatch step -- actions: write is what lets that
+      # dispatch start a new run.
+      actions: write
     steps:
       - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5.1.0
         with:
@@ -110,3 +116,16 @@ jobs:
             echo "::error::Refusing to create v${VERSION} from ${GITHUB_REF} -- release tags are only created from main" >&2
             exit 1
           fi
+
+      - name: Trigger build_addon.yml
+        env:
+          GH_TOKEN: ${{ github.token }}
+          VERSION: ${{ needs.resolve.outputs.version }}
+        # Dispatched against the real v${VERSION} tag, not main -- workflow_dispatch runs the
+        # workflow file's own content as it exists at --ref, and github.ref resolves to
+        # refs/tags/v${VERSION} either way, satisfying upload_release's own
+        # `startsWith(github.ref, 'refs/tags/')` gate the same as a real tag push would have.
+        # Runs unconditionally after the step above, including the "tag already exists --
+        # reusing it" branch: a prior run that pushed the tag but failed before reaching this
+        # step must still get the dispatch on retry.
+        run: gh workflow run build_addon.yml --ref "v${VERSION}"
