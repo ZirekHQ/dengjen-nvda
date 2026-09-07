@@ -136,8 +136,8 @@ git tag -a v3.2.0-beta.1 -m "v3.2.0-beta.1: <summary>"
 git push origin v3.2.0-beta.1
 ```
 
-CI builds on Ubuntu, runs pytest on `windows-latest`, and publishes a GitHub Release with the `.nvda-addon`, the `.pot`, and an auto-generated `changelog.md` containing the SHA256. Release Drafter maintains a draft release on every push to `main` — open the draft, set the actual tag, then publish.
+CI builds on Ubuntu, runs pytest on `windows-latest`, and publishes a GitHub Release with the `.nvda-addon`, the `.pot`, and notes from `gh release create --generate-notes` (scoped to the previous `vX.Y.Z(-beta.N)` tag) with the SHA256 appended.
 
 Tag scheme: standard semver `vMAJOR.MINOR.PATCH(-beta.N)`, e.g. `v3.2.0-beta.5` for a beta or `v3.2.0` for a stable cut — the release workflow's tag check accepts only these two forms, not other prerelease labels like `-rc.N` or `-alpha.N`. The `-beta.N` portion stays in the git tag only; `addon_version` in `buildVars.py` must remain strict three-part semver (e.g. `3.2.0`) per `tests/test_buildvars.py`.
 
-Historical tags `v3.2-beta.1` through `v3.2-beta.4` used a non-standard two-part scheme (no `.0` patch component). They're left as-is — already published, already linked — but new tags use the standard form so Release Drafter can anchor against them correctly.
+Historical tags `v3.2-beta.1` through `v3.2-beta.4` used a non-standard two-part scheme (no `.0` patch component). They're left as-is — already published, already linked — but new tags use the standard form so the previous-tag lookup can anchor against them correctly.

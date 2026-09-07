@@ -190,54 +190,54 @@ jobs:
     - name: Display structure of downloaded files
       run: ls -R
 
-    # release-drafter accumulates notes on one draft, tagged with a $RESOLVED_VERSION
-    # placeholder that won't match the real tag. Matched by a marker in the body, not
-    # position -- a draft created for any other reason must never be mistaken for this one.
-    - name: Fetch release-drafter draft notes
-      id: draft
+    # Scoped to the previous vX.Y.Z(-beta.N) tag so --generate-notes doesn't pull in
+    # whatever unrelated tag happened to be pushed most recently.
+    - name: Resolve previous release tag
+      id: prev
       env:
         GH_TOKEN: ${{ github.token }}
       run: |
         set -euo pipefail
-        draft_tag=""
-        for candidate in $(gh release list --json isDraft,tagName -q '[.[] | select(.isDraft)][].tagName'); do
-          if gh release view "$candidate" --json body -q .body | grep -q '<!-- release-drafter:managed -->'; then
-            draft_tag="$candidate"
-            break
-          fi
-        done
-        echo "tag=${draft_tag}" >> "$GITHUB_OUTPUT"
-        if [ -n "$draft_tag" ]; then
-          gh release view "$draft_tag" --json body -q .body > draft-notes.md
-        else
-          : > draft-notes.md
-        fi
+        TAG=${GITHUB_REF#refs/tags/}
+        previous_tag="$(gh release list --json tagName -q '.[].tagName' \
+          | grep -E '^v[0-9]+\.[0-9]+\.[0-9]+(-beta\.[0-9]+)?$' | grep -vFx "$TAG" | sort -rV | head -n1 || true)"
+        echo "tag=${previous_tag}" >> "$GITHUB_OUTPUT"
 
-    - name: Calculate sha256
-      run: |
-        cat draft-notes.md > changelog.md
-        echo -e "\nSHA256: " >> changelog.md
-        sha256sum -- *.nvda-addon >> changelog.md
-
-    - name: Release
-      id: release
-      uses: softprops/action-gh-release@3bb12739c298aeb8a4eeaf626c5b8d85266b0e65 # v2.6.2
-      with:
-        files: |
-          *.nvda-addon
-          *.pot
-        body_path: changelog.md
-        fail_on_unmatched_files: true
-        prerelease: ${{ contains(github.ref, '-') }}
-
-    # Guarded by a tag-mismatch check: a draft named identically to this tag means softprops
-    # already updated it in place, nothing left to delete.
-    - name: Delete superseded release-drafter draft
-      if: steps.draft.outputs.tag != '' && steps.draft.outputs.tag != github.ref_name
+    - name: Create release
       env:
         GH_TOKEN: ${{ github.token }}
-        DRAFT_TAG: ${{ steps.draft.outputs.tag }}
-      run: gh release delete "$DRAFT_TAG" --yes
+        PREVIOUS_TAG: ${{ steps.prev.outputs.tag }}
+      run: |
+        set -euo pipefail
+        TAG=${GITHUB_REF#refs/tags/}
+        notes_args=(--generate-notes)
+        if [ -n "$PREVIOUS_TAG" ]; then
+          notes_args=(--generate-notes --notes-start-tag "$PREVIOUS_TAG")
+        fi
+        prerelease_args=()
+        if [[ "$TAG" == *-* ]]; then
+          prerelease_args=(--prerelease)
+        fi
+        gh release create "$TAG" \
+          --title "$TAG" \
+          --verify-tag \
+          "${notes_args[@]}" \
+          "${prerelease_args[@]}" \
+          -- *.nvda-addon *.pot
+
+    # gh release create's --generate-notes has no way to append extra content in the same
+    # call, hence the follow-up edit to fold the SHA256 (needed for the Add-on Store
+    # submission below) into the notes GitHub already generated.
+    - name: Append SHA256 to release notes
+      env:
+        GH_TOKEN: ${{ github.token }}
+      run: |
+        set -euo pipefail
+        TAG=${GITHUB_REF#refs/tags/}
+        gh release view "$TAG" --json body -q .body > changelog.md
+        echo -e "\nSHA256: " >> changelog.md
+        sha256sum -- *.nvda-addon >> changelog.md
+        gh release edit "$TAG" --notes-file changelog.md
 
     - name: Store submission summary
       run: |
