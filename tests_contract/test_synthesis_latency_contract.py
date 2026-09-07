@@ -91,7 +91,8 @@ TIER2_CEILING_MS = 1000
 
 SILENCE_SAMPLE_THRESHOLD = 500  # ~1.5% of int16 full scale
 MAX_TAIL_SILENCE_MS = 50
-SENTENCE_TEXT = "Một. Hai. Ba."
+FIRST_REQUEST_TEXT = "Một."
+SECOND_REQUEST_TEXT = "Hai."
 
 
 def _download(url, target_path):
@@ -172,40 +173,29 @@ class TestSynthesisLatencyContract:
             f"the {tier1_ceiling_ms}ms regression ceiling"
         )
 
-    def test_no_unrequested_tail_silence_between_chunks(self, backend, loaded_voice):
-        # Mirrors domain/tts_system.py's own streaming=self.supports_streaming_output
-        # call: without it, the backend has no per-sentence chunk boundaries to
-        # inspect, and this would just measure natural end-of-utterance decay.
-        if not loaded_voice.supports_streaming_output:
-            pytest.skip("voice does not support streaming output")
-
+    def test_no_unrequested_tail_silence_between_requests(self, backend, loaded_voice):
+        # A standard (non-streaming) voice loads through dengjen-tts's plain
+        # VitsModel, not VitsStreamingModel -- supports_streaming_output is
+        # false for every such voice regardless of quality, so it never
+        # returns more than one chunk per synthesize() call. The boundary a
+        # screen-reader user would actually hear a gap at is therefore
+        # between two consecutive synthesize() calls, not within one.
         @aio.asyncio_coroutine_to_concurrent_future
-        async def _collect():
+        async def _synthesize(text):
             chunks = []
             async for chunk in backend.synthesize(
-                loaded_voice.backend_voice_id,
-                SENTENCE_TEXT,
-                None,
-                None,
-                None,
-                0,
-                True,
+                loaded_voice.backend_voice_id, text, None, None, None, 0, False
             ):
                 chunks.append(chunk)
             return chunks
 
-        chunks = _collect().result(timeout=CALL_TIMEOUT)
-        assert len(chunks) > 1, (
-            f"expected multiple chunks for a {SENTENCE_TEXT.count('.')}-sentence "
-            "utterance to inspect inter-sentence silence; got "
-            f"{len(chunks)}"
-        )
+        first_chunks = _synthesize(FIRST_REQUEST_TEXT).result(timeout=CALL_TIMEOUT)
+        _synthesize(SECOND_REQUEST_TEXT).result(timeout=CALL_TIMEOUT)
 
-        # The last chunk ends the utterance; its trailing decay is inherent to
-        # the model output, not something sentence_silence_ms controls.
-        for index, chunk in enumerate(chunks[:-1]):
-            tail_ms = _trailing_silence_ms(chunk, loaded_voice.sample_rate)
-            assert tail_ms < MAX_TAIL_SILENCE_MS, (
-                f"chunk {index} has {tail_ms:.1f}ms of trailing silence despite "
-                f"sentence_silence_ms=0 (max allowed {MAX_TAIL_SILENCE_MS}ms)"
-            )
+        assert first_chunks, "expected at least one audio chunk"
+        tail_ms = _trailing_silence_ms(first_chunks[-1], loaded_voice.sample_rate)
+        assert tail_ms < MAX_TAIL_SILENCE_MS, (
+            f"first request left {tail_ms:.1f}ms of trailing silence despite "
+            f"sentence_silence_ms=0 (max allowed {MAX_TAIL_SILENCE_MS}ms); a "
+            "user would hear this as a gap before the next speech request"
+        )
