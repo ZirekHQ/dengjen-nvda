@@ -19,6 +19,9 @@ from typing import Any
 
 import pytest
 
+if sys.platform == "win32":
+    from nvda_testkit.errors import AuthError, RpcError
+
 collect_ignore_glob = [] if sys.platform == "win32" else ["test_*.py"]
 
 
@@ -74,15 +77,29 @@ def wait_until(
     state" primitive -- speech.wait_for/log.wait_for only see NVDA's own
     speech and log output, which a background thread silently filling a
     wx.Choice never produces. This is the fallback for exactly that case.
+
+    A predicate built on voice_manager_state can raise RpcError if it catches
+    NVDA between two windows (e.g. next() over GetTopLevelWindows() finding
+    none yet) -- treated as "not ready" like a falsy return. AuthError, a
+    stale-token RpcError subclass no amount of retrying fixes, still raises
+    immediately.
     """
     deadline = time.monotonic() + timeout
     last: Any = None
     while time.monotonic() < deadline:
-        last = predicate()
-        if last:
-            return last
+        try:
+            last = predicate()
+        except AuthError:
+            raise
+        except RpcError as exc:
+            last = exc
+        else:
+            if last:
+                return last
         time.sleep(interval)
-    raise AssertionError(f"timed out waiting for {description}; last seen: {last!r}")
+    raise AssertionError(
+        f"timed out waiting for {description}; last seen: {last!r}"
+    ) from (last if isinstance(last, Exception) else None)
 
 
 def voice_manager_state(nvda, expr: str) -> Any:
