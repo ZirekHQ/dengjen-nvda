@@ -8,6 +8,7 @@ nvda-addon-testkit's own tests_e2e/test_demo_addon.py.
 
 from __future__ import annotations
 
+import os
 import sys
 
 import pytest
@@ -234,7 +235,8 @@ KOKORO_VOICE_KEY = "kokoro-multilingual"
 # ~350MB (full-precision model + 54 preset embeddings) over the CI network --
 # generous on purpose, matching this whole job's tolerance for a slow real
 # download (continue-on-error: true in build_addon.yml's `e2e` job).
-KOKORO_INSTALL_TIMEOUT = 300
+# Overridable via env for a CI runner with a slower or throttled connection.
+KOKORO_INSTALL_TIMEOUT = int(os.environ.get("KOKORO_INSTALL_TIMEOUT_SECONDS", "300"))
 
 
 @pytest.fixture(scope="session")
