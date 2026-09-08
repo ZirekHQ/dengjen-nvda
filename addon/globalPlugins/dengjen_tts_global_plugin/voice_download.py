@@ -293,10 +293,16 @@ class _BaseVoiceDownloader:
         self.progress_dialog = None
 
     def update_progress(self, progress):
-        self.progress_dialog.Update(
+        self._report_progress(
             progress,
             _("Downloaded: {progress}%").format(progress=progress),
         )
+
+    def _report_progress(self, percent, message):
+        # download_work runs on a worker thread (see download() below);
+        # wx.ProgressDialog.Update() is not thread-safe, so every call must
+        # be marshalled onto the GUI thread via wx.CallAfter.
+        wx.CallAfter(self.progress_dialog.Update, percent, message)
 
     def download(self):
         self.progress_dialog = wx.ProgressDialog(
@@ -314,12 +320,10 @@ class _BaseVoiceDownloader:
         # whichever thread completes it -- see download()). _install does
         # the actual disk I/O here rather than after the wx.CallAfter below,
         # so writing a large voice to disk doesn't block the wx event loop.
-        # progress_dialog.Update() from this thread already matches how
-        # _download_work reports download progress.
         has_error = isinstance(result, Exception)
         install_error = None
         if not has_error:
-            self.progress_dialog.Update(0, _("Installing voice"))
+            self._report_progress(0, _("Installing voice"))
             try:
                 self._install(result)
             except _VoiceInstallError as exc:
@@ -404,7 +408,7 @@ class PiperVoiceDownloader(_BaseVoiceDownloader):
     def download_voice_files(self):
         retvals = []
         for file in self.voice.files:
-            self.progress_dialog.Update(
+            self._report_progress(
                 0,
                 _("Downloading file: {file}").format(file=file.name),
             )
@@ -492,7 +496,7 @@ class PiperRTVoiceDownloader(_BaseVoiceDownloader):
 
     def download_voice_archive(self):
         voice_name = self.rt_download_url.split("/")[-1].strip()
-        self.progress_dialog.Update(
+        self._report_progress(
             0,
             _("Downloading file: {file}").format(file=voice_name),
         )

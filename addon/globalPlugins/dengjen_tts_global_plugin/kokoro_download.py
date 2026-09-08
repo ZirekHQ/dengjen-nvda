@@ -169,7 +169,7 @@ class KokoroVoiceDownloader(_BaseVoiceDownloader):
         for files_done, (result_key, relative_path) in enumerate(
             files_to_download, start=1
         ):
-            self.progress_dialog.Update(
+            self._report_progress(
                 int((files_done - 1) / total_files * 100),
                 _("Downloading file: {file}").format(file=relative_path),
             )
