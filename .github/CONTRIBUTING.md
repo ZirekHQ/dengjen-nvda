@@ -1,6 +1,6 @@
 # Contributing to Dengjen Neural Voices
 
-This project began as a maintenance fork of [mush42/sonata-nvda](https://github.com/mush42/sonata-nvda). The original author could no longer maintain it ([announcement](https://nvda-addons.groups.io/g/nvda-addons/message/27636)); this project has carried compatibility fixes and minor improvements since, keeping the add-on working on current NVDA releases.
+This project originated as a fork of [sonata-nvda](https://github.com/mush42/sonata-nvda) after the original author stepped back ([announcement](https://nvda-addons.groups.io/g/nvda-addons/message/27636)); it's since become its own independently maintained project, keeping the add-on working on current NVDA releases.
 
 Contributions are welcome.
 
@@ -122,7 +122,7 @@ Use the pull request template. Link the issue with `Closes #N` in the PR body â€
 
 Conventions used in this project:
 
-- **Commit messages**: short imperative subject, blank line, then a body that explains *why*. Reference the relevant issue or upstream report (e.g. "Closes #5", "mirrored from upstream mush42/sonata-nvda#30").
+- **Commit messages**: short imperative subject, blank line, then a body that explains *why*. Reference the relevant issue or upstream report (e.g. "Closes #5", "mirrored from upstream sonata-nvda#30").
 - **PR titles**: same conventional-commits style as the lead commit (`fix:`, `feat:`, `chore:`, `docs:`).
 - **Branch naming**: `fix/<short-slug>`, `feat/<short-slug>`, `chore/<short-slug>`.
 - **No `Co-Authored-By` trailers.**

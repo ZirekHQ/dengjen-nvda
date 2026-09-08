@@ -6,6 +6,3 @@ contact_links:
   - name: NVDA add-ons community list
     url: https://nvda-addons.groups.io/g/nvda-addons
     about: General NVDA add-on discussion, announcements, and user-to-user help.
-  - name: Upstream sonata-nvda (read-only)
-    url: https://github.com/mush42/sonata-nvda
-    about: The original repository. No longer actively maintained — this project is the active maintenance source.
