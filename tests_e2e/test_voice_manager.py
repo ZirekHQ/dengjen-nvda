@@ -15,12 +15,7 @@ import pytest
 if sys.platform == "win32":
     from nvda_testkit.namespaces.addons import AddonState
 
-from .conftest import (
-    kokoro_catalog_is_installed,
-    press_until,
-    voice_manager_state,
-    wait_until,
-)
+from .conftest import press_until, voice_manager_state, wait_until
 
 ADDON_NAME = "dengjen_neural_voices"
 NO_VOICE_MODAL_TEXT = "no dengjen voice was found"
@@ -286,12 +281,17 @@ def kokoro_installed(nvda_session, downloaded_voice_key):
     )
     nvda.keys.press("space")
 
-    # Ground truth is the real config.json on disk, not NVDA's speech --
-    # a real CI run has shown NVDA's focus can be stolen by an unrelated
-    # window mid-download and never return, even though the install
-    # completes normally in the background. See kokoro_catalog_is_installed.
+    # Ground truth is the real config.json on disk (via the Kokoro page's
+    # own already-live _catalog), not NVDA's speech -- a real CI run has
+    # shown NVDA's focus can be stolen by an unrelated window mid-download
+    # and never return, even though the install completes normally in the
+    # background.
     wait_until(
-        lambda: kokoro_catalog_is_installed(nvda),
+        lambda: voice_manager_state(
+            nvda,
+            f"{_VOICE_MANAGER_DIALOG}.notebookCtrl.GetPage({KOKORO_TAB_INDEX})"
+            "._catalog.is_installed()",
+        ),
         timeout=KOKORO_INSTALL_TIMEOUT,
         description="the Kokoro voice files to finish installing (config.json on disk)",
     )
