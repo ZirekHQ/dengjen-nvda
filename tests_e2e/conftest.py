@@ -101,6 +101,25 @@ def voice_manager_state(nvda, expr: str) -> Any:
     )
 
 
+def kokoro_catalog_is_installed(nvda) -> bool:
+    """Ground truth for "did the Kokoro install actually finish" -- checks
+    the real config.json on disk via the addon's own KokoroCatalog, not
+    NVDA's speech output. Speech.wait_for depends on NVDA continuing to
+    hold focus on our dialog for the whole download; a real CI run has
+    shown that focus can be stolen by an unrelated window mid-download,
+    after which no amount of extra timeout recovers it even though the
+    install itself completes normally in the background.
+    """
+    return bool(
+        nvda.eval(
+            "__import__("
+            "'dengjen_tts_global_plugin.kokoro_download', "
+            "fromlist=['KokoroCatalog']"
+            ").KokoroCatalog().is_installed()"
+        )
+    )
+
+
 def press_until(
     nvda,
     gesture: str,

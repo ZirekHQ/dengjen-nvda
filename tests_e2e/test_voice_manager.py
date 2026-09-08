@@ -15,7 +15,12 @@ import pytest
 if sys.platform == "win32":
     from nvda_testkit.namespaces.addons import AddonState
 
-from .conftest import press_until, voice_manager_state, wait_until
+from .conftest import (
+    kokoro_catalog_is_installed,
+    press_until,
+    voice_manager_state,
+    wait_until,
+)
 
 ADDON_NAME = "dengjen_neural_voices"
 NO_VOICE_MODAL_TEXT = "no dengjen voice was found"
@@ -279,13 +284,24 @@ def kokoro_installed(nvda_session, downloaded_voice_key):
         attempts=5,
         description="focus to reach the Install Kokoro voice button",
     )
-    before = nvda.speech.index()
     nvda.keys.press("space")
 
-    nvda.speech.wait_for(
-        "voice downloaded|successfully downloaded",
+    # Ground truth is the real config.json on disk, not NVDA's speech --
+    # a real CI run has shown NVDA's focus can be stolen by an unrelated
+    # window mid-download and never return, even though the install
+    # completes normally in the background. See kokoro_catalog_is_installed.
+    wait_until(
+        lambda: kokoro_catalog_is_installed(nvda),
         timeout=KOKORO_INSTALL_TIMEOUT,
-        since=before,
+        description="the Kokoro voice files to finish installing (config.json on disk)",
+    )
+    wait_until(
+        lambda: (
+            voice_manager_state(nvda, "dialog.GetTitle() if dialog else ''")
+            == VOICE_DOWNLOADED_TITLE
+        ),
+        timeout=15,
+        description="the voice-downloaded message box to appear",
     )
 
     press_until(
