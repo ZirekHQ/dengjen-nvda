@@ -229,6 +229,118 @@ def test_downloading_the_fast_variant_voice_installs_it(
     assert_no_unexpected_errors(nvda)
 
 
+KOKORO_TAB_INDEX = 2
+KOKORO_VOICE_KEY = "kokoro-multilingual"
+# ~350MB (full-precision model + 54 preset embeddings) over the CI network --
+# generous on purpose, matching this whole job's tolerance for a slow real
+# download (continue-on-error: true in build_addon.yml's `e2e` job).
+KOKORO_INSTALL_TIMEOUT = 300
+
+
+@pytest.fixture(scope="session")
+def kokoro_installed(nvda_session, downloaded_voice_key):
+    """Installs the real Kokoro voice via the real Kokoro tab, once per
+    session. Depends on downloaded_voice_key (not just nvda_session) so the
+    voice manager dialog is already open on the Installed tab -- reusing it
+    instead of re-deriving how to open it a second time, since the no-voice
+    modal that opened it originally only fires when zero voices are
+    installed."""
+    nvda = nvda_session
+    nvda.wait_until_idle(timeout=15)
+
+    press_until(
+        nvda,
+        "control+tab",
+        lambda: (
+            voice_manager_state(
+                nvda, f"{_VOICE_MANAGER_DIALOG}.notebookCtrl.GetSelection()"
+            )
+            == KOKORO_TAB_INDEX
+        ),
+        attempts=KOKORO_TAB_INDEX + 3,
+        description="the notebook to switch to the Kokoro tab",
+    )
+
+    # KokoroVoicesPanel's only tabbable control is install_btn -- the
+    # preceding description StaticText doesn't take a tab stop, same as the
+    # Download tab's own leading "Language" StaticText before language_choice.
+    nvda.keys.press("tab")
+    before = nvda.speech.index()
+    nvda.keys.press("space")
+
+    nvda.speech.wait_for(
+        "voice downloaded|successfully downloaded",
+        timeout=KOKORO_INSTALL_TIMEOUT,
+        since=before,
+    )
+
+    press_until(
+        nvda,
+        "n",
+        lambda: (
+            voice_manager_state(nvda, "dialog.GetTitle() if dialog else ''")
+            != VOICE_DOWNLOADED_TITLE
+        ),
+        description="the voice-downloaded message box to close",
+    )
+
+    if not voice_manager_state(
+        nvda, "dialog is not None and hasattr(dialog, 'notebookCtrl')"
+    ):
+        press_until(
+            nvda,
+            "alt+tab",
+            lambda: voice_manager_state(
+                nvda, "dialog is not None and hasattr(dialog, 'notebookCtrl')"
+            ),
+            description="focus to return to the voice manager dialog",
+        )
+    nvda.wait_until_idle(timeout=15)
+    return KOKORO_VOICE_KEY
+
+
+def test_kokoro_installs_and_lists_alongside_the_piper_voice(
+    nvda, kokoro_installed, downloaded_voice_key, assert_no_unexpected_errors
+):
+    press_until(
+        nvda,
+        "control+tab",
+        lambda: (
+            voice_manager_state(
+                nvda, f"{_VOICE_MANAGER_DIALOG}.notebookCtrl.GetSelection()"
+            )
+            == 0
+        ),
+        description="the notebook to switch to the Installed tab",
+    )
+    installed_keys = wait_until(
+        lambda: voice_manager_state(
+            nvda,
+            f"[v.key for v in {_VOICE_MANAGER_DIALOG}.notebookCtrl.GetPage(0).voices_list._objects]",
+        ),
+        timeout=15,
+        description="the Installed tab to list Kokoro alongside the Piper voice",
+    )
+    assert kokoro_installed in installed_keys
+    assert downloaded_voice_key in installed_keys
+    assert_no_unexpected_errors(nvda)
+
+
+def test_kokoro_produces_real_speech(
+    nvda, kokoro_installed, assert_no_unexpected_errors
+):
+    nvda.config.set(["speech", "synth"], ADDON_NAME)
+    nvda.config.set(["speech", ADDON_NAME, "voice"], kokoro_installed)
+    nvda.restart()
+
+    before = nvda.speech.index()
+    phrase = "dengjen kokoro testkit smoke phrase"
+    nvda.speech.speak(phrase)
+    found = nvda.speech.wait_for(phrase, timeout=15, since=before)
+    assert phrase in found.text.lower()
+    assert_no_unexpected_errors(nvda)
+
+
 def test_the_downloaded_voice_produces_real_speech(
     nvda, downloaded_voice_key, assert_no_unexpected_errors
 ):
