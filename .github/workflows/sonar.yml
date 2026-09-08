@@ -14,10 +14,9 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
-  # tests_contract/ (real dengjen-tts-grpc.exe) and tests_gui/ (real wxPython) only
-  # run on Windows, so the modules they exercise are invisible to the ubuntu
-  # coverage run below. This job measures them and hands the raw data over as
-  # an artifact for the scan job to combine (#89).
+  # tests_contract/ (real dengjen-tts-grpc.exe) and tests_gui/ (real wxPython)
+  # only run on Windows, invisible to the ubuntu coverage run below. This job
+  # measures them and hands the data to the scan job to combine (#89).
   windows_coverage:
     name: Windows coverage
     runs-on: windows-latest
@@ -42,10 +41,9 @@ jobs:
           pip install --only-binary :all: -r requirements-test.txt
           pip install --only-binary :all: -r requirements-test-gui.txt
 
-      # Three invocations for the reasons build_addon.yml spells out: each tree
-      # needs a different set of real-vs-stubbed modules, so they cannot share a
-      # process. Each writes its own COVERAGE_FILE because a bare `pytest --cov`
-      # erases whatever data files it finds first.
+      # Three invocations for the reasons build_addon.yml spells out (each tree
+      # needs different real-vs-stubbed modules). Each needs its own COVERAGE_FILE:
+      # a bare `pytest --cov` erases whatever data files it finds first.
       - name: Run tests with coverage
         env:
           COVERAGE_FILE: .coverage.windows.tests

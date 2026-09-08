@@ -68,7 +68,6 @@ def getScoreFromApi(fileNameToSearch: str, langId: str) -> float:
     projectId = int(projectIdEnv)
 
     try:
-        # Clean and prepare search patterns.
         # Example: 'addon/locale/fr/LC_MESSAGES/myAddon.po' -> base_target: 'myAddon'.
         baseTarget = (
             fileNameToSearch.replace("\\", "/").split("/")[-1].rsplit(".", 1)[0].lower()
@@ -101,8 +100,7 @@ def getScoreFromApi(fileNameToSearch: str, langId: str) -> float:
             for item in data:
                 langApi = item["data"]["languageId"]
 
-                # Flexible matching (e.g., 'fr' will match 'fr' or 'fr-FR' from API).
-                # Also handles underscore to dash conversion for Crowdin compatibility
+                # Startswith, not equality: Crowdin may report 'fr' as 'fr-FR' etc.
                 if langApi.lower().startswith(langId.lower().replace("_", "-")):
                     progress = float(item["data"]["translationProgress"])
                     return progress

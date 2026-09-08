@@ -4,9 +4,6 @@ $ErrorActionPreference = 'Stop'
 git config user.name "github-actions[bot]"
 git config user.email "github-actions[bot]@users.noreply.github.com"
 
-# main is protected (PRs + status checks required), so remember where we
-# started to detect new commits and publish them via a branch + PR instead
-# of pushing directly.
 $baseBranch = git symbolic-ref --short HEAD
 $baseCommit = git rev-parse HEAD
 

@@ -1,35 +1,8 @@
 name: Sonar fork scan
 
-# Automated SonarCloud analysis of arbitrary fork PRs doesn't have a safe
-# implementation: SONAR_TOKEN is needed to post results, but no matter how
-# fork source reaches a job holding SONAR_TOKEN, that job must not execute
-# anything derived from the fork. A previous version of this workflow chained
-# automatically off sonar-fork-coverage.yml via workflow_run and used
-# actions/checkout on the PR head -- actions/checkout itself refuses that
-# combination by default ("pwn request" protection), and a purpose-built
-# action for this exact problem (matrix-org/sonarcloud-workflow-action) was
-# archived with the stated reason: "there is [no] foolproof way to run
-# Sonarcloud against attacker-controlled PRs."
-#
-# So this is comment-triggered: a maintainer reviews the diff, then comments
-# `/sonar` on the PR. Only OWNER/MEMBER/COLLABORATOR authors can trigger it
-# (checked below), and the job resolves the PR's *current* head itself rather
-# than trusting a caller-supplied SHA -- there is no separate "pin the SHA you
-# reviewed" input to keep in sync, at the cost of a small window between
-# commenting and the job starting in which a new push would get scanned
-# instead of what was reviewed.
-#
-# Unlike a plain checkout-and-build of the fork's code (e.g. a workflow that
-# checks out the fork head and runs its own build scripts in a job that holds
-# SONAR_TOKEN), this job still never executes anything derived from the fork:
-# it downloads the tar archive sonar-fork-coverage.yml built (test suite
-# already executed there, safely, with no secrets) and extracts it with plain
-# `tar`, never a git operation against fork content. The scanner only reads
-# the result statically.
-#
-# Until a maintainer comments `/sonar`, the required "SonarCloud Code
-# Analysis" check on a fork PR stays pending -- merge via admin override if a
-# scan isn't warranted (e.g. docs-only changes), rather than faking green.
+# No safe way to auto-scan fork PRs: a job holding SONAR_TOKEN must never
+# execute fork-derived code. So this triggers only on a maintainer's
+# `/sonar` comment and only `tar`-extracts sonar-fork-coverage.yml's artifact.
 
 on:
   issue_comment:
@@ -38,27 +11,17 @@ on:
 permissions: {}
 
 concurrency:
-  # Every comment on the PR fires this trigger, not just /sonar ones -- so a
-  # group keyed on PR number alone would let an unrelated comment (including
-  # SonarCloud's own "Quality Gate Passed" bot comment, posted *by* our own
-  # run) cancel a scan that's mid-flight. Non-/sonar comments each get their
-  # own group, keyed on the comment id, so only genuine /sonar comments ever
-  # compete for the slot -- which is what cancel-in-progress is actually for:
-  # a second /sonar superseding a stale first one.
+  # Every PR comment fires this trigger, not just /sonar ones. Non-/sonar
+  # comments get their own per-comment-id group so an unrelated comment (even
+  # our own bot's result comment) can't cancel a scan mid-flight.
   group: sonar-fork-scan-${{ github.event.issue.number }}-${{ startsWith(github.event.comment.body, '/sonar') && 'sonar' || github.event.comment.id }}
   cancel-in-progress: true
 
 jobs:
   acknowledge:
-    # The only thing standing between a fork PR and SONAR_TOKEN, so it gates
-    # the scan job via `needs` rather than repeating this condition there,
-    # where the two copies could drift apart.
-    #
-    # No reaction/comment back here: this repo's default GITHUB_TOKEN
-    # permissions are read-only (org/repo setting), so a job-level
-    # `permissions: issues: write` can't actually widen the token -- any
-    # write call 403s. Rather than carry a permission this repo deliberately
-    # withholds, this job does nothing but gate.
+    # This condition is the only thing standing between a fork PR and
+    # SONAR_TOKEN -- the scan job depends on it via `needs` rather than
+    # repeating the check, so the two can't drift out of sync.
     if: >-
       github.event.issue.pull_request != null
       && startsWith(github.event.comment.body, '/sonar')
@@ -122,13 +85,9 @@ jobs:
           mkdir -p workspace
           tar -xzf "$ARCHIVE_DIR/workspace.tar.gz" -C workspace
 
-      # SonarCloud's GitHub integration normally posts the
-      # "SonarCloud Code Analysis" status itself, but it attaches to whatever
-      # commit the Actions *run* is associated with -- main's tip, since this
-      # is triggered by issue_comment, not the PR's head. It has no way to
-      # know to target the PR from sonar.pullrequest.key alone. So this waits
-      # for the real quality gate result and posts the status to the actual
-      # head SHA itself, rather than relying on that automatic posting.
+      # SonarCloud's own GitHub status-posting attaches to whatever commit the
+      # triggering event points to -- main's tip here, since this runs off
+      # issue_comment, not the PR head -- so this posts to the real head SHA itself.
       - name: SonarQube scan
         id: sonar
         if: env.SONAR_TOKEN != ''

@@ -1,5 +1,3 @@
-# Real wxPython for the tests_gui/ smoke layer (Windows leg only).
-#
 # Pinned to NVDA master's own pin, so the wx under test is the wx the add-on
 # actually runs against -- see pyproject.toml in nvaccess/nvda.
 #

@@ -1,8 +1,7 @@
 [run]
-# A single repo-root source keeps coverage.xml paths repo-root-relative, which is
-# what Sonar resolves against. Listing the addon package dirs here would also
-# report never-imported modules at 0%, but it makes coverage emit paths relative
-# to each source root (bare `__init__.py`), which Sonar cannot resolve.
+# source=. keeps coverage.xml paths repo-root-relative, which is what Sonar
+# resolves against. Listing each package dir instead would catch never-imported
+# modules at 0% too, but breaks paths (bare `__init__.py`) that Sonar can't resolve.
 source = .
 omit =
     .venv/*
