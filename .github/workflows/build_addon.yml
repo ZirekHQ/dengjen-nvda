@@ -190,54 +190,62 @@ jobs:
     - name: Display structure of downloaded files
       run: ls -R
 
-    # release-drafter accumulates notes on one draft, tagged with a $RESOLVED_VERSION
-    # placeholder that won't match the real tag. Matched by a marker in the body, not
-    # position -- a draft created for any other reason must never be mistaken for this one.
-    - name: Fetch release-drafter draft notes
-      id: draft
+    # Scoped to the previous vX.Y.Z(-beta.N) tag so notes don't pull in whatever unrelated
+    # tag happened to be pushed most recently. --exclude-drafts keeps an unpublished draft
+    # (semver-shaped or not) from being picked as that baseline.
+    - name: Resolve previous release tag
+      id: prev
       env:
         GH_TOKEN: ${{ github.token }}
       run: |
         set -euo pipefail
-        draft_tag=""
-        for candidate in $(gh release list --json isDraft,tagName -q '[.[] | select(.isDraft)][].tagName'); do
-          if gh release view "$candidate" --json body -q .body | grep -q '<!-- release-drafter:managed -->'; then
-            draft_tag="$candidate"
-            break
-          fi
-        done
-        echo "tag=${draft_tag}" >> "$GITHUB_OUTPUT"
-        if [ -n "$draft_tag" ]; then
-          gh release view "$draft_tag" --json body -q .body > draft-notes.md
-        else
-          : > draft-notes.md
-        fi
+        TAG=${GITHUB_REF#refs/tags/}
+        previous_tag="$(gh release list --exclude-drafts --json tagName -q '.[].tagName' \
+          | grep -E '^v[0-9]+\.[0-9]+\.[0-9]+(-beta\.[0-9]+)?$' | grep -vFx "$TAG" | sort -rV | head -n1 || true)"
+        echo "tag=${previous_tag}" >> "$GITHUB_OUTPUT"
 
-    - name: Calculate sha256
+    # Notes come from the generate-notes API directly, not gh release create's
+    # --generate-notes, so a rerun recomputes the same fresh text instead of re-appending
+    # SHA256 onto whatever an earlier run already wrote to the live release body.
+    - name: Generate release notes
+      env:
+        GH_TOKEN: ${{ github.token }}
+        PREVIOUS_TAG: ${{ steps.prev.outputs.tag }}
       run: |
-        cat draft-notes.md > changelog.md
+        set -euo pipefail
+        TAG=${GITHUB_REF#refs/tags/}
+        args=(-f tag_name="$TAG")
+        if [ -n "$PREVIOUS_TAG" ]; then
+          args+=(-f previous_tag_name="$PREVIOUS_TAG")
+        fi
+        gh api "repos/${GITHUB_REPOSITORY}/releases/generate-notes" "${args[@]}" -q .body > changelog.md
         echo -e "\nSHA256: " >> changelog.md
         sha256sum -- *.nvda-addon >> changelog.md
 
-    - name: Release
-      id: release
-      uses: softprops/action-gh-release@3bb12739c298aeb8a4eeaf626c5b8d85266b0e65 # v2.6.2
-      with:
-        files: |
-          *.nvda-addon
-          *.pot
-        body_path: changelog.md
-        fail_on_unmatched_files: true
-        prerelease: ${{ contains(github.ref, '-') }}
-
-    # Guarded by a tag-mismatch check: a draft named identically to this tag means softprops
-    # already updated it in place, nothing left to delete.
-    - name: Delete superseded release-drafter draft
-      if: steps.draft.outputs.tag != '' && steps.draft.outputs.tag != github.ref_name
+    # tag-and-release.yml unconditionally re-dispatches this workflow on a retry, including
+    # after a run that already published the release -- `gh release create` on an existing
+    # tag fails outright, so branch to edit+upload instead of erroring out on a rerun.
+    - name: Create or update release
       env:
         GH_TOKEN: ${{ github.token }}
-        DRAFT_TAG: ${{ steps.draft.outputs.tag }}
-      run: gh release delete "$DRAFT_TAG" --yes
+      run: |
+        set -euo pipefail
+        TAG=${GITHUB_REF#refs/tags/}
+        prerelease_args=()
+        if [[ "$TAG" == *-* ]]; then
+          prerelease_args=(--prerelease)
+        fi
+        if gh release view "$TAG" >/dev/null 2>&1; then
+          gh release edit "$TAG" --notes-file changelog.md "${prerelease_args[@]}"
+          gh release upload "$TAG" --clobber -- *.nvda-addon *.pot
+        else
+          gh release create "$TAG" \
+            --title "$TAG" \
+            --verify-tag \
+            --notes-file changelog.md \
+            "${prerelease_args[@]}" \
+            -- *.nvda-addon *.pot
+        fi
 
     - name: Store submission summary
       run: |
