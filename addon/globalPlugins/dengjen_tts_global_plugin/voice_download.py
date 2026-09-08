@@ -602,6 +602,10 @@ class PiperRTVoiceDownloader(_BaseVoiceDownloader):
             install_voice_from_tar_archive(target_file, DENGJEN_VOICES_DIR)
         except Exception:
             log.exception("Failed to extract voice archive", exc_info=True)
+            # Otherwise a Range request on the next attempt would land past
+            # EOF and get a 416 forever, since this archive has no known
+            # expected_size to catch it as stale beforehand.
+            Path(target_file).unlink(missing_ok=True)
             raise _VoiceInstallError
 
 

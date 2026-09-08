@@ -1219,6 +1219,7 @@ class TestPiperRTVoiceDownloader:
 
         downloader.done_callback((str(not_a_tar), not_a_tar.stat().st_size))
 
+        assert not not_a_tar.exists()
         downloader.success_callback.assert_not_called()
         messagebox_mock.assert_called_once()
 
