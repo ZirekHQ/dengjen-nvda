@@ -658,6 +658,104 @@ class TestCertVerificationFallback:
         assert isinstance(context, ssl.SSLContext)
 
 
+class TestResumablePartialSize:
+    """`_resumable_partial_size` decides whether a leftover file from a
+    previous attempt is safe to resume from (issue #167)."""
+
+    def test_returns_zero_when_no_partial_exists(self, tmp_path):
+        target = tmp_path / "voice.onnx"
+        assert voice_download._resumable_partial_size(str(target), 100) == 0
+
+    def test_returns_existing_size_when_smaller_than_expected(self, tmp_path):
+        target = tmp_path / "voice.onnx"
+        target.write_bytes(b"x" * 40)
+        assert voice_download._resumable_partial_size(str(target), 100) == 40
+
+    def test_discards_a_partial_at_or_past_the_expected_size(self, tmp_path):
+        target = tmp_path / "voice.onnx"
+        target.write_bytes(b"x" * 100)
+        assert voice_download._resumable_partial_size(str(target), 100) == 0
+
+    def test_resumes_regardless_of_size_when_expected_size_is_unknown(self, tmp_path):
+        target = tmp_path / "voice.tar.gz"
+        target.write_bytes(b"x" * 100)
+        assert voice_download._resumable_partial_size(str(target), 0) == 100
+
+
+class TestStreamToFileResume:
+    """`_stream_to_file` appends to a partial file when the server honors the
+    Range request (206), and restarts from scratch when it doesn't (issue #167)."""
+
+    def test_appends_and_extends_the_hash_when_the_server_sends_206(self, tmp_path):
+        target = tmp_path / "voice.onnx"
+        target.write_bytes(b"already-")
+        response = _FakeResponse(status=206, body=b"downloaded")
+        hasher = hashlib.md5(usedforsecurity=False)
+
+        voice_download._stream_to_file(
+            response, str(target), 18, MagicMock(), hasher, resume_offset=8
+        )
+
+        assert target.read_bytes() == b"already-downloaded"
+        assert hasher.hexdigest() == hashlib.md5(b"already-downloaded").hexdigest()
+
+    def test_overwrites_from_scratch_when_the_server_ignores_the_range(self, tmp_path):
+        target = tmp_path / "voice.onnx"
+        target.write_bytes(b"stale-partial-bytes")
+        response = _FakeResponse(status=200, body=b"full-body")
+        hasher = hashlib.md5(usedforsecurity=False)
+
+        voice_download._stream_to_file(
+            response, str(target), 9, MagicMock(), hasher, resume_offset=20
+        )
+
+        assert target.read_bytes() == b"full-body"
+        assert hasher.hexdigest() == hashlib.md5(b"full-body").hexdigest()
+
+
+class TestFollowRedirectsRangeSupport:
+    """`_follow_redirects` forwards a Range header for resumed downloads and
+    accepts 206 Partial Content as a terminal (non-redirect) status (issue #167)."""
+
+    def test_forwards_headers_to_the_underlying_request(self, monkeypatch):
+        fake_request = _FakeMureq(
+            stream_responses=[
+                _FakeResponse(
+                    status=206,
+                    headers={"Content-Type": "application/octet-stream"},
+                    body=b"rest-of-file",
+                ),
+            ]
+        )
+        monkeypatch.setattr(voice_download, "request", fake_request)
+
+        with voice_download._follow_redirects(
+            "https://example.com/voice.onnx",
+            "voice.onnx",
+            headers={"Range": "bytes=8-"},
+        ) as response:
+            assert response.read() == b"rest-of-file"
+
+        assert fake_request.yield_calls[0]["headers"] == {"Range": "bytes=8-"}
+
+    def test_accepts_206_as_a_terminal_status(self, monkeypatch):
+        fake_request = _FakeMureq(
+            stream_responses=[
+                _FakeResponse(
+                    status=206,
+                    headers={"Content-Type": "application/octet-stream"},
+                    body=b"rest-of-file",
+                ),
+            ]
+        )
+        monkeypatch.setattr(voice_download, "request", fake_request)
+
+        with voice_download._follow_redirects(
+            "https://example.com/voice.onnx", "voice.onnx"
+        ) as response:
+            assert response.status == 206
+
+
 class TestPiperVoiceDownloaderFileTransfer:
     """`_do_download_file` is where redirect/content-type/hash bugs would
     actually surface — HuggingFace serves every file through a redirect."""
@@ -758,6 +856,63 @@ class TestPiperVoiceDownloaderFileTransfer:
         with pytest.raises(RuntimeError, match="Download failed"):
             PiperVoiceDownloader._do_download_file(file, str(tmp_path), callback)
 
+    def test_resumes_a_partial_file_by_sending_a_range_header(
+        self, tmp_path, monkeypatch
+    ):
+        already = b"piper-mod"
+        rest = b"el-bytes"
+        body = already + rest
+        (tmp_path / "en").mkdir()
+        (tmp_path / "en" / "en_US-lessac-medium.onnx").write_bytes(already)
+        fake_request = _FakeMureq(
+            stream_responses=[
+                _FakeResponse(
+                    status=206,
+                    headers={"Content-Type": "application/octet-stream"},
+                    body=rest,
+                ),
+            ]
+        )
+        monkeypatch.setattr(voice_download, "request", fake_request)
+        file = self._file(body)
+
+        __, target, digest = PiperVoiceDownloader._do_download_file(
+            file, str(tmp_path), MagicMock()
+        )
+
+        with open(target, "rb") as f:
+            assert f.read() == body
+        assert digest == hashlib.md5(body).hexdigest()
+        assert fake_request.yield_calls[0]["headers"] == {"Range": "bytes=9-"}
+
+    def test_discards_a_stale_partial_at_or_past_the_expected_size(
+        self, tmp_path, monkeypatch
+    ):
+        body = b"piper-model-bytes"
+        (tmp_path / "en").mkdir()
+        target_path = tmp_path / "en" / "en_US-lessac-medium.onnx"
+        target_path.write_bytes(b"x" * len(body))
+        fake_request = _FakeMureq(
+            stream_responses=[
+                _FakeResponse(
+                    status=200,
+                    headers={"Content-Type": "application/octet-stream"},
+                    body=body,
+                ),
+            ]
+        )
+        monkeypatch.setattr(voice_download, "request", fake_request)
+        file = self._file(body)
+
+        __, target, digest = PiperVoiceDownloader._do_download_file(
+            file, str(tmp_path), MagicMock()
+        )
+
+        with open(target, "rb") as f:
+            assert f.read() == body
+        assert digest == hashlib.md5(body).hexdigest()
+        assert fake_request.yield_calls[0]["headers"] is None
+
     def test_download_voice_files_collects_a_result_per_file(
         self, tmp_path, monkeypatch
     ):
@@ -785,6 +940,46 @@ class TestPiperVoiceDownloaderFileTransfer:
         results = downloader.download_voice_files()
         assert len(results) == 2
         assert downloader.progress_dialog.Update.called
+
+
+class TestBaseVoiceDownloaderDownloadDir:
+    """A stable, voice-keyed download directory (not a fresh temp dir per
+    attempt) is what lets a partial file survive to the next retry (issue #167)."""
+
+    def test_creates_a_stable_download_directory_under_the_voices_dir(
+        self, tmp_path, monkeypatch
+    ):
+        voices_dir = tmp_path / "voices"
+        monkeypatch.setattr(voice_download, "DENGJEN_VOICES_DIR", str(voices_dir))
+        voice = _piper_voice(key="en_US-lessac-medium")
+
+        downloader = PiperVoiceDownloader(voice, success_callback=MagicMock())
+
+        expected_dir = voices_dir / ".downloads" / "en_US-lessac-medium"
+        assert downloader.download_dir == str(expected_dir)
+        assert expected_dir.is_dir()
+
+    def test_removes_the_download_directory_after_a_successful_install(
+        self, tmp_path, monkeypatch
+    ):
+        voices_dir = tmp_path / "voices"
+        monkeypatch.setattr(voice_download, "DENGJEN_VOICES_DIR", str(voices_dir))
+        voice = _piper_voice(key="en_US-lessac-medium")
+        downloader = PiperVoiceDownloader(voice, success_callback=MagicMock())
+        downloader.progress_dialog = MagicMock()
+        body = b"model-bytes"
+        src = tmp_path / "downloaded.onnx"
+        src.write_bytes(body)
+        digest = hashlib.md5(body).hexdigest()
+        file = PiperVoiceFile(
+            file_path="en/en_US-lessac-medium.onnx",
+            size_in_bytes=len(body),
+            md5hash=digest,
+        )
+
+        downloader.done_callback([(file, str(src), digest)])
+
+        assert not os.path.exists(downloader.download_dir)
 
 
 class TestPiperVoiceDownloaderDoneCallback:
@@ -836,10 +1031,48 @@ class TestPiperVoiceDownloaderDoneCallback:
 
         downloader.done_callback([(file, src, "mismatched-hash")])
 
-        assert not voices_dir.exists()
+        assert not (voices_dir / "en_US-lessac-medium").exists()
+        assert os.path.isdir(downloader.download_dir)
         downloader.success_callback.assert_not_called()
         messagebox_mock.assert_called_once()
         assert "Cannot download" in messagebox_mock.call_args.args[0]
+
+    def test_hash_mismatch_deletes_only_the_offending_partial(
+        self, tmp_path, monkeypatch
+    ):
+        voices_dir = tmp_path / "voices"
+        monkeypatch.setattr(voice_download, "DENGJEN_VOICES_DIR", str(voices_dir))
+        monkeypatch.setattr(voice_download.gui, "messageBox", MagicMock())
+
+        voice = _piper_voice(key="en_US-lessac-medium")
+        downloader = PiperVoiceDownloader(voice, success_callback=MagicMock())
+        downloader.progress_dialog = MagicMock()
+
+        good_body, bad_body = b"good-bytes", b"bad-bytes"
+        good_src = os.path.join(downloader.download_dir, "good.onnx")
+        bad_src = os.path.join(downloader.download_dir, "bad.onnx")
+        with open(good_src, "wb") as f:
+            f.write(good_body)
+        with open(bad_src, "wb") as f:
+            f.write(bad_body)
+        good_file = PiperVoiceFile(
+            file_path="en/good.onnx",
+            size_in_bytes=len(good_body),
+            md5hash=hashlib.md5(good_body).hexdigest(),
+        )
+        bad_file = PiperVoiceFile(
+            file_path="en/bad.onnx", size_in_bytes=len(bad_body), md5hash="mismatched"
+        )
+
+        downloader.done_callback(
+            [
+                (good_file, good_src, hashlib.md5(good_body).hexdigest()),
+                (bad_file, bad_src, hashlib.md5(bad_body).hexdigest()),
+            ]
+        )
+
+        assert not os.path.exists(bad_src)
+        assert os.path.exists(good_src)
 
     def test_copy_failure_reports_failure_without_crashing(self, tmp_path, monkeypatch):
         voices_dir = tmp_path / "voices"
@@ -860,7 +1093,7 @@ class TestPiperVoiceDownloaderDoneCallback:
         downloader.success_callback.assert_not_called()
         messagebox_mock.assert_called_once()
 
-    def test_an_exception_result_is_reported_without_touching_disk(
+    def test_an_exception_result_is_reported_without_installing_anything(
         self, tmp_path, monkeypatch
     ):
         voices_dir = tmp_path / "voices"
@@ -874,7 +1107,7 @@ class TestPiperVoiceDownloaderDoneCallback:
 
         downloader.done_callback(RuntimeError("network exploded"))
 
-        assert not voices_dir.exists()
+        assert not (voices_dir / "en_US-lessac-medium").exists()
         downloader.success_callback.assert_not_called()
         messagebox_mock.assert_called_once()
 
@@ -896,7 +1129,7 @@ class TestPiperRTVoiceDownloader:
             ]
         )
         monkeypatch.setattr(voice_download, "request", fake_request)
-        target = PiperRTVoiceDownloader._do_download_archive(
+        target, expected_size = PiperRTVoiceDownloader._do_download_archive(
             "https://example.com/voice.tar.gz",
             "voice.tar.gz",
             str(tmp_path),
@@ -904,6 +1137,38 @@ class TestPiperRTVoiceDownloader:
         )
         with open(target, "rb") as f:
             assert f.read() == body
+        assert expected_size == len(body)
+
+    def test_do_download_archive_resumes_a_partial_by_sending_a_range_header(
+        self, tmp_path, monkeypatch
+    ):
+        already, rest = b"archive-", b"bytes"
+        (tmp_path / "voice.tar.gz").write_bytes(already)
+        fake_request = _FakeMureq(
+            stream_responses=[
+                _FakeResponse(
+                    status=206,
+                    headers={
+                        "Content-Type": "application/octet-stream",
+                        "Content-Range": f"bytes 8-12/{len(already) + len(rest)}",
+                    },
+                    body=rest,
+                ),
+            ]
+        )
+        monkeypatch.setattr(voice_download, "request", fake_request)
+
+        target, expected_size = PiperRTVoiceDownloader._do_download_archive(
+            "https://example.com/voice.tar.gz",
+            "voice.tar.gz",
+            str(tmp_path),
+            MagicMock(),
+        )
+
+        with open(target, "rb") as f:
+            assert f.read() == already + rest
+        assert expected_size == len(already) + len(rest)
+        assert fake_request.yield_calls[0]["headers"] == {"Range": "bytes=8-"}
 
     def test_success_installs_the_archive_and_offers_a_restart(
         self, tmp_path, monkeypatch
@@ -929,7 +1194,7 @@ class TestPiperRTVoiceDownloader:
         downloader = PiperRTVoiceDownloader(voice, success_callback=MagicMock())
         downloader.progress_dialog = MagicMock()
 
-        downloader.done_callback(str(tar_path))
+        downloader.done_callback((str(tar_path), tar_path.stat().st_size))
 
         installed = (
             voices_dir / "en_US-lessac+RT-medium" / "en_US-lessac+RT-medium.onnx"
@@ -952,8 +1217,29 @@ class TestPiperRTVoiceDownloader:
         downloader = PiperRTVoiceDownloader(voice, success_callback=MagicMock())
         downloader.progress_dialog = MagicMock()
 
-        downloader.done_callback(str(not_a_tar))
+        downloader.done_callback((str(not_a_tar), not_a_tar.stat().st_size))
 
+        assert not not_a_tar.exists()
+        downloader.success_callback.assert_not_called()
+        messagebox_mock.assert_called_once()
+
+    def test_size_mismatch_does_not_install_and_deletes_the_partial(
+        self, tmp_path, monkeypatch
+    ):
+        voices_dir = tmp_path / "voices"
+        monkeypatch.setattr(voice_download, "DENGJEN_VOICES_DIR", str(voices_dir))
+        messagebox_mock = MagicMock()
+        monkeypatch.setattr(voice_download.gui, "messageBox", messagebox_mock)
+
+        archive = tmp_path / "truncated.tar.gz"
+        archive.write_bytes(b"only-part-of-the-archive")
+        voice = _piper_voice(key="en_US-lessac-medium", has_rt_variant=True)
+        downloader = PiperRTVoiceDownloader(voice, success_callback=MagicMock())
+        downloader.progress_dialog = MagicMock()
+
+        downloader.done_callback((str(archive), archive.stat().st_size + 1000))
+
+        assert not archive.exists()
         downloader.success_callback.assert_not_called()
         messagebox_mock.assert_called_once()
 
@@ -1122,7 +1408,7 @@ class TestVoiceJsonSidecarWrittenOnInstall:
         )
         downloader = PiperVoiceDownloader(voice, success_callback=lambda: None)
         onnx_file = voice.files[0]
-        src = os.path.join(downloader.temp_download_dir.name, onnx_file.name)
+        src = os.path.join(downloader.download_dir, onnx_file.name)
         with open(src, "wb") as f:
             f.write(b"\x00\x01\x02\x03")
 

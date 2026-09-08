@@ -164,7 +164,7 @@ class KokoroVoiceDownloader(_BaseVoiceDownloader):
             ),
         ]
         total_files = len(files_to_download)
-        temp_dir = Path(self.temp_download_dir.name)
+        download_dir = Path(self.download_dir)
         result = {}
         for files_done, (result_key, relative_path) in enumerate(
             files_to_download, start=1
@@ -173,7 +173,7 @@ class KokoroVoiceDownloader(_BaseVoiceDownloader):
                 int((files_done - 1) / total_files * 100),
                 _("Downloading file: {file}").format(file=relative_path),
             )
-            target_path = temp_dir / result_key
+            target_path = download_dir / result_key
             _download_to_file(relative_path, target_path)
             result[result_key] = target_path
             self.update_progress(int(files_done / total_files * 100))

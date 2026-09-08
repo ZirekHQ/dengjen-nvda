@@ -5,7 +5,6 @@ import re
 import shutil
 import ssl
 import tarfile
-import tempfile
 import urllib.parse
 from contextlib import ExitStack, contextmanager
 from dataclasses import dataclass
@@ -219,11 +218,11 @@ def _get_with_cert_fallback(url, **kwargs):
 
 
 @contextmanager
-def _yield_response_with_cert_fallback(method, url, **kwargs):
+def _yield_response_with_cert_fallback(method, url, headers=None, **kwargs):
     with ExitStack() as stack:
         try:
             response = stack.enter_context(
-                request.yield_response(method, url, **kwargs)
+                request.yield_response(method, url, headers=headers, **kwargs)
             )
         except HTTPException as e:
             if not _is_os_trust_store_gap(e):
@@ -234,17 +233,23 @@ def _yield_response_with_cert_fallback(method, url, **kwargs):
             )
             response = stack.enter_context(
                 request.yield_response(
-                    method, url, ssl_context=_fallback_ssl_context(), **kwargs
+                    method,
+                    url,
+                    headers=headers,
+                    ssl_context=_fallback_ssl_context(),
+                    **kwargs,
                 )
             )
         yield response
 
 
 @contextmanager
-def _follow_redirects(url, label):
+def _follow_redirects(url, label, headers=None):
 
     for _redirect in range(REDIRECT_LIMIT):
-        with _yield_response_with_cert_fallback("GET", url) as response:
+        with _yield_response_with_cert_fallback(
+            "GET", url, headers=headers
+        ) as response:
             if response.status in REDIRECT_STATUSES:
                 location = response.getheader("Location")
                 if not location:
@@ -252,7 +257,7 @@ def _follow_redirects(url, label):
                 url = urllib.parse.urljoin(url, location)
                 continue
 
-            if response.status != 200:
+            if response.status not in (200, 206):
                 raise RuntimeError(
                     f"Download failed for {label} (status {response.status})"
                 )
@@ -269,9 +274,52 @@ def _follow_redirects(url, label):
     raise RuntimeError(f"Too many redirects while downloading {label}")
 
 
-def _stream_to_file(response, target_file, total_size, progress_callback, hasher=None):
-    downloaded_til_now = 0
-    with open(target_file, "wb") as file_buffer:
+def _resumable_partial_size(target_file, expected_size):
+    """Bytes of `target_file` already on disk that a Range request can resume from.
+
+    Returns 0 (start fresh) when nothing exists yet, or when a known
+    `expected_size` shows the leftover is stale/complete already.
+    """
+    if not os.path.exists(target_file):
+        return 0
+    existing_size = os.path.getsize(target_file)
+    if expected_size and existing_size >= expected_size:
+        return 0
+    return existing_size
+
+
+CONTENT_RANGE_TOTAL_REGEX = re.compile(r"bytes \d+-\d+/(\d+)")
+
+
+def _archive_total_size(response, resume_offset):
+    """The archive's full size, for a request that may itself be a resume.
+
+    A 206 reports only the remaining bytes via Content-Length, so the total
+    comes from Content-Range's `.../<total>` instead; a fresh 200 reports the
+    full size directly.
+    """
+    if response.status == 206:
+        match = CONTENT_RANGE_TOTAL_REGEX.match(response.getheader("Content-Range", ""))
+        return int(match.group(1)) if match else resume_offset
+    return int(response.getheader("Content-Length", 0))
+
+
+def _stream_to_file(
+    response, target_file, total_size, progress_callback, hasher=None, resume_offset=0
+):
+    """Streams `response` into `target_file`, resuming a prior partial download.
+
+    A resume is only honored when the server actually answered with 206 —
+    a 200 despite a Range request means it sent the full body from byte 0,
+    so any partial bytes already on disk are discarded and hashed anew.
+    """
+    is_resuming = resume_offset > 0 and response.status == 206
+    downloaded_til_now = resume_offset if is_resuming else 0
+    if is_resuming and hasher is not None:
+        with open(target_file, "rb") as existing:
+            for chunk in iter(partial(existing.read, DOWNLOAD_CHUNK_SIZE), b""):
+                hasher.update(chunk)
+    with open(target_file, "ab" if is_resuming else "wb") as file_buffer:
         for chunk in iter(partial(response.read, DOWNLOAD_CHUNK_SIZE), b""):
             file_buffer.write(chunk)
             if hasher is not None:
@@ -289,7 +337,9 @@ class _BaseVoiceDownloader:
     def __init__(self, voice: PiperVoice, success_callback):
         self.voice = voice
         self.success_callback = success_callback
-        self.temp_download_dir = tempfile.TemporaryDirectory()
+        # Stable across instances, so _resumable_partial_size can find a prior attempt's file here.
+        self.download_dir = os.path.join(DENGJEN_VOICES_DIR, ".downloads", voice.key)
+        os.makedirs(self.download_dir, exist_ok=True)
         self.progress_dialog = None
 
     def update_progress(self, progress):
@@ -338,6 +388,7 @@ class _BaseVoiceDownloader:
         del self.progress_dialog
 
         if not has_error:
+            shutil.rmtree(self.download_dir, ignore_errors=True)
             self.success_callback()
             retval = gui.messageBox(
                 self._success_message(),
@@ -413,7 +464,7 @@ class PiperVoiceDownloader(_BaseVoiceDownloader):
                 _("Downloading file: {file}").format(file=file.name),
             )
             result = self._do_download_file(
-                file, self.temp_download_dir.name, self.update_progress
+                file, self.download_dir, self.update_progress
             )
             retvals.append(result)
 
@@ -424,22 +475,35 @@ class PiperVoiceDownloader(_BaseVoiceDownloader):
         target_file = os.path.join(download_dir, file.file_path.replace("/", os.sep))
         os.makedirs(os.path.dirname(target_file), exist_ok=True)
 
+        resume_offset = _resumable_partial_size(target_file, file.size_in_bytes)
+        headers = {"Range": f"bytes={resume_offset}-"} if resume_offset else None
+
         hasher = md5(usedforsecurity=False)
-        with _follow_redirects(file.download_url, file.file_path) as response:
+        with _follow_redirects(
+            file.download_url, file.file_path, headers=headers
+        ) as response:
             _stream_to_file(
                 response,
                 target_file,
                 file.size_in_bytes,
                 progress_callback,
                 hasher,
+                resume_offset=resume_offset,
             )
 
         return (file, target_file, hasher.hexdigest())
 
     def _install(self, result):
-        hashes = {file.name: (file.md5hash, md5hash) for (file, __, md5hash) in result}
-        if not all(expected == actual for expected, actual in hashes.values()):
-            log.error("File hashes do not match")
+        mismatched = [
+            (file, target_file)
+            for file, target_file, md5hash in result
+            if file.md5hash != md5hash
+        ]
+        if mismatched:
+            log.error(f"File hashes do not match: {[f.name for f, __ in mismatched]}")
+            for __, target_file in mismatched:
+                # Otherwise the next attempt would "resume" from corrupt bytes.
+                Path(target_file).unlink(missing_ok=True)
             raise _VoiceInstallError
 
         voice_dir = Path(DENGJEN_VOICES_DIR).joinpath(self.voice.key)
@@ -503,7 +567,7 @@ class PiperRTVoiceDownloader(_BaseVoiceDownloader):
         result = self._do_download_archive(
             self.rt_download_url,
             voice_name,
-            self.temp_download_dir.name,
+            self.download_dir,
             self.update_progress,
         )
         return result
@@ -513,21 +577,35 @@ class PiperRTVoiceDownloader(_BaseVoiceDownloader):
         cls, download_url, voice_name, download_dir, progress_callback
     ):
         target_file = os.path.join(download_dir, voice_name)
-        with _follow_redirects(download_url, voice_name) as response:
+        resume_offset = _resumable_partial_size(target_file, expected_size=0)
+        headers = {"Range": f"bytes={resume_offset}-"} if resume_offset else None
+
+        with _follow_redirects(download_url, voice_name, headers=headers) as response:
+            expected_size = _archive_total_size(response, resume_offset)
             _stream_to_file(
                 response,
                 target_file,
-                int(response.getheader("Content-Length", 0)),
+                expected_size,
                 progress_callback,
+                resume_offset=resume_offset,
             )
 
-        return target_file
+        return target_file, expected_size
 
     def _install(self, result):
+        target_file, expected_size = result
+        if expected_size and os.path.getsize(target_file) != expected_size:
+            log.error("Downloaded archive size does not match the expected size")
+            Path(target_file).unlink(missing_ok=True)
+            raise _VoiceInstallError
         try:
-            install_voice_from_tar_archive(result, DENGJEN_VOICES_DIR)
+            install_voice_from_tar_archive(target_file, DENGJEN_VOICES_DIR)
         except Exception:
             log.exception("Failed to extract voice archive", exc_info=True)
+            # Otherwise a Range request on the next attempt would land past
+            # EOF and get a 416 forever, since this archive has no known
+            # expected_size to catch it as stale beforehand.
+            Path(target_file).unlink(missing_ok=True)
             raise _VoiceInstallError
 
 
