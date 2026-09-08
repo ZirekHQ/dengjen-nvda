@@ -23,12 +23,17 @@ from ..const import (
     DEFAULT_PITCH,
     DEFAULT_RATE,
     DEFAULT_VOLUME,
+    DENGJEN_KOKORO_VOICES_DIR,
     DENGJEN_VOICES_DIR,
     FALLBACK_SPEAKER_NAME,
     IGNORED_PUNCS,
 )
 from ..ports.tts_backend import TTSBackend
 from ..voice_migration import migrate_voices_directory
+from .voice_metadata import VOICE_METADATA_FILENAME
+from .voice_metadata import read_or_migrate as _read_or_migrate_voice_metadata
+
+MODEL_TYPES_WITH_PROSODY_CONTROLS = frozenset({"piper", "melotts"})
 
 
 class VoiceNotFoundError(LookupError):
@@ -85,6 +90,7 @@ class DengjenVoice:
     description: str
     location: str
     backend: TTSBackend
+    model_type: str = "piper"
     properties: Mapping[str, int] | None = field(default_factory=dict)
     remote_id: str | None = None
     supports_streaming_output: bool = False
@@ -93,29 +99,38 @@ class DengjenVoice:
     def from_path(cls, path, backend):
         path = Path(path)
         key = path.name
-        try:
-            lang, name, quality = key.split("-")
-        except ValueError:
-            raise ValueError(f"Invalid voice path: {path}")
+        metadata = _read_or_migrate_voice_metadata(path)
+        properties = {}
+        if metadata.model_type == "piper":
+            try:
+                _, _, quality = key.split("-")
+                properties["quality"] = quality.lower()
+            except ValueError:
+                pass  # non-3-part key: no quality metadata, not an error
         return cls(
             key=key,
-            name=name.replace("+RT", ""),
-            language=normalizeLanguage(lang),
-            description="",
+            name=metadata.name,
+            language=normalizeLanguage(metadata.language),
+            description=metadata.description,
             location=path,
             backend=backend,
-            properties={"quality": quality.lower()},
+            model_type=metadata.model_type,
+            properties=properties,
         )
 
     def load(self):
         if self.remote_id:
             return
-        try:
-            self.config_path = next(self.location.glob("*.json"))
-        except StopIteration:
+        candidates = [
+            p for p in self.location.glob("*.json") if p.name != VOICE_METADATA_FILENAME
+        ]
+        if not candidates:
             raise RuntimeError(
                 f"Could not load voice from `{os.fspath(self.location)}`"
             )
+        self.config_path = next(
+            iter(sorted(candidates, key=lambda p: p.name != "config.json"))
+        )
         loaded = self.backend.load_voice(str(self.config_path))
         self.remote_id = loaded.backend_voice_id
         self.supports_streaming_output = loaded.supports_streaming_output
@@ -132,54 +147,61 @@ class DengjenVoice:
             loaded.defaults.speaker if self.is_multi_speaker else None
         )
 
-    def _get_synth_option(self, name):
+    def _get_prosody_option(self, name):
+        if self.model_type not in MODEL_TYPES_WITH_PROSODY_CONTROLS:
+            return None
         options = self.backend.get_synth_options(self.remote_id)
         return getattr(options, name)
 
-    def _set_synth_option(self, **kwargs):
+    def _set_prosody_option(self, **kwargs):
+        if self.model_type not in MODEL_TYPES_WITH_PROSODY_CONTROLS:
+            return
         self.backend.set_synth_options(self.remote_id, **kwargs)
 
     @property
     def speaker(self):
         if self.is_multi_speaker:
-            return self._get_synth_option("speaker")
+            options = self.backend.get_synth_options(self.remote_id)
+            return options.speaker
         return FALLBACK_SPEAKER_NAME
 
     @speaker.setter
     def speaker(self, value):
         if self.is_multi_speaker:
-            self._set_synth_option(speaker=value)
+            self.backend.set_synth_options(self.remote_id, speaker=value)
 
     @property
     def noise_scale(self):
-        return self._get_synth_option("noise_scale")
+        return self._get_prosody_option("noise_scale")
 
     @noise_scale.setter
     def noise_scale(self, value):
-        self._set_synth_option(noise_scale=value)
+        self._set_prosody_option(noise_scale=value)
 
     @property
     def length_scale(self):
-        return self._get_synth_option("length_scale")
+        return self._get_prosody_option("length_scale")
 
     @length_scale.setter
     def length_scale(self, value):
-        self._set_synth_option(length_scale=value)
+        self._set_prosody_option(length_scale=value)
 
     @property
     def noise_w(self):
-        return self._get_synth_option("noise_w")
+        return self._get_prosody_option("noise_w")
 
     @noise_w.setter
     def noise_w(self, value):
-        self._set_synth_option(noise_w=value)
+        self._set_prosody_option(noise_w=value)
 
     @property
     def is_fast(self):
-        return "+RT" in self.key
+        return self.model_type == "piper" and "+RT" in self.key
 
     @property
     def variant(self):
+        if self.model_type != "piper":
+            return "standard"
         return "fast" if self.is_fast else "standard"
 
     @property
@@ -369,7 +391,10 @@ class DengjenTextToSpeechSystem:
     @staticmethod
     def get_voice_variants(voice_key):
         std_key = voice_key.replace("+RT", "")
-        lang, name, quality = std_key.split("-")
+        try:
+            lang, name, quality = std_key.split("-")
+        except ValueError:
+            return voice_key, voice_key
         rt_key = f"{lang}-{name}+RT-{quality}"
         return std_key, rt_key
 
@@ -387,6 +412,15 @@ class DengjenTextToSpeechSystem:
             cls.load_voices_from_directory(DENGJEN_VOICES_DIR, backend),
             key=operator.attrgetter("key"),
         )
+
+    @classmethod
+    def load_all_voices_from_nvda_config_dir(cls, backend):
+        migrate_voices_directory()
+        rv = []
+        for voices_dir in (DENGJEN_VOICES_DIR, DENGJEN_KOKORO_VOICES_DIR):
+            Path(voices_dir).mkdir(parents=True, exist_ok=True)
+            rv.extend(cls.load_voices_from_directory(voices_dir, backend))
+        return sorted(rv, key=operator.attrgetter("key"))
 
     @classmethod
     def load_voices_from_directory(

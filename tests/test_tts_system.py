@@ -146,6 +146,113 @@ class TestDengjenVoiceFromPath:
     def test_fast_variant_key(self, single_voice):
         assert single_voice.fast_variant_key == "en-test+RT-medium"
 
+    def test_parses_standard_key_sets_piper_model_type(self, backend):
+        v = DengjenVoice.from_path("/tmp/en-john-medium", backend)
+        assert v.model_type == "piper"
+
+    def test_from_path_reads_sidecar_for_non_piper_directory_name(
+        self, backend, tmp_path
+    ):
+        voice_dir = tmp_path / "kokoro-multilingual"
+        voice_dir.mkdir()
+        (voice_dir / "voice.json").write_text(
+            '{"model_type": "kokoro", "name": "Kokoro Multilingual", '
+            '"language": "en", "description": "54 presets"}',
+            encoding="utf-8",
+        )
+
+        v = DengjenVoice.from_path(voice_dir, backend)
+
+        assert v.model_type == "kokoro"
+        assert v.name == "Kokoro Multilingual"
+        assert v.language == "en"
+
+
+class TestDengjenVoiceLoadIgnoresTheSidecar:
+    def test_picks_the_engine_config_even_when_the_sidecar_sorts_first(
+        self, backend, tmp_path
+    ):
+        voice_dir = tmp_path / "en-john-medium"
+        voice_dir.mkdir()
+        # Write the sidecar FIRST, matching the real install order (both
+        # PiperVoiceDownloader._install and install_voice_from_tar_archive
+        # write voice.json before the payload) -- this is also the FAT/
+        # exFAT filesystem-ordering failure mode this test guards against.
+        (voice_dir / "voice.json").write_text(
+            '{"model_type": "piper", "name": "john", "language": "en"}',
+            encoding="utf-8",
+        )
+        (voice_dir / "en-john-medium.onnx.json").write_text(
+            '{"some": "engine config"}', encoding="utf-8"
+        )
+
+        v = DengjenVoice.from_path(voice_dir, backend)
+        v.load()
+
+        assert v.config_path.name == "en-john-medium.onnx.json"
+
+
+class TestDengjenVoiceFastVariantGating:
+    def test_piper_voice_reports_is_fast_from_key(self, backend):
+        v = DengjenVoice.from_path("/tmp/en-john+RT-medium", backend)
+        assert v.is_fast is True
+
+    def test_non_piper_voice_is_never_fast(self, backend, tmp_path):
+        voice_dir = tmp_path / "kokoro-multilingual"
+        voice_dir.mkdir()
+        (voice_dir / "voice.json").write_text(
+            '{"model_type": "kokoro", "name": "Kokoro", "language": "en"}',
+            encoding="utf-8",
+        )
+        v = DengjenVoice.from_path(voice_dir, backend)
+        assert v.is_fast is False
+
+
+class TestDengjenVoiceProsodyControlGating:
+    def test_piper_voice_reads_noise_scale_from_backend(self, backend):
+        v = _make_voice(backend)
+        assert v.noise_scale == pytest.approx(0.667)
+
+    def test_kokoro_voice_noise_scale_is_a_harmless_no_op(self, backend, tmp_path):
+        voice_dir = tmp_path / "kokoro-multilingual"
+        voice_dir.mkdir()
+        (voice_dir / "voice.json").write_text(
+            '{"model_type": "kokoro", "name": "Kokoro", "language": "en"}',
+            encoding="utf-8",
+        )
+        v = DengjenVoice.from_path(voice_dir, backend)
+        v.remote_id = "fake-remote-id"
+
+        assert v.noise_scale is None
+        assert backend.get_synth_options_calls == []
+
+        v.noise_scale = 0.9  # must not raise, must not reach the backend
+
+        assert backend.set_synth_options_calls == []
+
+
+class TestSpeakerBypassesTheProsodyControlGate:
+    def test_speaker_reaches_the_backend_for_a_non_prosody_model_type(self, backend):
+        v = _make_voice(
+            backend,
+            key="kokoro-multilingual",
+            name="Kokoro",
+            is_multi_speaker=True,
+            speakers={"0": "af_heart", "1": "am_adam"},
+        )
+        v.model_type = "kokoro"
+
+        assert v.speaker == "default"
+        assert backend.get_synth_options_calls == [v.remote_id]
+
+        v.speaker = "af_heart"
+
+        assert backend.set_synth_options_calls == [
+            (v.remote_id, {"speaker": "af_heart"})
+        ]
+        # noise_scale must still be gated off for this model_type
+        assert v.noise_scale is None
+
 
 class TestSilenceProvider:
     def test_generates_correct_byte_length(self):
@@ -306,6 +413,12 @@ class TestGetVoiceVariants:
         assert rt == "en-john+RT-medium"
 
 
+class TestGetVoiceVariantsOnNonPiperKeys:
+    def test_returns_the_key_unchanged_for_a_non_three_part_key(self):
+        result = DengjenTextToSpeechSystem.get_voice_variants("kokoro-multilingual")
+        assert result == ("kokoro-multilingual", "kokoro-multilingual")
+
+
 class TestSpeakerSingleVoice:
     def test_speaker_returns_fallback_for_single_speaker(self, tts):
         assert tts.speaker == FALLBACK_SPEAKER_NAME
@@ -364,3 +477,36 @@ class TestConstants:
     def test_fallback_speaker_name_is_string(self):
         assert isinstance(FALLBACK_SPEAKER_NAME, str)
         assert FALLBACK_SPEAKER_NAME
+
+
+class TestLoadAllVoicesFromNvdaConfigDir:
+    def test_merges_piper_and_kokoro_directories(self, backend, tmp_path, monkeypatch):
+        piper_dir = tmp_path / "piper"
+        kokoro_dir = tmp_path / "kokoro"
+        piper_dir.mkdir()
+        kokoro_dir.mkdir()
+        (piper_dir / "en-john-medium").mkdir()
+        (kokoro_dir / "kokoro-multilingual").mkdir()
+        (kokoro_dir / "kokoro-multilingual" / "voice.json").write_text(
+            '{"model_type": "kokoro", "name": "Kokoro", "language": "en"}',
+            encoding="utf-8",
+        )
+        monkeypatch.setattr(
+            "dengjen_neural_voices.domain.tts_system.DENGJEN_VOICES_DIR",
+            str(piper_dir),
+        )
+        monkeypatch.setattr(
+            "dengjen_neural_voices.domain.tts_system.DENGJEN_KOKORO_VOICES_DIR",
+            str(kokoro_dir),
+        )
+        monkeypatch.setattr(
+            "dengjen_neural_voices.domain.tts_system.migrate_voices_directory",
+            lambda: None,
+        )
+
+        voices = DengjenTextToSpeechSystem.load_all_voices_from_nvda_config_dir(backend)
+
+        assert sorted(v.key for v in voices) == [
+            "en-john-medium",
+            "kokoro-multilingual",
+        ]

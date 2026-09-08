@@ -1092,3 +1092,45 @@ class TestDownloadWiresProgressDialogToInstall:
         assert std_message != rt_message
         assert "fast variant" not in std_message
         assert "fast variant" in rt_message
+
+
+class TestVoiceJsonSidecarWrittenOnInstall:
+    def test_install_writes_voice_json_sidecar(self, tmp_path, monkeypatch):
+        monkeypatch.setattr(voice_download, "DENGJEN_VOICES_DIR", str(tmp_path))
+        language = PiperVoiceLanguage(
+            code="en_US",
+            family="English",
+            region="US",
+            name_native="English",
+            name_english="English",
+            country_english="United States",
+        )
+        voice = PiperVoice(
+            key="en_US-libritts-high",
+            name="libritts",
+            quality=PiperVoiceQualityLevel.High,
+            num_speakers=1,
+            speaker_id_map={},
+            language=language,
+            files=[
+                PiperVoiceFile(
+                    file_path="en/en_US/libritts/high/en_US-libritts-high.onnx",
+                    size_in_bytes=4,
+                    md5hash="37b59afd592725f9305e484a5d7f5168",
+                )
+            ],
+        )
+        downloader = PiperVoiceDownloader(voice, success_callback=lambda: None)
+        onnx_file = voice.files[0]
+        src = os.path.join(downloader.temp_download_dir.name, onnx_file.name)
+        with open(src, "wb") as f:
+            f.write(b"\x00\x01\x02\x03")
+
+        downloader._install(
+            [(onnx_file, src, hashlib.md5(b"\x00\x01\x02\x03").hexdigest())]
+        )
+
+        sidecar = tmp_path / "en_US-libritts-high" / "voice.json"
+        assert sidecar.exists()
+        data = json.loads(sidecar.read_text())
+        assert data["model_type"] == "piper"

@@ -388,6 +388,17 @@ def install(*, stub_wx: bool = True) -> None:
         package="dengjen_neural_voices.domain",
     )
 
+    # Manual sys.modules registration above bypasses the import system's own
+    # step of setting `tts_system` as an attribute of `domain`, which a
+    # string-path monkeypatch.setattr("...domain.tts_system.X", ...) needs.
+    _domain_pkg = sys.modules.setdefault(
+        "dengjen_neural_voices.domain", types.ModuleType("dengjen_neural_voices.domain")
+    )
+    _domain_pkg.__path__ = [os.path.join(_SYNTH_PKG_DIR, "domain")]
+    _domain_pkg.__package__ = "dengjen_neural_voices.domain"
+    _domain_pkg.tts_system = sys.modules["dengjen_neural_voices.domain.tts_system"]
+    _pkg.domain = _domain_pkg
+
     _pkg.DengjenTextToSpeechSystem = sys.modules[
         "dengjen_neural_voices.domain.tts_system"
     ].DengjenTextToSpeechSystem

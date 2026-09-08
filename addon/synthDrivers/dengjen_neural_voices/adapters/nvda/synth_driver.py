@@ -212,9 +212,7 @@ class SynthDriver(NvdaSynthDriver):
                 exc_info=True,
             )
             return
-        voices = DengjenTextToSpeechSystem.load_piper_voices_from_nvda_config_dir(
-            backend
-        )
+        voices = DengjenTextToSpeechSystem.load_all_voices_from_nvda_config_dir(backend)
         if not any(voices):
             log.error(
                 "No installed voices were found for Dengjen. Synthesizer will not be available."
@@ -517,7 +515,7 @@ class SynthDriver(NvdaSynthDriver):
         rv = OrderedDict()
         if std_key in self._voice_map:
             rv["standard"] = VoiceInfo("standard", "Standard", self.language)
-        if rt_key in self._voice_map:
+        if rt_key != std_key and rt_key in self._voice_map:
             rv["fast"] = VoiceInfo("fast", "Fast", self.language)
         return rv
 
@@ -528,9 +526,13 @@ class SynthDriver(NvdaSynthDriver):
         all_voices = OrderedDict()
         for voice in self.voices:
             voice_id = self._get_variant_independent_voice_id(voice.key)
-            quality = voice.properties["quality"]
+            quality = voice.properties.get("quality")
             lang = languageHandler.normalizeLanguage(voice.language).replace("_", "-")
-            display_name = f"{voice.name} ({lang}) - {quality}"
+            display_name = (
+                f"{voice.name} ({lang}) - {quality}"
+                if quality
+                else f"{voice.name} ({lang})"
+            )
             all_voices[voice_id] = VoiceInfo(voice_id, display_name, voice.language)
         return all_voices
 

@@ -51,6 +51,22 @@ C4Component
     Rel(grpcadapter, port, "Implements")
 ----
 
+== Adding a model backend
+
+`dengjen-tts` (the vendored gRPC engine) can support more model types than
+Piper -- it already ships Kokoro and MeloTTS. Wiring a new one into this
+add-on needs:
+
+1. A `ModelCatalog` implementation (`addon/globalPlugins/dengjen_tts_global_plugin/model_catalog.py`'s `Protocol`) with `model_type`, `is_installed()`, and `install()`, following `kokoro_download.py`'s `KokoroCatalog` as a template.
+2. That catalog's installer writes two files per voice directory: the model backend's own `config.json` (whatever shape `dengjen-tts`'s loader for that `model_type` expects -- check `crates/dengjen/models/<type>/src/config.rs` in `zirekhq/dengjen-tts`), and a `voice.json` sidecar via `domain/voice_metadata.write()` carrying `{model_type, name, language, description}` -- the only fields `DengjenVoice.from_path()` reads.
+3. If the new model type has per-utterance parameters the existing gRPC `ProsodyControls` message doesn't carry, that needs a change in `zirekhq/dengjen-tts` first (a different repo) -- not an addon-side concern.
+4. If the new model type's prosody parameters *do* map onto the existing `noise_scale`/`length_scale`/`noise_w` fields (as MeloTTS's `inference` block does), add its `model_type` string to `domain/tts_system.py`'s `MODEL_TYPES_WITH_PROSODY_CONTROLS`.
+5. Add a `DENGJEN_<TYPE>_VOICES_DIR` constant to `const.py` and register it in `DengjenTextToSpeechSystem.load_all_voices_from_nvda_config_dir()` (`domain/tts_system.py`) -- that method iterates a fixed tuple of directories, not a dynamic scan of `voices/*`, so a new backend's directory has to be added there explicitly or its installed voices are invisible to NVDA.
+
+No install directory is shared between model types: each gets its own
+`DENGJEN_VOICES_BASE_DIR/voices/<model_type>/` (see `const.py`), scanned
+only once its constant is registered per step 5 above.
+
 == Code
 
 `TTSBackend` is a `Protocol`, not a base class -- the `sonata_grpc` adapter

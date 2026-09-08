@@ -391,3 +391,38 @@ msgstr "El complemento Voces Neuronales Sonata sigue instalado, por lo que las v
 msgid "Old add-on still installed"
 msgstr "El complemento antiguo sigue instalado"
 
+
+#: addon\globalPlugins\dengjen_tts_global_plugin\kokoro_download.py:87
+msgid "Downloading Kokoro multilingual voice"
+msgstr ""
+
+#: addon\globalPlugins\dengjen_tts_global_plugin\kokoro_download.py:90
+msgid "Successfully downloaded the Kokoro multilingual voice.\n"
+"To use this voice, you need to restart NVDA.\n"
+"Do you want to restart NVDA now?"
+msgstr ""
+
+#: addon\globalPlugins\dengjen_tts_global_plugin\kokoro_download.py:97
+msgid "Cannot download the Kokoro voice.\n"
+"Please check your connection and try again."
+msgstr ""
+
+#: addon\globalPlugins\dengjen_tts_global_plugin\voice_manager.py:479
+msgid "Kokoro is a single multilingual voice with 54 presets, installed as one unit. After installing, choose a preset from NVDA's Speaker setting."
+msgstr ""
+
+#: addon\globalPlugins\dengjen_tts_global_plugin\voice_manager.py:485
+msgid "&Install Kokoro voice"
+msgstr ""
+
+#: addon\globalPlugins\dengjen_tts_global_plugin\voice_manager.py:493
+msgid "Already installed"
+msgstr ""
+
+#: addon\globalPlugins\dengjen_tts_global_plugin\voice_manager.py:493
+msgid "Not installed"
+msgstr ""
+
+#: addon\globalPlugins\dengjen_tts_global_plugin\voice_manager.py:529
+msgid "Kokoro"
+msgstr ""
