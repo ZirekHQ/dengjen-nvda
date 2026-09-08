@@ -10,17 +10,14 @@ from pathlib import Path
 from collections.abc import Iterable
 from typing import Final
 
-# While names imported below are available by default in every SConscript
-# Linters aren't aware about them.
-# To avoid PyRight `reportUndefinedVariable` errors about them they are imported explicitly.
-# When using other  Scons functions please add them to the line below.
+# SCons injects these names into every SConscript at runtime; PyRight doesn't
+# know that and flags them as undefined, so they're imported here explicitly.
+# Add any other SCons builtins used below to this import.
 from SCons.Script import EnsurePythonVersion, Variables, BoolVariable, Environment, Copy
 
-# Imports for type hints
 from SCons.Node import FS
 
-# Add-on localization exchange facility and the template requires Python 3.10.
-# For best practice, use Python 3.11 or later to align with NVDA development.
+# The add-on localization exchange facility requires Python 3.10 at minimum.
 EnsurePythonVersion(3, 10)
 
 # Bytecode should not be written for build vars module to keep the repository root folder clean.
@@ -30,7 +27,7 @@ import buildVars  # NOQA: E402
 
 
 def validateVersionNumber(key: str, val: str, _):
-	# Used to make sure version major.minor.patch are integers to comply with NV Access add-on store.
+	# NV Access add-on store requires version numbers to be major.minor.patch integers.
 	# Ignore all this if version number is not specified.
 	if val == "0.0.0":
 		return
@@ -85,7 +82,6 @@ addon = env.NVDAAddon(addonFile, env.Dir(addonDir), excludePatterns=buildVars.ex
 
 langDirs: list[FS.Dir] = [env.Dir(d) for d in env.Glob(localeDir/"*/") if d.isdir()]
 
-# Allow all NVDA's gettext po files to be compiled in source/locale, and manifest files to be generated
 moByLang: dict[str, FS.File] = {}
 for dir in langDirs:
 	poFile = dir.File(os.path.join("LC_MESSAGES", "nvda.po"))
@@ -103,8 +99,7 @@ pythonFiles = expandGlobs(buildVars.pythonSources)
 for file in pythonFiles:
 	env.Depends(addon, file)
 
-# Convert markdown files to html
-# We need at least doc in English and should enable the Help button for the add-on in Add-ons Manager
+# Need at least the English doc, to enable the Help button in Add-ons Manager.
 if (cssFile := Path("style.css")).is_file():
 	cssPath = docsDir / cssFile
 	cssTarget = env.Command(str(cssPath), str(cssFile), Copy("$TARGET", "$SOURCE"))
@@ -116,8 +111,8 @@ if (readmeFile := Path("readme.md")).is_file():
 	env.Depends(addon, readmeTarget)
 
 for mdFile in env.Glob(docsDir/"*/*.md"):
-	# the title of the html file is translated based on the contents of something in the moFile for a language.
-	# Thus, we find the moFile for this language and depend on it if it exists.
+	# The html title is translated from the moFile's catalog, so look up this
+	# language's moFile and depend on it if one exists.
 	lang = mdFile.dir.name
 	moFile = moByLang.get(lang)
 	htmlFile = env.md2html(mdFile, moFile=moFile, mdExtensions=buildVars.markdownExtensions)
@@ -126,7 +121,6 @@ for mdFile in env.Glob(docsDir/"*/*.md"):
 		env.Depends(htmlFile, moFile)
 	env.Depends(addon, htmlFile)
 
-# Pot target
 i18nFiles = expandGlobs(buildVars.i18nSources)
 gettextvars: dict[str, str] = {
 	"gettext_package_bugs_address": "nvda-translations@groups.io",
@@ -141,9 +135,7 @@ mergePot = env.gettextMergePotFile("${addon_name}-merge.pot", i18nFiles, **gette
 env.Alias("mergePot", mergePot)
 env.Depends(mergePot, i18nFiles)
 
-# Generate Manifest path
 manifest = env.NVDAManifest(env.File(addonDir/"manifest.ini"), "manifest.ini.tpl")
-# Ensure manifest is rebuilt if buildVars is updated.
 env.Depends(manifest, "buildVars.py")
 
 env.Depends(addon, manifest)

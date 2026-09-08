@@ -318,10 +318,9 @@ class TestProcessSpeechSequence:
 
         exception_mock = MagicMock()
         monkeypatch.setattr(driver_module.log, "exception", exception_mock)
-        # nvda_stubs aliases the module's CancelledError to the builtin
-        # Exception (so a plain raise can stand in for a real cancellation
-        # elsewhere); narrow it back to the real type here so a ValueError
-        # can actually reach the generic-exception branch under test.
+        # nvda_stubs aliases CancelledError to the builtin Exception (so a plain
+        # raise can stand in for a real cancellation); narrow it back to the real
+        # type here so a ValueError can reach the generic-exception branch under test.
         monkeypatch.setattr(driver_module, "CancelledError", asyncio.CancelledError)
 
         asyncio.run(driver_module._process_speech_sequence([blows_up, never_runs]))

@@ -30,11 +30,9 @@ def update_displaied_params_on_voice_change(synth):
             if isinstance(win, NVDASettingsDialog)
         )
     except StopIteration:
-        # No gui displaied
         return
     current_panel = setting_dialog.currentCategory
     if not isinstance(current_panel, SpeechSettingsPanel):
-        # No gui displaied
         return
     voice_panel = current_panel.voicePanel
     speakers = list(synth.availableSpeakers.values())

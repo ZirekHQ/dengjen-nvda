@@ -3,8 +3,6 @@ name: build addon
 on:
   push:
     tags: ["v*"]
-    # To build on main/master branch, uncomment the following line:
-    # branches: [ main , master ]
 
   pull_request:
     branches: [ main, master ]
@@ -74,22 +72,16 @@ jobs:
       - name: Run tests
         run: pytest
 
-      # Separate invocation, not folded into `pytest` above: testpaths=tests
-      # already keeps this out of that run, and tests_contract/'s conftest.py
-      # imports the real grpc package (incompatible with tests/conftest.py's
-      # MagicMock stub of it). dengjen-tts-grpc.exe is a Windows binary, so this
-      # only does anything on the windows-latest leg of the matrix; the test
-      # module self-skips on other platforms.
+      # Separate from `pytest` above (testpaths=tests excludes this already):
+      # tests_contract/'s conftest.py imports the real grpc package, incompatible
+      # with tests/conftest.py's MagicMock stub of it. Windows-only since the exe is.
       - name: Run gRPC contract tests
         if: runner.os == 'Windows'
         run: pytest tests_contract/ -v
 
-      # Separate invocation for the same reason as the contract tests above:
-      # tests_gui/ imports the real wxPython that tests/conftest.py replaces
-      # with a module stub, and a stub cannot be a base class for the
-      # wx.ListCtrl / SizedDialog subclasses in components.py. wxPython ships
-      # no Linux wheels on PyPI, so this is the Windows leg only; the test
-      # modules self-skip elsewhere.
+      # Same reason as the contract tests: tests_gui/ needs the real wxPython,
+      # which tests/conftest.py replaces with a stub (a stub can't be a base
+      # class for the wx subclasses in components.py); wxPython ships no Linux wheels.
       - name: Run GUI smoke tests
         if: runner.os == 'Windows'
         run: |
@@ -116,10 +108,9 @@ jobs:
     permissions:
       contents: read
     needs: ["build"]
-    # Real network calls to Hugging Face for voice downloads (added in a
-    # later task) make this slower and flakier than the deterministic
-    # suites, so it's kept out of the `test` gate deliberately rather than
-    # blocking merges on a flaky external dependency.
+    # Real network calls to Hugging Face for voice downloads make this slower
+    # and flakier than the deterministic suites, so it stays out of the
+    # `test` gate rather than blocking merges on a flaky external dependency.
     continue-on-error: true
     steps:
       - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5.1.0

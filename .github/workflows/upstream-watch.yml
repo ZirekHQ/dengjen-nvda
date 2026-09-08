@@ -1,15 +1,8 @@
 name: Upstream Watch
 
-# Tracks divergence from mush42/sonata-nvda, the upstream this repo was
-# forked from (see readme.md: the original author, Musharraf Omer (@mush42),
-# announced that commercial contract conflicts prevent him from continuing
-# to maintain the open-source add-on; this repo continues the project as a
-# fork). This repo's own git history is that fork lineage, so it shares
-# commit ancestry with mush42/sonata-nvda directly -- the compare API below
-# works the same way it would for any GitHub fork. Rather than auto-merging
-# upstream/main -- which would risk clobbering this fork's own divergence --
-# this just keeps one tracking issue current so a human decides when and how
-# to pull changes in.
+# Tracks divergence from mush42/sonata-nvda, the upstream this fork continues
+# (see readme.md). Deliberately files a tracking issue instead of auto-merging
+# upstream/main, to avoid clobbering this fork's own divergence.
 
 on:
   schedule:

@@ -180,12 +180,9 @@ class TestSynthesisLatencyContract:
         strict=False,
     )
     def test_no_unrequested_tail_silence_between_requests(self, backend, loaded_voice):
-        # A standard (non-streaming) voice loads through dengjen-tts's plain
-        # VitsModel, not VitsStreamingModel -- supports_streaming_output is
-        # false for every such voice regardless of quality, so it never
-        # returns more than one chunk per synthesize() call. The boundary a
-        # screen-reader user would actually hear a gap at is therefore
-        # between two consecutive synthesize() calls, not within one.
+        # Standard voices use VitsModel, not VitsStreamingModel, so
+        # supports_streaming_output is false and synthesize() never returns more
+        # than one chunk -- the audible gap is between two calls, not within one.
         @aio.asyncio_coroutine_to_concurrent_future
         async def _synthesize(text):
             chunks = []

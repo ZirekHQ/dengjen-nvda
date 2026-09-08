@@ -1,20 +1,8 @@
 name: Sonar fork coverage
 
-# The Sonar job in sonar.yml is deliberately skipped for fork PRs because
-# forks are never given SONAR_TOKEN. This workflow builds what a real scan
-# needs -- a full checkout (including git history, for Sonar's blame/new-code
-# detection) plus a coverage report -- using only the read-only, secret-less
-# token that `pull_request` gets for fork PRs, and packages it as a plain tar
-# archive artifact.
-#
-# sonar-fork-scan.yml (triggered by a maintainer commenting `/sonar` on the
-# PR after reviewing the diff) extracts that archive with plain `tar`, never a
-# git operation, so it never runs git fetch/checkout against fork content and
-# never executes anything from the fork -- the archive is only read
-# statically by the Sonar scanner. This workflow must never gain
-# `secrets:` access and must never do anything beyond running the PR's own
-# test suite, exactly as any other fork `pull_request` job already safely
-# does.
+# Forks never get SONAR_TOKEN, so sonar.yml skips them. This workflow builds
+# the checkout + coverage report with only the safe, secret-less fork
+# `pull_request` token, and must never gain `secrets:` access.
 
 on:
   pull_request:
@@ -27,10 +15,8 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
-  # Mirrors sonar.yml's job of the same name: tests_contract/ and tests_gui/ are
-  # Windows-only, so without this the modules only they reach would land in the
-  # fork's report at 0% (#89). Runs the fork's own tests with no secrets, exactly
-  # as build_addon.yml's windows-latest leg already does for every fork PR.
+  # tests_contract/ and tests_gui/ are Windows-only, so without this leg those
+  # modules land in the fork's coverage report at 0% (#89).
   windows_coverage:
     name: Windows coverage for fork scan
     runs-on: windows-latest
@@ -89,11 +75,9 @@ jobs:
     steps:
       - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5.1.0
         with:
-          # Pinned to the actual PR head, not actions/checkout's default
-          # ephemeral merge commit -- otherwise the scanner analyzes a
-          # commit SHA that doesn't match the PR, and SonarCloud can't
-          # attach its status to the commit branch protection actually
-          # checks.
+          # Pinned to the PR head, not actions/checkout's default ephemeral merge
+          # commit -- otherwise the scanner analyzes a SHA that doesn't match the
+          # PR, and SonarCloud can't attach status to the commit branch protection checks.
           ref: ${{ github.event.pull_request.head.sha }}
           fetch-depth: 0 # Sonar needs full history for new-code detection and blame
           persist-credentials: false

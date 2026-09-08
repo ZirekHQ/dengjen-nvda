@@ -40,7 +40,6 @@ def md2html(
     for k, v in headerDic.items():
         mdText = mdText.replace(k, v, 1)
     htmlText = markdown.markdown(mdText, extensions=mdExtensions)
-    # Optimization: build resulting HTML text in one go instead of writing parts separately.
     docText = "\n".join(
         (
             "<!DOCTYPE html>",

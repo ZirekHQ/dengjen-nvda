@@ -29,12 +29,9 @@ jobs:
       - run: ruff check .
       - run: ruff format --check .
 
-  # No pip-audit precedent yet in any sibling Python repo (nvda-addon-testkit
-  # doesn't have one either), so pinned dependencies haven't been triaged
-  # against advisories before. Kept non-blocking on this first pass -- mirrors
-  # how the Rust repos' `deny` job separates cheap license/bans/sources checks
-  # from the full `audit` gate -- so findings surface without failing PRs
-  # until someone has looked at them; tighten to a hard gate once that happens.
+  # No pip-audit precedent yet, so pinned dependencies haven't been triaged
+  # against advisories before. Kept non-blocking on this first pass so findings
+  # surface without failing PRs until someone has looked at them.
   audit:
     runs-on: ubuntu-latest
     steps:
