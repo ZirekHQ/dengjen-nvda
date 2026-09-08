@@ -132,4 +132,5 @@ If this repository saves you time and effort, please consider supporting it!
 
 - ⭐ [Star on GitHub](https://github.com/ZirekHQ/dengjen-nvda)
 - 🐦 [Share on Twitter](https://twitter.com/intent/tweet?text=Dengjen%20Neural%20Voices%20-%20local%20neural%20TTS%20for%20NVDA&url=https%3A%2F%2Fgithub.com%2FZirekHQ%2Fdengjen-nvda)
+- 💼 [Share on LinkedIn](https://www.linkedin.com/sharing/share-offsite/?url=https%3A%2F%2Fgithub.com%2FZirekHQ%2Fdengjen-nvda)
 - 💖 [More ways to support](https://github.com/ZirekHQ) — Open Collective coming soon
