@@ -261,10 +261,24 @@ def kokoro_installed(nvda_session, downloaded_voice_key):
         description="the notebook to switch to the Kokoro tab",
     )
 
-    # KokoroVoicesPanel's only tabbable control is install_btn -- the
-    # preceding description StaticText doesn't take a tab stop, same as the
-    # Download tab's own leading "Language" StaticText before language_choice.
-    nvda.keys.press("tab")
+    # A single blind tab press here landed on the dialog's own Close button
+    # (not KokoroVoicesPanel's install_btn) on real CI, closing the whole
+    # dialog instead of installing anything -- wx's tab order after a
+    # control+tab page switch isn't reliably "one tab into the new page's
+    # first control" once other interactions already happened earlier in
+    # this file. Verify focus actually lands on install_btn before pressing
+    # space, retrying tab presses rather than assuming a fixed count.
+    press_until(
+        nvda,
+        "tab",
+        lambda: voice_manager_state(
+            nvda,
+            f"wx.Window.FindFocus() is {_VOICE_MANAGER_DIALOG}"
+            f".notebookCtrl.GetPage({KOKORO_TAB_INDEX}).install_btn",
+        ),
+        attempts=5,
+        description="focus to reach the Install Kokoro voice button",
+    )
     before = nvda.speech.index()
     nvda.keys.press("space")
 
