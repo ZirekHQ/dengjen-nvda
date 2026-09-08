@@ -24,6 +24,8 @@ from logHandler import log
 
 addonHandler.initTranslation()
 
+from dengjen_neural_voices.domain import voice_metadata
+
 from . import DENGJEN_VOICES_DIR, DengjenGrpcBackend, DengjenTextToSpeechSystem, helpers
 
 with helpers.import_bundled_library():
@@ -308,23 +310,25 @@ class _BaseVoiceDownloader:
         )
 
     def done_callback(self, result):
-
-        wx.CallAfter(self._on_download_complete, result)
-
-    def _on_download_complete(self, result):
+        # Runs on the worker thread (a future's add_done_callback fires on
+        # whichever thread completes it -- see download()). _install does
+        # the actual disk I/O here rather than after the wx.CallAfter below,
+        # so writing a large voice to disk doesn't block the wx event loop.
+        # progress_dialog.Update() from this thread already matches how
+        # _download_work reports download progress.
         has_error = isinstance(result, Exception)
         install_error = None
         if not has_error:
-            self.progress_dialog.Update(
-                0,
-                _("Installing voice"),
-            )
+            self.progress_dialog.Update(0, _("Installing voice"))
             try:
                 self._install(result)
             except _VoiceInstallError as exc:
                 has_error = True
                 install_error = exc
 
+        wx.CallAfter(self._on_download_complete, has_error, install_error, result)
+
+    def _on_download_complete(self, has_error, install_error, result):
         self.progress_dialog.Hide()
         self.progress_dialog.Destroy()
         del self.progress_dialog
@@ -436,6 +440,17 @@ class PiperVoiceDownloader(_BaseVoiceDownloader):
 
         voice_dir = Path(DENGJEN_VOICES_DIR).joinpath(self.voice.key)
         voice_dir.mkdir(parents=True, exist_ok=True)
+        try:
+            voice_metadata.write(
+                voice_dir,
+                voice_metadata.VoiceMetadata(
+                    model_type="piper",
+                    name=self.voice.name,
+                    language=self.voice.language.code,
+                ),
+            )
+        except OSError:
+            log.exception("Failed to write voice.json sidecar", exc_info=True)
         copy_failed = False
         for file, src, __ in result:
             dst = os.path.join(voice_dir, file.name)
@@ -601,6 +616,19 @@ def install_voice_from_tar_archive(tar_path, voices_dir):
                 set_attrs=False,
                 filter="data",
             )
+        # Written after extraction: config_files matches any *.json in the
+        # archive, so a root-level voice.json in the archive would otherwise
+        # overwrite this canonical sidecar instead of the other way around.
+        lang, name, _quality = voice_key.split("-")
+        try:
+            voice_metadata.write(
+                Path(voice_folder_name),
+                voice_metadata.VoiceMetadata(
+                    model_type="piper", name=name.replace("+RT", ""), language=lang
+                ),
+            )
+        except OSError:
+            log.exception("Failed to write voice.json sidecar", exc_info=True)
         return voice_key
 
 

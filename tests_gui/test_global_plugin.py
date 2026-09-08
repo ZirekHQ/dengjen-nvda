@@ -28,7 +28,7 @@ def plugin_module(gui_plugin_package):
 def no_installed_voices(plugin_module, monkeypatch):
     monkeypatch.setattr(
         plugin_module.DengjenTextToSpeechSystem,
-        "load_piper_voices_from_nvda_config_dir",
+        "load_all_voices_from_nvda_config_dir",
         classmethod(lambda cls, backend: iter([])),
     )
 
@@ -37,7 +37,7 @@ def no_installed_voices(plugin_module, monkeypatch):
 def one_installed_voice(plugin_module, monkeypatch):
     monkeypatch.setattr(
         plugin_module.DengjenTextToSpeechSystem,
-        "load_piper_voices_from_nvda_config_dir",
+        "load_all_voices_from_nvda_config_dir",
         classmethod(lambda cls, backend: iter([MagicMock()])),
     )
 

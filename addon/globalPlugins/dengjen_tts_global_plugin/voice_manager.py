@@ -23,6 +23,7 @@ from . import (
     DengjenTextToSpeechSystem,
     aio,
     helpers,
+    model_catalog,
     voice_download,
     voice_migration,
 )
@@ -55,7 +56,7 @@ class InstalledDengjenVoicesPanel(SizedPanel):
                     _("Quality"),
                     "center",
                     30,
-                    lambda v: v.properties["quality"].title(),
+                    lambda v: v.properties.get("quality", "").title(),
                 ),
                 ColumnDefn(_("Language"), "right", 20, operator.attrgetter("language")),
             ],
@@ -97,7 +98,7 @@ class InstalledDengjenVoicesPanel(SizedPanel):
 
     def update_voices_list(self, set_focus=False, invalidate_synth_voices_cache=False):
         voices = list(
-            DengjenTextToSpeechSystem.load_piper_voices_from_nvda_config_dir(
+            DengjenTextToSpeechSystem.load_all_voices_from_nvda_config_dir(
                 DengjenGrpcBackend()
             )
         )
@@ -466,6 +467,43 @@ class OnlineDengjenVoicesPanel(SizedPanel):
         self.__already_populated.set()
 
 
+class KokoroVoicesPanel(SizedPanel):
+    def __init__(self, parent):
+        super().__init__(parent, -1)
+        self._catalog = next(
+            c for c in model_catalog.AVAILABLE_CATALOGS if c.model_type == "kokoro"
+        )
+        wx.StaticText(
+            self,
+            -1,
+            _(
+                "Kokoro is a single multilingual voice with 54 presets, "
+                "installed as one unit. After installing, choose a preset "
+                "from NVDA's Speaker setting."
+            ),
+        )
+        self.install_btn = wx.Button(self, -1, _("&Install Kokoro voice"))
+        self.status_label = wx.StaticText(self, -1, "")
+        self.Bind(wx.EVT_BUTTON, self.on_install, self.install_btn)
+
+    def populate_list(self, force_online=False):
+        installed = self._catalog.is_installed()
+        self.install_btn.Enable(not installed)
+        self.status_label.SetLabel(
+            _("Already installed") if installed else _("Not installed")
+        )
+
+    def invalidate_cache(self):
+        pass  # no fetched-list cache to clear -- is_installed() always re-checks disk
+
+    def on_install(self, event):
+        def success_callback():
+            self.Parent._invalidate_pages_voice_cache()
+            wx.CallAfter(self.populate_list)
+
+        self._catalog.install(success_callback)
+
+
 class DengjenVoiceManagerDialog(SimpleDialog):
     def __init__(self):
         super().__init__(
@@ -486,6 +524,10 @@ class DengjenVoiceManagerDialog(SimpleDialog):
             (
                 _("Download"),
                 OnlineDengjenVoicesPanel(self.notebookCtrl),
+            ),
+            (
+                _("Kokoro"),
+                KokoroVoicesPanel(self.notebookCtrl),
             ),
         ]
         for label, panel in panel_info:

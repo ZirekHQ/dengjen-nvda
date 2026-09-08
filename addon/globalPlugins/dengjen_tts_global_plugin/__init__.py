@@ -68,7 +68,7 @@ class GlobalPlugin(globalPluginHandler.GlobalPlugin):
         if self.__voice_manager_shown:
             return
         if not any(
-            DengjenTextToSpeechSystem.load_piper_voices_from_nvda_config_dir(
+            DengjenTextToSpeechSystem.load_all_voices_from_nvda_config_dir(
                 DengjenGrpcBackend()
             )
         ):

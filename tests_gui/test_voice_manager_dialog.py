@@ -44,11 +44,11 @@ def voice_manager(gui_plugin_package):
 
 @pytest.fixture
 def no_installed_voices(voice_manager, monkeypatch):
-    """load_piper_voices_from_nvda_config_dir touches the NVDA config dir;
+    """load_all_voices_from_nvda_config_dir touches the NVDA config dir;
     pin it to empty so construction never depends on the host machine."""
     monkeypatch.setattr(
         voice_manager.DengjenTextToSpeechSystem,
-        "load_piper_voices_from_nvda_config_dir",
+        "load_all_voices_from_nvda_config_dir",
         classmethod(lambda cls, backend: iter([])),
     )
 
@@ -89,15 +89,15 @@ class TestDialogConstruction:
     def test_dialog_builds(self, dialog):
         assert isinstance(dialog, wx.Dialog)
 
-    def test_it_has_two_notebook_pages(self, dialog):
-        assert dialog.notebookCtrl.GetPageCount() == 2
+    def test_it_has_three_notebook_pages(self, dialog):
+        assert dialog.notebookCtrl.GetPageCount() == 3
 
-    def test_pages_are_labelled_installed_and_download(self, dialog):
+    def test_pages_are_labelled_installed_download_and_kokoro(self, dialog):
         labels = [
             dialog.notebookCtrl.GetPageText(i)
             for i in range(dialog.notebookCtrl.GetPageCount())
         ]
-        assert labels == ["Installed", "Download"]
+        assert labels == ["Installed", "Download", "Kokoro"]
 
     def test_it_has_a_close_button(self, dialog):
         assert dialog.FindWindowById(wx.ID_CANCEL) is not None
@@ -337,8 +337,19 @@ class TestKeyboardAccess:
 
     @pytest.mark.parametrize("page", [0, 1])
     def test_access_keys_do_not_collide_on_a_page(self, dialog, page):
-
-        hidden = _access_keys(dialog.notebookCtrl.GetPage(1 - page))
+        # _access_keys(dialog) recurses the whole tree regardless of which
+        # notebook page is selected, so every *other* page's keys have to be
+        # subtracted -- not just "the one other page" (1 - page), now that a
+        # third (Kokoro) page exists. Kokoro itself isn't parametrized here:
+        # its single button plus the dialog's Close button can't reach this
+        # test's >= 3 minimum, which was calibrated for the two
+        # button-heavy Piper panels.
+        other_pages = (
+            dialog.notebookCtrl.GetPage(i)
+            for i in range(dialog.notebookCtrl.GetPageCount())
+            if i != page
+        )
+        hidden = [key for other in other_pages for key in _access_keys(other)]
         visible = _access_keys(dialog)
         for key in hidden:
             visible.remove(key)

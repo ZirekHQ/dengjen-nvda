@@ -84,6 +84,16 @@ With `Dengjen Neural Voices` selected as your synthesizer, the following appear 
 
 Above 50, the sliders scale up to twice the voice's default for `Length scale` and three times the default for `Noise scale` and `Noise w`. Because 50 always means "this voice's default", a given slider position keeps its meaning when you switch to a different voice.
 
+### Kokoro voices
+
+In addition to Piper voices, this add-on supports Kokoro, a multilingual
+neural voice with 54 built-in presets across English, French, Spanish,
+Hindi, Italian, Japanese, Portuguese, and Mandarin. Install it from the
+Dengjen voice manager's "Kokoro" tab (a single ~340MB download, unlike
+Piper's per-voice downloads); once installed, it appears in NVDA's Voice
+list like any other voice, and its 54 presets are selectable via NVDA's
+"Speaker" setting.
+
 # A note on voice quality
 
 The currently available voices are trained using freely available TTS datasets, which are generally of low quality (mostly public domain audio books or research quality recordings).

@@ -139,9 +139,9 @@ class TestConstruction:
     def test_loads_voices_from_disk_only_once(
         self, configured_voice, fake_backend, monkeypatch
     ):
-        """A previous version called load_piper_voices_from_nvda_config_dir()
+        """A previous version called load_all_voices_from_nvda_config_dir()
         twice back to back in __init__ for no reason."""
-        real_load = driver_module.DengjenTextToSpeechSystem.load_piper_voices_from_nvda_config_dir.__func__
+        real_load = driver_module.DengjenTextToSpeechSystem.load_all_voices_from_nvda_config_dir.__func__
         calls = []
 
         def counting_load(cls, backend):
@@ -150,7 +150,7 @@ class TestConstruction:
 
         monkeypatch.setattr(
             driver_module.DengjenTextToSpeechSystem,
-            "load_piper_voices_from_nvda_config_dir",
+            "load_all_voices_from_nvda_config_dir",
             classmethod(counting_load),
         )
         d = SynthDriver()
@@ -568,3 +568,31 @@ class TestSetVoiceSuccess:
 
         assert driver._SynthDriver__voice == "alex"
         assert driver.tts.voice == "en_US-alex-medium"
+
+
+@pytest.fixture
+def kokoro_voice_dir(tmp_path, monkeypatch):
+    """A second, Kokoro-shaped voice directory alongside the Piper one."""
+    kokoro_dir = tmp_path / "kokoro"
+    monkeypatch.setattr(tts_system, "DENGJEN_KOKORO_VOICES_DIR", str(kokoro_dir))
+    voice_dir = kokoro_dir / "kokoro-multilingual"
+    voice_dir.mkdir(parents=True)
+    (voice_dir / "config.json").write_text("{}", encoding="utf-8")
+    (voice_dir / "voice.json").write_text(
+        '{"model_type": "kokoro", "name": "Kokoro", "language": "en"}',
+        encoding="utf-8",
+    )
+    return kokoro_dir
+
+
+class TestConstructionWithAKokoroVoicePresent:
+    def test_does_not_crash_building_the_voice_list(
+        self, configured_voice, kokoro_voice_dir, fake_backend
+    ):
+        d = SynthDriver()
+        try:
+            assert sorted(d.availableVoices) == sorted(
+                [VOICE_KEY, "kokoro-multilingual"]
+            )
+        finally:
+            d.terminate()
