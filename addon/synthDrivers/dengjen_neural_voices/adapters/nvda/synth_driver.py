@@ -71,14 +71,20 @@ def _bootstrap_backend():  # pragma: no cover
 
 
 class DoneSpeakingTask:
-    __slots__ = ["on_index_reached", "player"]
+    """Waits on every player used by the sequence, not just one -- a
+    mid-sequence LangChangeCommand can switch to a voice with a different
+    sample rate, and each rate gets its own WavePlayer (see
+    _get_or_create_player)."""
 
-    def __init__(self, player, on_index_reached):
-        self.player = player
+    __slots__ = ["on_index_reached", "players"]
+
+    def __init__(self, players, on_index_reached):
+        self.players = players
         self.on_index_reached = on_index_reached
 
     async def __call__(self):
-        await run_in_executor(self.player.idle)
+        for player in self.players:
+            await run_in_executor(player.idle)
         await run_in_executor(self.on_index_reached, None)
 
 
@@ -263,6 +269,7 @@ class SynthDriver(NvdaSynthDriver):
         text_list = []
         index_command_list = []
         default_lang = self.tts.language
+        players_used = {self._player}
         for item in speech_sequence:
             item_type = type(item)
             if item_type is IndexCommand:
@@ -278,13 +285,14 @@ class SynthDriver(NvdaSynthDriver):
             break_task = self._apply_speech_command(item, default_lang)
             if break_task is not None:
                 speech_seq.append(break_task)
+            players_used.add(self._player)
         if any(text_list):
             speech_seq.append(self._create_speech_task(text_list))
         if any(index_command_list):
             speech_seq.append(
                 IndexReachedTask(self._on_index_reached, index_command_list)
             )
-        speech_seq.append(DoneSpeakingTask(self._player, self._on_index_reached))
+        speech_seq.append(DoneSpeakingTask(players_used, self._on_index_reached))
         return speech_seq
 
     def _create_speech_task(self, text_list):
@@ -302,6 +310,8 @@ class SynthDriver(NvdaSynthDriver):
             )
         if item_type is LangChangeCommand:
             self.tts.language = default_lang if item.isDefault else item.lang
+            voice = self.tts.speech_options.voice
+            self._player = self._get_or_create_player(voice.sample_rate)
         elif item_type is RateCommand:
             self.tts.rate = item.newValue
         elif item_type is VolumeCommand:
