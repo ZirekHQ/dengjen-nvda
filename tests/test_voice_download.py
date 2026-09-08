@@ -499,6 +499,12 @@ class TestVoicesCache:
         monkeypatch.setattr(voice_download, "PIPER_VOICES_JSON_LOCAL_CACHE", str(path))
         return path
 
+    @pytest.fixture
+    def bundled_path(self, tmp_path, monkeypatch):
+        path = tmp_path / "bundled-piper-voices.json"
+        monkeypatch.setattr(voice_download, "BUNDLED_PIPER_VOICES_JSON", str(path))
+        return path
+
     def test_get_voices_from_cache_returns_none_when_file_is_missing(self, cache_path):
         assert voice_download._get_voices_from_cache() is None
 
@@ -564,6 +570,58 @@ class TestVoicesCache:
             ]
             is True
         )
+
+    def _offline_request(self, monkeypatch):
+        fake_request = _FakeMureq(get_responses=[RuntimeError("network down")])
+        monkeypatch.setattr(voice_download, "request", fake_request)
+        return fake_request
+
+    def _no_installed_voices(self, monkeypatch):
+        monkeypatch.setattr(
+            voice_download.DengjenTextToSpeechSystem,
+            "load_piper_voices_from_nvda_config_dir",
+            classmethod(lambda cls, backend: []),
+        )
+
+    def test_falls_back_to_bundled_catalog_when_offline_and_no_local_cache(
+        self, cache_path, bundled_path, monkeypatch
+    ):
+        bundled_path.write_text(json.dumps({}), encoding="utf-8")
+        self._offline_request(monkeypatch)
+        self._no_installed_voices(monkeypatch)
+
+        result = voice_download.get_available_voices(force_online=False)
+
+        assert result == []
+
+    def test_falls_back_to_bundled_catalog_when_local_cache_is_corrupt_and_offline(
+        self, cache_path, bundled_path, monkeypatch
+    ):
+        cache_path.write_text("not json", encoding="utf-8")
+        bundled_path.write_text(json.dumps({}), encoding="utf-8")
+        self._offline_request(monkeypatch)
+        self._no_installed_voices(monkeypatch)
+
+        result = voice_download.get_available_voices(force_online=False)
+
+        assert result == []
+
+    def test_forced_refresh_raises_without_falling_back_to_bundled_catalog(
+        self, cache_path, bundled_path, monkeypatch
+    ):
+        bundled_path.write_text(json.dumps({}), encoding="utf-8")
+        self._offline_request(monkeypatch)
+
+        with pytest.raises(RuntimeError, match="network down"):
+            voice_download.get_available_voices(force_online=True)
+
+    def test_raises_when_bundled_catalog_is_also_unavailable(
+        self, cache_path, bundled_path, monkeypatch
+    ):
+        self._offline_request(monkeypatch)
+
+        with pytest.raises(RuntimeError, match="network down"):
+            voice_download.get_available_voices(force_online=False)
 
 
 def _cert_verification_error():

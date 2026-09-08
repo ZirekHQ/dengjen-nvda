@@ -11,6 +11,7 @@ from gui.settingsDialogs import NVDASettingsDialog, SpeechSettingsPanel
 PLUGIN_DIRECTORY = os.path.abspath(os.path.dirname(__file__))
 LIB_DIRECTORY = os.path.join(PLUGIN_DIRECTORY, "lib")
 BIN_DIRECTORY = os.path.join(PLUGIN_DIRECTORY, "bin")
+DATA_DIRECTORY = os.path.join(PLUGIN_DIRECTORY, "data")
 
 
 @contextlib.contextmanager
