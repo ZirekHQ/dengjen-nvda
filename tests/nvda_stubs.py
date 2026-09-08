@@ -34,6 +34,7 @@ import types
 from concurrent.futures import Future as _Future
 from unittest.mock import MagicMock
 
+
 def _stub_module(name: str, **attrs) -> types.ModuleType:
     """Create a plain module stub and register it in sys.modules."""
     mod = types.ModuleType(name)
