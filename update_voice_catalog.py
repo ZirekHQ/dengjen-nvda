@@ -2,8 +2,12 @@ import json
 import sys
 import urllib.request
 
-PIPER_VOICE_LIST_URL = "https://huggingface.co/rhasspy/piper-voices/raw/v1.0.0/voices.json"
-RT_VOICE_LIST_URL = "https://huggingface.co/datasets/mush42/piper-rt/raw/main/voices.json"
+PIPER_VOICE_LIST_URL = (
+    "https://huggingface.co/rhasspy/piper-voices/raw/v1.0.0/voices.json"
+)
+RT_VOICE_LIST_URL = (
+    "https://huggingface.co/datasets/mush42/piper-rt/raw/main/voices.json"
+)
 TARGET_PATH = "addon/synthDrivers/dengjen_neural_voices/data/piper-voices.json"
 
 
