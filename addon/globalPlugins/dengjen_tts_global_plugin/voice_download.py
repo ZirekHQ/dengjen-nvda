@@ -42,6 +42,9 @@ PIPER_VOICE_DOWNLOAD_URL_PREFIX = (
 )
 PIPER_SAMPLES_URL_PREFIX = "https://rhasspy.github.io/piper-samples/samples"
 PIPER_VOICES_JSON_LOCAL_CACHE = os.path.join(DENGJEN_VOICES_DIR, "piper-voices.json")
+# Snapshot refreshed by update_voice_catalog.py before each release; lets
+# get_available_voices() serve a catalog offline on first run.
+BUNDLED_PIPER_VOICES_JSON = os.path.join(helpers.DATA_DIRECTORY, "piper-voices.json")
 RT_VOICE_LIST_URL = (
     "https://huggingface.co/datasets/mush42/piper-rt/raw/main/voices.json"
 )
@@ -732,10 +735,16 @@ def _select_not_installed_voices(voices):
     return not_installed
 
 
-def _get_voices_from_cache():
-    """Return the not-installed voices from the on-disk cache, or None if unreadable."""
+def _get_voices_from_cache(path=None):
+    """Return the not-installed voices from a piper-voices.json file, or None if unreadable.
+
+    Defaults to the on-disk user cache; also used to read the bundled
+    fallback catalog by passing BUNDLED_PIPER_VOICES_JSON.
+    """
+    if path is None:
+        path = PIPER_VOICES_JSON_LOCAL_CACHE
     try:
-        with open(PIPER_VOICES_JSON_LOCAL_CACHE, "rb") as file:
+        with open(path, "rb") as file:
             voices = json.load(file)
     except Exception:
         log.exception("Failed to get voices from local file", exc_info=True)
@@ -763,7 +772,17 @@ def get_available_voices(force_online=False):
         cached_voices = _get_voices_from_cache()
         if cached_voices is not None:
             return cached_voices
-    _refresh_voices_cache()
+    try:
+        _refresh_voices_cache()
+    except Exception:
+        # An explicit "Refresh" request should surface the failure rather
+        # than silently serving a stale bundled snapshot.
+        if force_online:
+            raise
+        bundled_voices = _get_voices_from_cache(BUNDLED_PIPER_VOICES_JSON)
+        if bundled_voices is not None:
+            return bundled_voices
+        raise
     voices = _get_voices_from_cache()
     if voices is None:
         raise RuntimeError("Failed to read the voice list cache that was just written")
