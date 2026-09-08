@@ -190,8 +190,9 @@ jobs:
     - name: Display structure of downloaded files
       run: ls -R
 
-    # Scoped to the previous vX.Y.Z(-beta.N) tag so --generate-notes doesn't pull in
-    # whatever unrelated tag happened to be pushed most recently.
+    # Scoped to the previous vX.Y.Z(-beta.N) tag so notes don't pull in whatever unrelated
+    # tag happened to be pushed most recently. --exclude-drafts keeps an unpublished draft
+    # (semver-shaped or not) from being picked as that baseline.
     - name: Resolve previous release tag
       id: prev
       env:
@@ -199,45 +200,52 @@ jobs:
       run: |
         set -euo pipefail
         TAG=${GITHUB_REF#refs/tags/}
-        previous_tag="$(gh release list --json tagName -q '.[].tagName' \
+        previous_tag="$(gh release list --exclude-drafts --json tagName -q '.[].tagName' \
           | grep -E '^v[0-9]+\.[0-9]+\.[0-9]+(-beta\.[0-9]+)?$' | grep -vFx "$TAG" | sort -rV | head -n1 || true)"
         echo "tag=${previous_tag}" >> "$GITHUB_OUTPUT"
 
-    - name: Create release
+    # Notes come from the generate-notes API directly, not gh release create's
+    # --generate-notes, so a rerun recomputes the same fresh text instead of re-appending
+    # SHA256 onto whatever an earlier run already wrote to the live release body.
+    - name: Generate release notes
       env:
         GH_TOKEN: ${{ github.token }}
         PREVIOUS_TAG: ${{ steps.prev.outputs.tag }}
       run: |
         set -euo pipefail
         TAG=${GITHUB_REF#refs/tags/}
-        notes_args=(--generate-notes)
+        args=(-f tag_name="$TAG")
         if [ -n "$PREVIOUS_TAG" ]; then
-          notes_args=(--generate-notes --notes-start-tag "$PREVIOUS_TAG")
+          args+=(-f previous_tag_name="$PREVIOUS_TAG")
         fi
-        prerelease_args=()
-        if [[ "$TAG" == *-* ]]; then
-          prerelease_args=(--prerelease)
-        fi
-        gh release create "$TAG" \
-          --title "$TAG" \
-          --verify-tag \
-          "${notes_args[@]}" \
-          "${prerelease_args[@]}" \
-          -- *.nvda-addon *.pot
+        gh api "repos/${GITHUB_REPOSITORY}/releases/generate-notes" "${args[@]}" -q .body > changelog.md
+        echo -e "\nSHA256: " >> changelog.md
+        sha256sum -- *.nvda-addon >> changelog.md
 
-    # gh release create's --generate-notes has no way to append extra content in the same
-    # call, hence the follow-up edit to fold the SHA256 (needed for the Add-on Store
-    # submission below) into the notes GitHub already generated.
-    - name: Append SHA256 to release notes
+    # tag-and-release.yml unconditionally re-dispatches this workflow on a retry, including
+    # after a run that already published the release -- `gh release create` on an existing
+    # tag fails outright, so branch to edit+upload instead of erroring out on a rerun.
+    - name: Create or update release
       env:
         GH_TOKEN: ${{ github.token }}
       run: |
         set -euo pipefail
         TAG=${GITHUB_REF#refs/tags/}
-        gh release view "$TAG" --json body -q .body > changelog.md
-        echo -e "\nSHA256: " >> changelog.md
-        sha256sum -- *.nvda-addon >> changelog.md
-        gh release edit "$TAG" --notes-file changelog.md
+        prerelease_args=()
+        if [[ "$TAG" == *-* ]]; then
+          prerelease_args=(--prerelease)
+        fi
+        if gh release view "$TAG" >/dev/null 2>&1; then
+          gh release edit "$TAG" --notes-file changelog.md "${prerelease_args[@]}"
+          gh release upload "$TAG" --clobber -- *.nvda-addon *.pot
+        else
+          gh release create "$TAG" \
+            --title "$TAG" \
+            --verify-tag \
+            --notes-file changelog.md \
+            "${prerelease_args[@]}" \
+            -- *.nvda-addon *.pot
+        fi
 
     - name: Store submission summary
       run: |
