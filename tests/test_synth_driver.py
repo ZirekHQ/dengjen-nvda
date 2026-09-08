@@ -290,6 +290,72 @@ class TestLifecycle:
         driver.pause(True)
         driver._player.pause.assert_called_once_with(True)
 
+    def test_cancel_stops_every_player_from_a_mid_sequence_lang_change(
+        self, configured_voice, fake_backend
+    ):
+        """cancel() must stop every player a just-built sequence might still
+        be using, not just self._player -- _build_speech_tasks can leave
+        self._player pointing at a later voice than whichever task is
+        actually mid-playback when cancel() fires."""
+        second_voice_dir = _write_voice(configured_voice, key="fr_FR-test-medium")
+        second_config_path = str(next(second_voice_dir.glob("*.json")))
+        fake_backend.voices_by_config_path[second_config_path] = LoadedVoice(
+            backend_voice_id="fake-remote-id-fr",
+            supports_streaming_output=False,
+            sample_rate=24000,
+            speakers={},
+            defaults=SynthOptions(
+                speaker=None, length_scale=1.0, noise_scale=0.667, noise_w=0.8
+            ),
+        )
+        driver = SynthDriver()
+        try:
+            first_player = driver._player
+            driver._build_speech_tasks(
+                ["hello", _lang_change_command("fr_FR"), "bonjour"]
+            )
+            second_player = driver._players[24000]
+            first_player.stop = MagicMock()
+            second_player.stop = MagicMock()
+
+            driver.cancel()
+
+            first_player.stop.assert_called_once()
+            second_player.stop.assert_called_once()
+        finally:
+            driver.terminate()
+
+    def test_pause_pauses_every_player_from_a_mid_sequence_lang_change(
+        self, configured_voice, fake_backend
+    ):
+        second_voice_dir = _write_voice(configured_voice, key="fr_FR-test-medium")
+        second_config_path = str(next(second_voice_dir.glob("*.json")))
+        fake_backend.voices_by_config_path[second_config_path] = LoadedVoice(
+            backend_voice_id="fake-remote-id-fr",
+            supports_streaming_output=False,
+            sample_rate=24000,
+            speakers={},
+            defaults=SynthOptions(
+                speaker=None, length_scale=1.0, noise_scale=0.667, noise_w=0.8
+            ),
+        )
+        driver = SynthDriver()
+        try:
+            first_player = driver._player
+            driver._build_speech_tasks(
+                ["hello", _lang_change_command("fr_FR"), "bonjour"]
+            )
+            second_player = driver._players[24000]
+            first_player.pause = MagicMock()
+            second_player.pause = MagicMock()
+
+            driver.pause(True)
+
+            first_player.pause.assert_called_once_with(True)
+            second_player.pause.assert_called_once_with(True)
+        finally:
+            driver.terminate()
+
     def test_terminate_closes_every_player_and_clears_them(self, driver):
         extra_player = MagicMock()
         driver._players["extra"] = extra_player

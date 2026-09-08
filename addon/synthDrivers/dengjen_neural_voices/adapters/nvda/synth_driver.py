@@ -201,6 +201,7 @@ class SynthDriver(NvdaSynthDriver):
         self.tts = None
         self._player = None
         self._players = {}
+        self._active_players = set()
         self._noise_scale_factor = None
         self._length_scale_factor = None
         self._noise_w_factor = None
@@ -239,6 +240,7 @@ class SynthDriver(NvdaSynthDriver):
         self._player = self._get_or_create_player(
             self.tts.speech_options.voice.sample_rate
         )
+        self._active_players = {self._player}
         self.availableLanguages = {v.language for v in self.voices}
         self._voice_map = {v.key: v for v in self.voices}
         self._standard_voice_map = {v.standard_variant_key: v for v in self.voices}
@@ -253,6 +255,7 @@ class SynthDriver(NvdaSynthDriver):
             player.close()
         self._players.clear()
         self._player = None
+        self._active_players = set()
 
     def speak(self, speechSequence):
         with self.tts.create_synthesis_context():
@@ -293,6 +296,11 @@ class SynthDriver(NvdaSynthDriver):
                 IndexReachedTask(self._on_index_reached, index_command_list)
             )
         speech_seq.append(DoneSpeakingTask(players_used, self._on_index_reached))
+        # cancel()/pause() can fire at any point while this sequence plays,
+        # potentially before a later task's mid-sequence voice switch has
+        # actually started playing -- they need every player this sequence
+        # might touch, not just whichever self._player ends up as.
+        self._active_players = players_used
         return speech_seq
 
     def _create_speech_task(self, text_list):
@@ -323,12 +331,12 @@ class SynthDriver(NvdaSynthDriver):
     def cancel(self):
         if self._current_task is not None:
             asyncio_cancel_task(self._current_task)
-        if self._player is not None:
-            self._player.stop()
+        for player in self._active_players:
+            player.stop()
 
     def pause(self, switch):
-        if self._player is not None:
-            self._player.pause(switch)
+        for player in self._active_players:
+            player.pause(switch)
 
     def _on_index_reached(self, index):
         if index is not None:
@@ -517,6 +525,7 @@ class SynthDriver(NvdaSynthDriver):
         DengjenConfig.setdefault(self.voice, {})["variant"] = value
         voice = self.tts.speech_options.voice
         self._player = self._get_or_create_player(voice.sample_rate)
+        self._active_players = {self._player}
 
         self._reapply_scale_settings()
 
