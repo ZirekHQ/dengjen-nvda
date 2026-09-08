@@ -86,6 +86,7 @@ def wait_until(
     """
     deadline = time.monotonic() + timeout
     last: Any = None
+    last_rpc_error: RpcError | None = None
     while time.monotonic() < deadline:
         try:
             last = predicate()
@@ -93,13 +94,14 @@ def wait_until(
             raise
         except RpcError as exc:
             last = exc
+            last_rpc_error = exc
         else:
             if last:
                 return last
         time.sleep(interval)
     raise AssertionError(
         f"timed out waiting for {description}; last seen: {last!r}"
-    ) from (last if isinstance(last, Exception) else None)
+    ) from last_rpc_error
 
 
 def voice_manager_state(nvda, expr: str) -> Any:

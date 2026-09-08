@@ -49,6 +49,26 @@ def test_times_out_with_the_last_rpc_error_attached(monkeypatch):
     assert excinfo.value.__cause__ is exc
 
 
+def test_a_later_falsy_result_does_not_drop_an_earlier_rpc_error(monkeypatch):
+    exc = RpcError("NVDA between windows")
+    attempts = iter([exc, False])
+
+    def predicate():
+        item = next(attempts)
+        if isinstance(item, Exception):
+            raise item
+        return item
+
+    monkeypatch.setattr("time.sleep", lambda _seconds: None)
+    clock = iter([0, 0, 0, 10])
+    monkeypatch.setattr("time.monotonic", lambda: next(clock))
+
+    with pytest.raises(AssertionError) as excinfo:
+        wait_until(predicate, timeout=5, description="the flaky state")
+
+    assert excinfo.value.__cause__ is exc
+
+
 def test_an_auth_error_is_not_retried(monkeypatch):
     exc = AuthError("stale token")
     calls = 0
