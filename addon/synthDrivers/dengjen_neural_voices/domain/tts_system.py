@@ -279,7 +279,7 @@ class DengjenTextToSpeechSystem:
             try:
                 voice = self.voices[0]
             except IndexError:
-                raise VoiceNotFoundError("No Piper voices found")
+                raise VoiceNotFoundError("No voices found")
             self.speech_options = SpeechOptions(voice=voice)
 
     @contextmanager

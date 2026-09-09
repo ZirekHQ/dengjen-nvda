@@ -22,6 +22,7 @@ from . import (
     DengjenGrpcBackend,
     DengjenTextToSpeechSystem,
     aio,
+    download_infra,
     helpers,
     model_catalog,
     voice_download,
@@ -280,7 +281,7 @@ class InstalledDengjenVoicesPanel(SizedPanel):
             self.update_voices_list(set_focus=True, invalidate_synth_voices_cache=True)
 
 
-class OnlineDengjenVoicesPanel(SizedPanel):
+class OnlinePiperVoicesPanel(SizedPanel):
     def __init__(self, parent):
         super().__init__(parent, -1)
         self.__already_populated = threading.Event()
@@ -338,7 +339,7 @@ class OnlineDengjenVoicesPanel(SizedPanel):
         if not force_online and self.__already_populated.is_set():
             return
         AsyncSnakDialog(
-            executor=voice_download.THREAD_POOL_EXECUTOR,
+            executor=download_infra.THREAD_POOL_EXECUTOR,
             func=functools.partial(
                 voice_download.get_available_voices, force_online=force_online
             ),
@@ -523,7 +524,7 @@ class DengjenVoiceManagerDialog(SimpleDialog):
             ),
             (
                 _("Download"),
-                OnlineDengjenVoicesPanel(self.notebookCtrl),
+                OnlinePiperVoicesPanel(self.notebookCtrl),
             ),
             (
                 _("Kokoro"),
@@ -560,7 +561,7 @@ class DengjenVoiceManagerDialog(SimpleDialog):
 
 
 def play_remote_mp3(mp3_url):
-    resp = voice_download.request.get(mp3_url)
+    resp = download_infra.request.get(mp3_url)
     resp.raise_for_status()
     decoded_file = miniaudio.decode(resp.body, nchannels=1, sample_rate=22050)
     with tempfile.TemporaryDirectory() as tempdir:

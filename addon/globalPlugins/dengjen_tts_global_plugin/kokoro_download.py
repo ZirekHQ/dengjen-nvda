@@ -25,11 +25,11 @@ addonHandler.initTranslation()
 from dengjen_neural_voices.const import DENGJEN_KOKORO_VOICES_DIR
 from dengjen_neural_voices.domain import voice_metadata
 
-from .voice_download import (
-    _BaseVoiceDownloader,
-    _follow_redirects,
-    _stream_to_file,
-    _VoiceInstallError,
+from .download_infra import (
+    BaseVoiceDownloader,
+    VoiceInstallError,
+    follow_redirects,
+    stream_to_file,
 )
 
 KOKORO_REPO_RESOLVE_URL = (
@@ -122,12 +122,12 @@ def _download_to_file(relative_path, target_path):
     simultaneously would be material memory pressure inside NVDA."""
     url = f"{KOKORO_REPO_RESOLVE_URL}/{relative_path}"
     target_path.parent.mkdir(parents=True, exist_ok=True)
-    with _follow_redirects(url, relative_path) as response:
+    with follow_redirects(url, relative_path) as response:
         total_size = int(response.getheader("Content-Length", 0))
-        _stream_to_file(response, target_path, total_size, lambda _percent: None)
+        stream_to_file(response, target_path, total_size, lambda _percent: None)
 
 
-class KokoroVoiceDownloader(_BaseVoiceDownloader):
+class KokoroVoiceDownloader(BaseVoiceDownloader):
     """Downloads the shared model + vocab + every preset embedding in one
     install. `voice` is unused by the base class beyond `.key` (used in
     progress/success/failure message formatting)."""
@@ -215,7 +215,7 @@ class KokoroVoiceDownloader(_BaseVoiceDownloader):
             )
         except OSError as exc:
             log.exception("Failed to install the Kokoro voice", exc_info=True)
-            raise _VoiceInstallError from exc
+            raise VoiceInstallError from exc
 
 
 class KokoroCatalog:

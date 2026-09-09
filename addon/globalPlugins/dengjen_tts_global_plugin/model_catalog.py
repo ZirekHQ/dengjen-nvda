@@ -1,7 +1,7 @@
 """ModelCatalog: the seam a `dengjen-tts` model backend implements so the
 voice manager can check install state without hardcoding Piper's shape.
 
-Piper's own browsing/preview/download UI (OnlineDengjenVoicesPanel) predates
+Piper's own browsing/preview/download UI (OnlinePiperVoicesPanel) predates
 this protocol and isn't rebuilt on top of it -- PiperCatalog exists to prove
 the protocol against a second, structurally different backend (Kokoro, see
 kokoro_download.py), not to replace working UI.
@@ -30,7 +30,7 @@ class PiperCatalog:
 
     def install(self, success_callback) -> None:
         raise NotImplementedError(
-            "Piper voices are installed per-voice via OnlineDengjenVoicesPanel, "
+            "Piper voices are installed per-voice via OnlinePiperVoicesPanel, "
             "not through ModelCatalog.install()"
         )
 

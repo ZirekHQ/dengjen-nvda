@@ -66,7 +66,7 @@ class AsyncEngine:
             if self._executor is None or self._executor_is_shutdown:
                 max_workers = max(1, (os.cpu_count() or 2) // 2)
                 self._executor = ThreadPoolExecutor(
-                    max_workers=max_workers, thread_name_prefix="piper4nvda_executor"
+                    max_workers=max_workers, thread_name_prefix="dengjen_executor"
                 )
                 self._executor_is_shutdown = False
 
@@ -95,7 +95,7 @@ class AsyncEngine:
                 target=_thread_target,
                 args=(self._event_loop,),
                 daemon=True,
-                name="piper4nvda_asyncio",
+                name="dengjen_asyncio",
             )
             self._loop_thread.start()
             if not self._loop_running.wait(timeout=LOOP_STARTUP_TIMEOUT):

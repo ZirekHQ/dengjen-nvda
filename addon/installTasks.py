@@ -19,17 +19,17 @@ addonHandler.initTranslation()
 
 
 _DIR = os.path.abspath(os.path.dirname(__file__))
-_PIPER_SYNTH_DIR = os.path.join(_DIR, "synthDrivers", "dengjen_neural_voices")
-LIB_DIR = os.path.join(_PIPER_SYNTH_DIR, "lib")
-BIN_DIR = os.path.join(_PIPER_SYNTH_DIR, "bin")
+_SYNTH_DRIVER_DIR = os.path.join(_DIR, "synthDrivers", "dengjen_neural_voices")
+LIB_DIR = os.path.join(_SYNTH_DRIVER_DIR, "lib")
+BIN_DIR = os.path.join(_SYNTH_DRIVER_DIR, "bin")
 
 
-def _load_voice_migration(piper_synth_dir=_PIPER_SYNTH_DIR):
+def _load_voice_migration(synth_driver_dir=_SYNTH_DRIVER_DIR):
     """By file path, not import: the synth package pulls in grpc and the
     bundled Windows libraries at import time, which install must not need."""
     spec = importlib.util.spec_from_file_location(
         "_dengjen_voice_migration",
-        os.path.join(piper_synth_dir, "voice_migration.py"),
+        os.path.join(synth_driver_dir, "voice_migration.py"),
     )
     module = importlib.util.module_from_spec(spec)
     spec.loader.exec_module(module)
@@ -37,7 +37,7 @@ def _load_voice_migration(piper_synth_dir=_PIPER_SYNTH_DIR):
 
 
 voice_migration = _load_voice_migration()
-del _DIR, _PIPER_SYNTH_DIR
+del _DIR, _SYNTH_DRIVER_DIR
 
 OLD_ADDON_NAME = voice_migration.OLD_ADDON_NAME
 CONFIG_SECTION = "dengjen_neural_voices"
