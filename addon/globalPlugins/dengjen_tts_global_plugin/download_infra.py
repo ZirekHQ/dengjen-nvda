@@ -136,16 +136,18 @@ def resumable_partial_size(target_file, expected_size):
 CONTENT_RANGE_TOTAL_REGEX = re.compile(r"bytes \d+-\d+/(\d+)")
 
 
-def archive_total_size(response, resume_offset):
+def archive_total_size(response):
     """The archive's full size, for a request that may itself be a resume.
 
     A 206 reports only the remaining bytes via Content-Length, so the total
     comes from Content-Range's `.../<total>` instead; a fresh 200 reports the
-    full size directly.
+    full size directly. An unparseable or wildcard Content-Range yields 0
+    (unknown), rather than a resume offset that would overshoot the max on
+    progress updates and fail the post-download size check.
     """
     if response.status == 206:
         match = CONTENT_RANGE_TOTAL_REGEX.match(response.getheader("Content-Range", ""))
-        return int(match.group(1)) if match else resume_offset
+        return int(match.group(1)) if match else 0
     return int(response.getheader("Content-Length", 0))
 
 

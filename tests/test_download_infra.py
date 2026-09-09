@@ -206,6 +206,29 @@ class TestResumablePartialSize:
         assert download_infra.resumable_partial_size(str(target), 0) == 100
 
 
+class TestArchiveTotalSize:
+    """`archive_total_size` derives the full archive size from a response
+    that may itself be a resumed (206) request."""
+
+    def test_returns_content_length_for_a_fresh_200(self):
+        response = _FakeResponse(status=200, headers={"Content-Length": "1234"})
+        assert download_infra.archive_total_size(response) == 1234
+
+    def test_parses_the_total_from_a_206_content_range(self):
+        response = _FakeResponse(
+            status=206, headers={"Content-Range": "bytes 500-999/1234"}
+        )
+        assert download_infra.archive_total_size(response) == 1234
+
+    def test_returns_zero_for_an_unparseable_206_content_range(self):
+        response = _FakeResponse(status=206, headers={"Content-Range": "bytes */1234x"})
+        assert download_infra.archive_total_size(response) == 0
+
+    def test_returns_zero_when_a_206_omits_content_range(self):
+        response = _FakeResponse(status=206, headers={})
+        assert download_infra.archive_total_size(response) == 0
+
+
 class TestStreamToFileResume:
     """`stream_to_file` appends to a partial file when the server honors the
     Range request (206), and restarts from scratch when it doesn't (issue #167)."""

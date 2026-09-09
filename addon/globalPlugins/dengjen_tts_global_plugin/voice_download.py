@@ -338,7 +338,7 @@ class PiperRTVoiceDownloader(BaseVoiceDownloader):
             with follow_redirects(
                 download_url, voice_name, headers=headers
             ) as response:
-                expected_size = archive_total_size(response, resume_offset)
+                expected_size = archive_total_size(response)
                 stream_to_file(
                     response,
                     target_file,
@@ -354,7 +354,7 @@ class PiperRTVoiceDownloader(BaseVoiceDownloader):
                 raise
             Path(target_file).unlink(missing_ok=True)
             with follow_redirects(download_url, voice_name) as response:
-                expected_size = archive_total_size(response, 0)
+                expected_size = archive_total_size(response)
                 stream_to_file(response, target_file, expected_size, progress_callback)
 
         return target_file, expected_size
