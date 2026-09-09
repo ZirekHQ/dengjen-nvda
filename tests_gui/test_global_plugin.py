@@ -155,11 +155,17 @@ class TestOnFirstRunVoiceInstalled:
     def test_reinitializes_the_active_dengjen_synth(
         self, plugin, plugin_module, monkeypatch
     ):
+        # terminate()'s call record can't be read off the mock after this
+        # test's own __init__() call below -- that call re-runs
+        # NonCallableMock.__init__ on the same instance, which resets its
+        # children's call tracking. An independent side effect survives it.
+        calls = []
         synth = MagicMock()
         synth.name = "dengjen_neural_voices"
+        synth.terminate.side_effect = lambda: calls.append("terminate")
         monkeypatch.setattr(plugin_module.synthDriverHandler, "getSynth", lambda: synth)
         plugin._on_first_run_voice_installed("en_US-amy-low")
-        assert synth.terminate.called
+        assert calls == ["terminate"]
 
     def test_leaves_a_different_active_synth_alone(
         self, plugin, plugin_module, monkeypatch
