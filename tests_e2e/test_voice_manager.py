@@ -156,9 +156,14 @@ def downloaded_voice_key(nvda_session, addon_under_test):
     for _ in range(rt_index):
         nvda.keys.press("downArrow")
 
-    online_key = voice_manager_state(
-        nvda,
-        "manager.notebookCtrl.GetPage(1).voices_list.get_selected().key",
+    online_key = wait_until(
+        lambda: voice_manager_state(
+            nvda,
+            "(manager and manager.notebookCtrl.GetPage(1)"
+            ".voices_list.get_selected().key) or None",
+        ),
+        timeout=10,
+        description="the selected online voice key",
     )
 
     nvda.keys.press_all("tab", "tab", "tab")
