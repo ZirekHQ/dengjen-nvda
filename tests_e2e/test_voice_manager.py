@@ -55,10 +55,12 @@ def test_install_is_two_phase_and_completes_on_restart(
 def test_the_no_voice_modal_appears_and_no_declines_it(
     nvda, addon_under_test, assert_no_unexpected_errors
 ):
-    """_perform_voice_check fires a real, blocking gui.messageBox 3s after
-    startup when no voice is installed (__init__.py:58-74). This is exactly
-    the behavior tests_gui/test_global_plugin.py cannot prove, since it
-    mocks gui.messageBox so the call never actually blocks."""
+    """_perform_voice_check calls _ask_first_run_voice_action, which shows a
+    real, blocking wx.MessageDialog 3s after startup when no voice is
+    installed (__init__.py:68-106). This is exactly the behavior
+    tests_gui/test_global_plugin.py cannot prove, since it monkeypatches
+    _ask_first_run_voice_action outright rather than risk a real ShowModal
+    hanging the test run."""
     nvda.restart()
 
     before = nvda.speech.index()
@@ -96,7 +98,7 @@ def downloaded_voice_key(nvda_session, addon_under_test):
     nvda.restart()
     before = nvda.speech.index()
     nvda.speech.wait_for(NO_VOICE_MODAL_TEXT, timeout=15, since=before)
-    nvda.keys.press("y")
+    nvda.keys.press("o")
 
     nvda.speech.wait_for(VOICE_MANAGER_TITLE, timeout=10, since=before)
 

@@ -18,6 +18,9 @@ import pytest
 if sys.platform != "win32":
     pytest.skip("real wxPython is Windows-only here", allow_module_level=True)
 
+import gui
+import wx
+
 
 @pytest.fixture
 def plugin_module(gui_plugin_package):
@@ -77,32 +80,99 @@ class TestMenuLifecycle:
 
 
 class TestVoiceCheck:
-    def test_it_prompts_when_no_voice_is_installed(
-        self, plugin, nvda_gui, no_installed_voices, monkeypatch
-    ):
-        opened = []
-        monkeypatch.setattr(plugin, "on_manager", lambda evt: opened.append(evt))
+    """_ask_first_run_voice_action shows a real wx.MessageDialog via
+    gui.runScriptModalDialog, which nvda_gui mocks -- so every test here
+    that needs a user choice grabs the completion callback from that mock's
+    call and fires it directly, the same technique
+    tests_gui/test_voice_manager_dialog.py uses for its file dialog."""
+
+    @pytest.fixture(autouse=True)
+    def _destroy_the_dialog(self):
+        # gui.runScriptModalDialog is mocked here, so the real Destroy() it
+        # would otherwise do after the dialog closes never runs.
+        yield
+        if gui.runScriptModalDialog.called:
+            gui.runScriptModalDialog.call_args.args[0].Destroy()
+
+    def _choose(self, retval):
+        callback = gui.runScriptModalDialog.call_args.args[1]
+        callback(retval)
+
+    def test_it_asks_when_no_voice_is_installed(self, plugin, no_installed_voices):
         plugin._perform_voice_check()
-
-        import gui
-
-        assert gui.messageBox.called
-        assert len(opened) == 1
+        assert gui.runScriptModalDialog.called
 
     def test_it_stays_quiet_when_a_voice_is_installed(
-        self, plugin, one_installed_voice, monkeypatch
+        self, plugin, one_installed_voice
     ):
-        import gui
-
-        gui.messageBox.reset_mock()
         plugin._perform_voice_check()
-        assert not gui.messageBox.called
+        assert not gui.runScriptModalDialog.called
 
     def test_it_stays_quiet_once_the_manager_has_been_opened(
         self, plugin, no_installed_voices
     ):
-        import gui
-
         plugin._GlobalPlugin__voice_manager_shown = True
         plugin._perform_voice_check()
-        assert not gui.messageBox.called
+        assert not gui.runScriptModalDialog.called
+
+    def test_choosing_manager_opens_it(self, plugin, no_installed_voices, monkeypatch):
+        opened = []
+        monkeypatch.setattr(plugin, "on_manager", lambda evt: opened.append(evt))
+        plugin._perform_voice_check()
+        self._choose(wx.ID_YES)
+        assert len(opened) == 1
+
+    def test_choosing_local_file_installs_from_a_local_file(
+        self, plugin, plugin_module, no_installed_voices, monkeypatch
+    ):
+        calls = []
+        monkeypatch.setattr(
+            plugin_module,
+            "install_voice_from_local_file",
+            lambda **kwargs: calls.append(kwargs),
+        )
+        plugin._perform_voice_check()
+        self._choose(wx.ID_NO)
+        assert calls == [{"on_installed": plugin._on_first_run_voice_installed}]
+
+    def test_choosing_not_now_does_nothing(
+        self, plugin, plugin_module, no_installed_voices, monkeypatch
+    ):
+        opened = []
+        installed = []
+        monkeypatch.setattr(plugin, "on_manager", lambda evt: opened.append(evt))
+        monkeypatch.setattr(
+            plugin_module,
+            "install_voice_from_local_file",
+            lambda **kwargs: installed.append(kwargs),
+        )
+        plugin._perform_voice_check()
+        self._choose(wx.ID_CANCEL)
+        assert opened == []
+        assert installed == []
+
+
+class TestOnFirstRunVoiceInstalled:
+    def test_reinitializes_the_active_dengjen_synth(
+        self, plugin, plugin_module, monkeypatch
+    ):
+        # terminate()'s call record can't be read off the mock after this
+        # test's own __init__() call below -- that call re-runs
+        # NonCallableMock.__init__ on the same instance, which resets its
+        # children's call tracking. An independent side effect survives it.
+        calls = []
+        synth = MagicMock()
+        synth.name = "dengjen_neural_voices"
+        synth.terminate.side_effect = lambda: calls.append("terminate")
+        monkeypatch.setattr(plugin_module.synthDriverHandler, "getSynth", lambda: synth)
+        plugin._on_first_run_voice_installed("en_US-amy-low")
+        assert calls == ["terminate"]
+
+    def test_leaves_a_different_active_synth_alone(
+        self, plugin, plugin_module, monkeypatch
+    ):
+        synth = MagicMock()
+        synth.name = "espeak"
+        monkeypatch.setattr(plugin_module.synthDriverHandler, "getSynth", lambda: synth)
+        plugin._on_first_run_voice_installed("en_US-amy-low")
+        assert not synth.terminate.called

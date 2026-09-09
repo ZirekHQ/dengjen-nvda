@@ -8,6 +8,7 @@ import addonHandler
 import core
 import globalPluginHandler
 import gui
+import synthDriverHandler
 import wx
 from logHandler import log
 
@@ -41,7 +42,7 @@ __all__ = [
     "voice_migration",
 ]
 
-from .voice_manager import DengjenVoiceManagerDialog
+from .voice_manager import DengjenVoiceManagerDialog, install_voice_from_local_file
 
 
 class GlobalPlugin(globalPluginHandler.GlobalPlugin):
@@ -67,22 +68,52 @@ class GlobalPlugin(globalPluginHandler.GlobalPlugin):
     def _perform_voice_check(self):
         if self.__voice_manager_shown:
             return
-        if not any(
+        if any(
             DengjenTextToSpeechSystem.load_all_voices_from_nvda_config_dir(
                 DengjenGrpcBackend()
             )
         ):
-            retval = gui.messageBox(
-                _(
-                    "No Dengjen voice was found.\n"
-                    "You can preview and download voices from the voice manager.\n"
-                    "Do you want to open the voice manager now?"
-                ),
-                _("Dengjen Neural Voices"),
-                wx.YES_NO | wx.ICON_WARNING,
+            return
+        self._ask_first_run_voice_action()
+
+    def _ask_first_run_voice_action(self):
+        """Yes/No/Cancel maps to open-manager/install-local/not-now. A plain
+        wx.MessageDialog, not gui.messageBox, since the latter has no way to
+        relabel its buttons for a three-way choice. Shown via
+        runScriptModalDialog, not ShowModal(), since this runs from the
+        startup path and must not block it; runScriptModalDialog also owns
+        Destroy(), so this doesn't call it."""
+        dlg = wx.MessageDialog(
+            gui.mainFrame,
+            _(
+                "No Dengjen voice was found.\n"
+                "You can download a voice online, or install one from a "
+                "local archive if you already have one."
+            ),
+            _("Dengjen Neural Voices"),
+            wx.YES_NO | wx.CANCEL | wx.ICON_WARNING,
+        )
+        dlg.SetYesNoCancelLabels(
+            _("&Open voice manager"), _("&Install from local file"), _("Not &now")
+        )
+        gui.runScriptModalDialog(dlg, self._on_first_run_voice_action_chosen)
+
+    def _on_first_run_voice_action_chosen(self, retval):
+        action = {wx.ID_YES: "manager", wx.ID_NO: "local_file"}.get(retval)
+        if action == "manager":
+            self.on_manager(None)
+        elif action == "local_file":
+            install_voice_from_local_file(
+                on_installed=self._on_first_run_voice_installed
             )
-            if retval == wx.YES:
-                self.on_manager(None)
+
+    def _on_first_run_voice_installed(self, voice_key):
+        # SynthDriver.voices is a snapshot taken at construction time, so the
+        # just-installed voice stays invisible until the driver rebuilds it.
+        synth = synthDriverHandler.getSynth()
+        if "dengjen" in synth.name.lower():
+            synth.terminate()
+            synth.__init__()
 
     def terminate(self):
         try:

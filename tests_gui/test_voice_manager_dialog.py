@@ -166,6 +166,84 @@ class TestInstalledPanelControls:
         assert gui.runScriptModalDialog.called
 
 
+class TestInstallVoiceFromLocalFile:
+    """install_voice_from_local_file is the panel's tar-install flow pulled
+    out into a free function, so a first-run "no voice found" check can
+    offer it without going through the voice manager dialog at all.
+    gui.runScriptModalDialog is mocked (see nvda_gui), so the completion
+    callback it would invoke is grabbed from the mock's call and fired
+    directly to simulate the user finishing the file dialog."""
+
+    def test_it_opens_a_file_dialog(self, voice_manager, nvda_gui):
+        voice_manager.install_voice_from_local_file()
+        assert gui.runScriptModalDialog.called
+        opened_dialog = gui.runScriptModalDialog.call_args.args[0]
+        assert isinstance(opened_dialog, wx.FileDialog)
+        opened_dialog.Destroy()
+
+    def _complete_dialog(self, path, res=wx.ID_OK):
+        # gui.runScriptModalDialog is mocked here, so the real Destroy() it
+        # would otherwise do after the dialog closes never runs.
+        dialog = gui.runScriptModalDialog.call_args.args[0]
+        dialog.SetPath(path)
+        callback = gui.runScriptModalDialog.call_args.args[1]
+        try:
+            callback(res)
+        finally:
+            dialog.Destroy()
+
+    def test_cancel_does_not_install(self, voice_manager, nvda_gui, monkeypatch):
+        install = MagicMock()
+        monkeypatch.setattr(
+            voice_manager.voice_download, "install_voice_from_tar_archive", install
+        )
+        voice_manager.install_voice_from_local_file()
+        self._complete_dialog("/tmp/whatever.tar.gz", res=wx.ID_CANCEL)
+        assert not install.called
+
+    def test_empty_path_does_not_install(self, voice_manager, nvda_gui, monkeypatch):
+        install = MagicMock()
+        monkeypatch.setattr(
+            voice_manager.voice_download, "install_voice_from_tar_archive", install
+        )
+        voice_manager.install_voice_from_local_file()
+        self._complete_dialog("")
+        assert not install.called
+
+    def test_success_calls_on_installed_with_the_voice_key(
+        self, voice_manager, nvda_gui, monkeypatch, tmp_path
+    ):
+        monkeypatch.setattr(
+            voice_manager.voice_download,
+            "install_voice_from_tar_archive",
+            lambda filepath, voices_dir: "en_US-amy-low",
+        )
+        installed = []
+        voice_manager.install_voice_from_local_file(on_installed=installed.append)
+        self._complete_dialog(str(tmp_path / "voice.tar.gz"))
+
+        assert installed == ["en_US-amy-low"]
+        assert gui.messageBox.called
+        assert "amy" in gui.messageBox.call_args.args[0]
+
+    def test_failure_shows_an_error_and_skips_on_installed(
+        self, voice_manager, nvda_gui, monkeypatch, tmp_path
+    ):
+        def _raise(filepath, voices_dir):
+            raise ValueError("corrupt archive")
+
+        monkeypatch.setattr(
+            voice_manager.voice_download, "install_voice_from_tar_archive", _raise
+        )
+        installed = []
+        voice_manager.install_voice_from_local_file(on_installed=installed.append)
+        self._complete_dialog(str(tmp_path / "voice.tar.gz"))
+
+        assert installed == []
+        assert gui.messageBox.called
+        assert gui.messageBox.call_args.kwargs["style"] == wx.ICON_ERROR
+
+
 class TestOnlinePanelControls:
     @pytest.fixture
     def panel(self, dialog):
