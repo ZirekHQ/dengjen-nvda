@@ -79,7 +79,7 @@ class TestModulePaths:
 
     def test_private_path_temporaries_are_cleaned_off_the_module(self):
         assert not hasattr(install_tasks, "_DIR")
-        assert not hasattr(install_tasks, "_PIPER_SYNTH_DIR")
+        assert not hasattr(install_tasks, "_SYNTH_DRIVER_DIR")
 
 
 class TestForceKillDengjenGrpcServer:

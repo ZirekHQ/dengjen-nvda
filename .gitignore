@@ -10,6 +10,7 @@ manifest.ini
 .sconsign.dblite
 /[0-9]*.[0-9]*.[0-9]*.json
 .venv/
+.venv-py313/
 .idea
 .coverage
 coverage.xml

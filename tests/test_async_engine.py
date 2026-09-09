@@ -152,7 +152,7 @@ class TestCallThreaded:
 
         name = which_thread().result(timeout=5)
         assert name != threading.current_thread().name
-        assert name.startswith("piper4nvda_executor")
+        assert name.startswith("dengjen_executor")
 
     def test_preserves_the_wrapped_function_metadata(self, running_engine):
         @running_engine.call_threaded

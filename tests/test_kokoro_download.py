@@ -1,8 +1,8 @@
 """
 Tests for kokoro_download.py: generates the exact config.json dengjen-tts's
 kokoro::config::load_config expects, and drives the download/install via the
-existing _BaseVoiceDownloader machinery. Network is never exercised here --
-_do_download_file/_stream_to_file are exercised by voice_download.py's own
+existing BaseVoiceDownloader machinery. Network is never exercised here --
+_do_download_file/stream_to_file are exercised by voice_download.py's own
 tests already; these tests cover kokoro_download.py's own logic only.
 """
 
@@ -108,7 +108,7 @@ class TestKokoroVoiceDownloaderInstall:
             },
         }
 
-        with pytest.raises(kokoro_download._VoiceInstallError):
+        with pytest.raises(kokoro_download.VoiceInstallError):
             downloader._install(result)
 
         install_dir = tmp_path / "kokoro-multilingual"

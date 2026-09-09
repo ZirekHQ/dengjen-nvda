@@ -74,7 +74,7 @@ def offline(voice_manager, monkeypatch, sync_executor):
         voice_manager.voice_download, "get_available_voices", lambda **kw: []
     )
     monkeypatch.setattr(
-        voice_manager.voice_download, "THREAD_POOL_EXECUTOR", sync_executor
+        voice_manager.download_infra, "THREAD_POOL_EXECUTOR", sync_executor
     )
 
 
@@ -238,7 +238,7 @@ class TestOnlinePanelControls:
             fake_get_available_voices,
         )
         monkeypatch.setattr(
-            voice_manager.voice_download, "THREAD_POOL_EXECUTOR", sync_executor
+            voice_manager.download_infra, "THREAD_POOL_EXECUTOR", sync_executor
         )
 
         refresh_btn = _find_child_of_type(panel, wx.Button)
@@ -424,7 +424,7 @@ class TestNotebookPageChanged:
             fake_get_available_voices,
         )
         monkeypatch.setattr(
-            voice_manager.voice_download, "THREAD_POOL_EXECUTOR", sync_executor
+            voice_manager.download_infra, "THREAD_POOL_EXECUTOR", sync_executor
         )
         online_panel = dialog.notebookCtrl.GetPage(1)
 

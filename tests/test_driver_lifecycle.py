@@ -25,7 +25,7 @@ _GRPC_CLIENT_PATH = os.path.join(_PKG_DIR, "adapters", "dengjen_grpc", "__init__
 _SHIM_INIT_PATH = os.path.join(_PKG_DIR, "__init__.py")
 _SYNTH_DRIVER_PATH = os.path.join(_PKG_DIR, "adapters", "nvda", "synth_driver.py")
 
-_LOOP_THREAD_NAME = "piper4nvda_asyncio"
+_LOOP_THREAD_NAME = "dengjen_asyncio"
 
 
 def _load_module_function(path, name, namespace):
