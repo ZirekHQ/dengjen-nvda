@@ -25,11 +25,6 @@ VOICE_MANAGER_TITLE = "dengjen voice manager"
 VOICE_DOWNLOADED_TITLE = "Voice downloaded"
 
 
-_VOICE_MANAGER_DIALOG = (
-    "next(w for w in wx.GetTopLevelWindows() if hasattr(w, 'notebookCtrl'))"
-)
-
-
 @pytest.mark.fresh_nvda
 def test_install_is_two_phase_and_completes_on_restart(
     nvda, addon_bundle, assert_no_unexpected_errors
@@ -107,9 +102,7 @@ def downloaded_voice_key(nvda_session, addon_under_test):
         nvda,
         "control+tab",
         lambda: (
-            voice_manager_state(
-                nvda, f"{_VOICE_MANAGER_DIALOG}.notebookCtrl.GetSelection()"
-            )
+            voice_manager_state(nvda, "manager and manager.notebookCtrl.GetSelection()")
             == 1
         ),
         description="the notebook to switch to the Download tab",
@@ -120,7 +113,8 @@ def downloaded_voice_key(nvda_session, addon_under_test):
         lambda: (
             voice_manager_state(
                 nvda,
-                f"{_VOICE_MANAGER_DIALOG}.notebookCtrl.GetPage(1).language_choice.GetCount()",
+                "(manager and manager.notebookCtrl.GetPage(1)"
+                ".language_choice.GetCount()) or 0",
             )
             > 0
         ),
@@ -134,7 +128,8 @@ def downloaded_voice_key(nvda_session, addon_under_test):
         lambda: (
             voice_manager_state(
                 nvda,
-                f"{_VOICE_MANAGER_DIALOG}.notebookCtrl.GetPage(1).voices_list.GetItemCount()",
+                "(manager and manager.notebookCtrl.GetPage(1)"
+                ".voices_list.GetItemCount()) or 0",
             )
             > 0
         ),
@@ -146,7 +141,8 @@ def downloaded_voice_key(nvda_session, addon_under_test):
         nvda,
         "next("
         "  (i for i, v in enumerate("
-        f"    {_VOICE_MANAGER_DIALOG}.notebookCtrl.GetPage(1).voices_list._objects"
+        "    manager.notebookCtrl.GetPage(1).voices_list._objects"
+        "    if manager else []"
         "  )"
         "  if v.has_rt_variant and v.num_speakers <= 1),"
         "  None"
@@ -160,9 +156,14 @@ def downloaded_voice_key(nvda_session, addon_under_test):
     for _ in range(rt_index):
         nvda.keys.press("downArrow")
 
-    online_key = voice_manager_state(
-        nvda,
-        f"{_VOICE_MANAGER_DIALOG}.notebookCtrl.GetPage(1).voices_list.get_selected().key",
+    online_key = wait_until(
+        lambda: voice_manager_state(
+            nvda,
+            "(manager and manager.notebookCtrl.GetPage(1)"
+            ".voices_list.get_selected().key) or None",
+        ),
+        timeout=10,
+        description="the selected online voice key",
     )
 
     nvda.keys.press_all("tab", "tab", "tab")
@@ -212,9 +213,7 @@ def test_downloading_the_fast_variant_voice_installs_it(
         nvda,
         "control+tab",
         lambda: (
-            voice_manager_state(
-                nvda, f"{_VOICE_MANAGER_DIALOG}.notebookCtrl.GetSelection()"
-            )
+            voice_manager_state(nvda, "manager and manager.notebookCtrl.GetSelection()")
             == 0
         ),
         description="the notebook to switch to the Installed tab",
@@ -223,7 +222,8 @@ def test_downloading_the_fast_variant_voice_installs_it(
     installed_keys = wait_until(
         lambda: voice_manager_state(
             nvda,
-            f"[v.key for v in {_VOICE_MANAGER_DIALOG}.notebookCtrl.GetPage(0).voices_list._objects]",
+            "[v.key for v in (manager.notebookCtrl.GetPage(0)"
+            ".voices_list._objects if manager else [])]",
         ),
         timeout=15,
         description="the Installed tab to list the just-downloaded voice",
@@ -235,8 +235,7 @@ def test_downloading_the_fast_variant_voice_installs_it(
 KOKORO_TAB_INDEX = 2
 KOKORO_VOICE_KEY = "kokoro-multilingual"
 # ~350MB (full-precision model + 54 preset embeddings) over the CI network --
-# generous on purpose, matching this whole job's tolerance for a slow real
-# download (continue-on-error: true in build_addon.yml's `e2e` job).
+# generous on purpose to tolerate a slow real download.
 # Overridable via env for a CI runner with a slower or throttled connection.
 KOKORO_INSTALL_TIMEOUT = int(os.environ.get("KOKORO_INSTALL_TIMEOUT_SECONDS", "300"))
 
@@ -256,9 +255,7 @@ def kokoro_installed(nvda_session, downloaded_voice_key):
         nvda,
         "control+tab",
         lambda: (
-            voice_manager_state(
-                nvda, f"{_VOICE_MANAGER_DIALOG}.notebookCtrl.GetSelection()"
-            )
+            voice_manager_state(nvda, "manager and manager.notebookCtrl.GetSelection()")
             == KOKORO_TAB_INDEX
         ),
         attempts=KOKORO_TAB_INDEX + 3,
@@ -277,8 +274,8 @@ def kokoro_installed(nvda_session, downloaded_voice_key):
         "tab",
         lambda: voice_manager_state(
             nvda,
-            f"wx.Window.FindFocus() is {_VOICE_MANAGER_DIALOG}"
-            f".notebookCtrl.GetPage({KOKORO_TAB_INDEX}).install_btn",
+            "manager is not None and wx.Window.FindFocus() is "
+            f"manager.notebookCtrl.GetPage({KOKORO_TAB_INDEX}).install_btn",
         ),
         attempts=5,
         description="focus to reach the Install Kokoro voice button",
@@ -293,8 +290,8 @@ def kokoro_installed(nvda_session, downloaded_voice_key):
     wait_until(
         lambda: voice_manager_state(
             nvda,
-            f"{_VOICE_MANAGER_DIALOG}.notebookCtrl.GetPage({KOKORO_TAB_INDEX})"
-            "._catalog.is_installed()",
+            "manager is not None and "
+            f"manager.notebookCtrl.GetPage({KOKORO_TAB_INDEX})._catalog.is_installed()",
         ),
         timeout=KOKORO_INSTALL_TIMEOUT,
         description="the Kokoro voice files to finish installing (config.json on disk)",
@@ -340,9 +337,7 @@ def test_kokoro_installs_and_lists_alongside_the_piper_voice(
         nvda,
         "control+tab",
         lambda: (
-            voice_manager_state(
-                nvda, f"{_VOICE_MANAGER_DIALOG}.notebookCtrl.GetSelection()"
-            )
+            voice_manager_state(nvda, "manager and manager.notebookCtrl.GetSelection()")
             == 0
         ),
         description="the notebook to switch to the Installed tab",
@@ -350,7 +345,8 @@ def test_kokoro_installs_and_lists_alongside_the_piper_voice(
     installed_keys = wait_until(
         lambda: voice_manager_state(
             nvda,
-            f"[v.key for v in {_VOICE_MANAGER_DIALOG}.notebookCtrl.GetPage(0).voices_list._objects]",
+            "[v.key for v in (manager.notebookCtrl.GetPage(0)"
+            ".voices_list._objects if manager else [])]",
         ),
         timeout=15,
         description="the Installed tab to list Kokoro alongside the Piper voice",

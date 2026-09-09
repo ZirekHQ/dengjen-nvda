@@ -107,16 +107,22 @@ def wait_until(
 def voice_manager_state(nvda, expr: str) -> Any:
     """Evaluate `expr` inside NVDA against the current top-level window.
 
-    `expr` sees `dialog` (wx.GetActiveWindow()) and `wx`. Read-only use only
-    -- a synchronization/assertion oracle, never a way to drive controls;
-    driving goes through nvda.keys, because proving real keyboard
-    reachability against a real NVDA is the point of this suite. Requires
-    allow-eval = true in pyproject.toml.
+    `expr` sees `wx`, `dialog` (wx.GetActiveWindow()), and `manager` (the
+    top-level window with a notebookCtrl, or None if none currently has one
+    -- dialog isn't reliably the voice manager, e.g. mid-download focus can
+    land elsewhere, so lookups that need the voice manager dialog itself
+    should use manager and guard the None case rather than assume it's
+    found). Read-only use only -- a synchronization/assertion oracle, never
+    a way to drive controls; driving goes through nvda.keys, because proving
+    real keyboard reachability against a real NVDA is the point of this
+    suite. Requires allow-eval = true in pyproject.toml.
     """
     return nvda.eval(
-        "(lambda wx, dialog: "
+        "(lambda wx, dialog, manager: "
         + expr
-        + ")(__import__('wx'), __import__('wx').GetActiveWindow())"
+        + ")(__import__('wx'), __import__('wx').GetActiveWindow(),"
+        " next((w for w in __import__('wx').GetTopLevelWindows()"
+        " if hasattr(w, 'notebookCtrl')), None))"
     )
 
 
