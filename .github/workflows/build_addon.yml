@@ -108,10 +108,6 @@ jobs:
     permissions:
       contents: read
     needs: ["build"]
-    # Real network calls to Hugging Face for voice downloads make this slower
-    # and flakier than the deterministic suites, so it stays out of the
-    # `test` gate rather than blocking merges on a flaky external dependency.
-    continue-on-error: true
     steps:
       - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5.1.0
         with:
