@@ -1117,13 +1117,15 @@ class TestPiperRTVoiceDownloader:
             ]
         )
         monkeypatch.setattr(download_infra, "request", fake_request)
+        voices_dir = str(tmp_path)
+        progress_reporter = MagicMock()
 
         with pytest.raises(RuntimeError, match=r"\(status 500\)"):
             PiperRTVoiceDownloader._do_download_archive(
                 "https://example.com/voice.tar.gz",
                 "voice.tar.gz",
-                str(tmp_path),
-                MagicMock(),
+                voices_dir,
+                progress_reporter,
             )
 
         assert target_path.read_bytes() == leftover
