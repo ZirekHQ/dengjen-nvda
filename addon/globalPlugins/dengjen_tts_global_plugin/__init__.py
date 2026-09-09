@@ -74,18 +74,15 @@ class GlobalPlugin(globalPluginHandler.GlobalPlugin):
             )
         ):
             return
-        action = self._ask_first_run_voice_action()
-        if action == "manager":
-            self.on_manager(None)
-        elif action == "local_file":
-            install_voice_from_local_file(
-                on_installed=self._on_first_run_voice_installed
-            )
+        self._ask_first_run_voice_action()
 
     def _ask_first_run_voice_action(self):
         """Yes/No/Cancel maps to open-manager/install-local/not-now. A plain
         wx.MessageDialog, not gui.messageBox, since the latter has no way to
-        relabel its buttons for a three-way choice."""
+        relabel its buttons for a three-way choice. Shown via
+        runScriptModalDialog, not ShowModal(), since this runs from the
+        startup path and must not block it; runScriptModalDialog also owns
+        Destroy(), so this doesn't call it."""
         dlg = wx.MessageDialog(
             gui.mainFrame,
             _(
@@ -99,11 +96,16 @@ class GlobalPlugin(globalPluginHandler.GlobalPlugin):
         dlg.SetYesNoCancelLabels(
             _("&Open voice manager"), _("&Install from local file"), _("Not &now")
         )
-        try:
-            retval = dlg.ShowModal()
-        finally:
-            dlg.Destroy()
-        return {wx.ID_YES: "manager", wx.ID_NO: "local_file"}.get(retval)
+        gui.runScriptModalDialog(dlg, self._on_first_run_voice_action_chosen)
+
+    def _on_first_run_voice_action_chosen(self, retval):
+        action = {wx.ID_YES: "manager", wx.ID_NO: "local_file"}.get(retval)
+        if action == "manager":
+            self.on_manager(None)
+        elif action == "local_file":
+            install_voice_from_local_file(
+                on_installed=self._on_first_run_voice_installed
+            )
 
     def _on_first_run_voice_installed(self, voice_key):
         # SynthDriver.voices is a snapshot taken at construction time, so the

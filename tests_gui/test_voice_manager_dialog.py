@@ -179,11 +179,18 @@ class TestInstallVoiceFromLocalFile:
         assert gui.runScriptModalDialog.called
         opened_dialog = gui.runScriptModalDialog.call_args.args[0]
         assert isinstance(opened_dialog, wx.FileDialog)
+        opened_dialog.Destroy()
 
     def _complete_dialog(self, path, res=wx.ID_OK):
-        gui.runScriptModalDialog.call_args.args[0].SetPath(path)
+        # gui.runScriptModalDialog is mocked here, so the real Destroy() it
+        # would otherwise do after the dialog closes never runs.
+        dialog = gui.runScriptModalDialog.call_args.args[0]
+        dialog.SetPath(path)
         callback = gui.runScriptModalDialog.call_args.args[1]
-        callback(res)
+        try:
+            callback(res)
+        finally:
+            dialog.Destroy()
 
     def test_cancel_does_not_install(self, voice_manager, nvda_gui, monkeypatch):
         install = MagicMock()

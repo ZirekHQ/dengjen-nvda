@@ -18,6 +18,9 @@ import pytest
 if sys.platform != "win32":
     pytest.skip("real wxPython is Windows-only here", allow_module_level=True)
 
+import gui
+import wx
+
 
 @pytest.fixture
 def plugin_module(gui_plugin_package):
@@ -77,48 +80,46 @@ class TestMenuLifecycle:
 
 
 class TestVoiceCheck:
-    """_ask_first_run_voice_action shows a real wx.MessageDialog and calls
-    ShowModal, which blocks forever without an event loop (see
-    tests_gui/test_voice_manager_dialog.py's "Never call ShowModal()" rule)
-    -- so every test here monkeypatches it outright, the same way the
-    pre-existing suite already treated on_manager as a black box."""
+    """_ask_first_run_voice_action shows a real wx.MessageDialog via
+    gui.runScriptModalDialog, which nvda_gui mocks -- so every test here
+    that needs a user choice grabs the completion callback from that mock's
+    call and fires it directly, the same technique
+    tests_gui/test_voice_manager_dialog.py uses for its file dialog."""
 
-    def test_it_asks_when_no_voice_is_installed(
-        self, plugin, no_installed_voices, monkeypatch
-    ):
-        asked = []
-        monkeypatch.setattr(
-            plugin, "_ask_first_run_voice_action", lambda: asked.append(True)
-        )
+    @pytest.fixture(autouse=True)
+    def _destroy_the_dialog(self):
+        # gui.runScriptModalDialog is mocked here, so the real Destroy() it
+        # would otherwise do after the dialog closes never runs.
+        yield
+        if gui.runScriptModalDialog.called:
+            gui.runScriptModalDialog.call_args.args[0].Destroy()
+
+    def _choose(self, retval):
+        callback = gui.runScriptModalDialog.call_args.args[1]
+        callback(retval)
+
+    def test_it_asks_when_no_voice_is_installed(self, plugin, no_installed_voices):
         plugin._perform_voice_check()
-        assert asked == [True]
+        assert gui.runScriptModalDialog.called
 
     def test_it_stays_quiet_when_a_voice_is_installed(
-        self, plugin, one_installed_voice, monkeypatch
+        self, plugin, one_installed_voice
     ):
-        asked = []
-        monkeypatch.setattr(
-            plugin, "_ask_first_run_voice_action", lambda: asked.append(True)
-        )
         plugin._perform_voice_check()
-        assert asked == []
+        assert not gui.runScriptModalDialog.called
 
     def test_it_stays_quiet_once_the_manager_has_been_opened(
-        self, plugin, no_installed_voices, monkeypatch
+        self, plugin, no_installed_voices
     ):
-        asked = []
-        monkeypatch.setattr(
-            plugin, "_ask_first_run_voice_action", lambda: asked.append(True)
-        )
         plugin._GlobalPlugin__voice_manager_shown = True
         plugin._perform_voice_check()
-        assert asked == []
+        assert not gui.runScriptModalDialog.called
 
     def test_choosing_manager_opens_it(self, plugin, no_installed_voices, monkeypatch):
         opened = []
-        monkeypatch.setattr(plugin, "_ask_first_run_voice_action", lambda: "manager")
         monkeypatch.setattr(plugin, "on_manager", lambda evt: opened.append(evt))
         plugin._perform_voice_check()
+        self._choose(wx.ID_YES)
         assert len(opened) == 1
 
     def test_choosing_local_file_installs_from_a_local_file(
@@ -130,8 +131,8 @@ class TestVoiceCheck:
             "install_voice_from_local_file",
             lambda **kwargs: calls.append(kwargs),
         )
-        monkeypatch.setattr(plugin, "_ask_first_run_voice_action", lambda: "local_file")
         plugin._perform_voice_check()
+        self._choose(wx.ID_NO)
         assert calls == [{"on_installed": plugin._on_first_run_voice_installed}]
 
     def test_choosing_not_now_does_nothing(
@@ -139,7 +140,6 @@ class TestVoiceCheck:
     ):
         opened = []
         installed = []
-        monkeypatch.setattr(plugin, "_ask_first_run_voice_action", lambda: None)
         monkeypatch.setattr(plugin, "on_manager", lambda evt: opened.append(evt))
         monkeypatch.setattr(
             plugin_module,
@@ -147,6 +147,7 @@ class TestVoiceCheck:
             lambda **kwargs: installed.append(kwargs),
         )
         plugin._perform_voice_check()
+        self._choose(wx.ID_CANCEL)
         assert opened == []
         assert installed == []
 

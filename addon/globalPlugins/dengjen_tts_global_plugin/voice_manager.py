@@ -91,6 +91,7 @@ def _process_voice_archive(dialog, on_installed, res):
         _("Voice {voice} has been installed successfully.").format(voice=voice_key),
         _("Voice installed successfully"),
         style=wx.ICON_INFORMATION,
+        parent=gui.mainFrame,
     )
     if on_installed is not None:
         on_installed(voice_key)
