@@ -341,13 +341,19 @@ msgstr "Administrador de voces &Dengjen..."
 msgid "Open the voice manager to preview, install or download dengjen voices"
 msgstr "Abrir el administrador de voces para probar, instalar o descargar voces dengjen"
 
-#: addon\globalPlugins\dengjen_tts_global_plugin\__init__.py:77
+#: addon\globalPlugins\dengjen_tts_global_plugin\__init__.py:91
+msgid "&Open voice manager"
+msgstr ""
+
+#: addon\globalPlugins\dengjen_tts_global_plugin\__init__.py:93
+msgid "Not &now"
+msgstr ""
+
+#: addon\globalPlugins\dengjen_tts_global_plugin\__init__.py:83
 msgid "No Dengjen voice was found.\n"
-"You can preview and download voices from the voice manager.\n"
-"Do you want to open the voice manager now?"
-msgstr "No se encontró una voz Dengjen.\n"
-"Puedes probar o descargar voces desde el administrador de voces.\n"
-"¿Quieres abrir el administrador de voces ahora?"
+"You can download a voice online, or install one from a "
+"local archive if you already have one."
+msgstr ""
 
 #: addon\globalPlugins\dengjen_tts_global_plugin\__init__.py:81 buildVars.py:10
 msgid "Dengjen Neural Voices"

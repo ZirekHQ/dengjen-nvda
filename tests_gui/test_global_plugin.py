@@ -77,32 +77,95 @@ class TestMenuLifecycle:
 
 
 class TestVoiceCheck:
-    def test_it_prompts_when_no_voice_is_installed(
-        self, plugin, nvda_gui, no_installed_voices, monkeypatch
+    """_ask_first_run_voice_action shows a real wx.MessageDialog and calls
+    ShowModal, which blocks forever without an event loop (see
+    tests_gui/test_voice_manager_dialog.py's "Never call ShowModal()" rule)
+    -- so every test here monkeypatches it outright, the same way the
+    pre-existing suite already treated on_manager as a black box."""
+
+    def test_it_asks_when_no_voice_is_installed(
+        self, plugin, no_installed_voices, monkeypatch
     ):
-        opened = []
-        monkeypatch.setattr(plugin, "on_manager", lambda evt: opened.append(evt))
+        asked = []
+        monkeypatch.setattr(
+            plugin, "_ask_first_run_voice_action", lambda: asked.append(True)
+        )
         plugin._perform_voice_check()
-
-        import gui
-
-        assert gui.messageBox.called
-        assert len(opened) == 1
+        assert asked == [True]
 
     def test_it_stays_quiet_when_a_voice_is_installed(
         self, plugin, one_installed_voice, monkeypatch
     ):
-        import gui
-
-        gui.messageBox.reset_mock()
+        asked = []
+        monkeypatch.setattr(
+            plugin, "_ask_first_run_voice_action", lambda: asked.append(True)
+        )
         plugin._perform_voice_check()
-        assert not gui.messageBox.called
+        assert asked == []
 
     def test_it_stays_quiet_once_the_manager_has_been_opened(
-        self, plugin, no_installed_voices
+        self, plugin, no_installed_voices, monkeypatch
     ):
-        import gui
-
+        asked = []
+        monkeypatch.setattr(
+            plugin, "_ask_first_run_voice_action", lambda: asked.append(True)
+        )
         plugin._GlobalPlugin__voice_manager_shown = True
         plugin._perform_voice_check()
-        assert not gui.messageBox.called
+        assert asked == []
+
+    def test_choosing_manager_opens_it(self, plugin, no_installed_voices, monkeypatch):
+        opened = []
+        monkeypatch.setattr(plugin, "_ask_first_run_voice_action", lambda: "manager")
+        monkeypatch.setattr(plugin, "on_manager", lambda evt: opened.append(evt))
+        plugin._perform_voice_check()
+        assert len(opened) == 1
+
+    def test_choosing_local_file_installs_from_a_local_file(
+        self, plugin, plugin_module, no_installed_voices, monkeypatch
+    ):
+        calls = []
+        monkeypatch.setattr(
+            plugin_module,
+            "install_voice_from_local_file",
+            lambda **kwargs: calls.append(kwargs),
+        )
+        monkeypatch.setattr(plugin, "_ask_first_run_voice_action", lambda: "local_file")
+        plugin._perform_voice_check()
+        assert calls == [{"on_installed": plugin._on_first_run_voice_installed}]
+
+    def test_choosing_not_now_does_nothing(
+        self, plugin, plugin_module, no_installed_voices, monkeypatch
+    ):
+        opened = []
+        installed = []
+        monkeypatch.setattr(plugin, "_ask_first_run_voice_action", lambda: None)
+        monkeypatch.setattr(plugin, "on_manager", lambda evt: opened.append(evt))
+        monkeypatch.setattr(
+            plugin_module,
+            "install_voice_from_local_file",
+            lambda **kwargs: installed.append(kwargs),
+        )
+        plugin._perform_voice_check()
+        assert opened == []
+        assert installed == []
+
+
+class TestOnFirstRunVoiceInstalled:
+    def test_reinitializes_the_active_dengjen_synth(
+        self, plugin, plugin_module, monkeypatch
+    ):
+        synth = MagicMock()
+        synth.name = "dengjen_neural_voices"
+        monkeypatch.setattr(plugin_module.synthDriverHandler, "getSynth", lambda: synth)
+        plugin._on_first_run_voice_installed("en_US-amy-low")
+        assert synth.terminate.called
+
+    def test_leaves_a_different_active_synth_alone(
+        self, plugin, plugin_module, monkeypatch
+    ):
+        synth = MagicMock()
+        synth.name = "espeak"
+        monkeypatch.setattr(plugin_module.synthDriverHandler, "getSynth", lambda: synth)
+        plugin._on_first_run_voice_installed("en_US-amy-low")
+        assert not synth.terminate.called

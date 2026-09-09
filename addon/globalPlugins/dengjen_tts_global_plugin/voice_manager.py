@@ -42,6 +42,60 @@ with helpers.import_bundled_library():
     import miniaudio
 
 
+def install_voice_from_local_file(on_installed=None):
+    """Prompt for a voice archive and install it, independent of the voice
+    manager dialog so a first-run "no voice found" check can offer it
+    directly. `on_installed(voice_key)` runs after a successful install;
+    cancellation and failure are handled here and need no caller action."""
+    open_file_dialog = wx.FileDialog(
+        parent=gui.mainFrame,
+        message=_("Choose voice archive file "),
+        defaultDir=wx.GetUserHome(),
+        wildcard=(
+            _("Tar archives (*.tar.gz, *.tgz)")
+            + "|*.tar.gz;*.tgz|"
+            + _("All files")
+            + "|*.*"
+        ),
+        style=wx.FD_OPEN,
+    )
+    gui.runScriptModalDialog(
+        open_file_dialog,
+        functools.partial(_process_voice_archive, open_file_dialog, on_installed),
+    )
+
+
+def _process_voice_archive(dialog, on_installed, res):
+    if res != wx.ID_OK:
+        return
+    filepath = dialog.GetPath().strip()
+    if not filepath:
+        return
+    try:
+        voice_key = voice_download.install_voice_from_tar_archive(
+            filepath, DENGJEN_VOICES_DIR
+        )
+    except Exception as exc:
+        log.error("Failed to install voice from archive", exc_info=True)
+        gui.messageBox(
+            _(
+                "Failed to install voice from archive.\n\n{detail}\n\n"
+                "See NVDA's log for more details."
+            ).format(detail=str(exc) or type(exc).__name__),
+            _("Voice installation failed"),
+            style=wx.ICON_ERROR,
+            parent=gui.mainFrame,
+        )
+        return
+    gui.messageBox(
+        _("Voice {voice} has been installed successfully.").format(voice=voice_key),
+        _("Voice installed successfully"),
+        style=wx.ICON_INFORMATION,
+    )
+    if on_installed is not None:
+        on_installed(voice_key)
+
+
 class InstalledDengjenVoicesPanel(SizedPanel):
     def __init__(self, parent):
         super().__init__(parent, -1)
@@ -232,53 +286,12 @@ class InstalledDengjenVoicesPanel(SizedPanel):
         self.update_voices_list(set_focus=True, invalidate_synth_voices_cache=True)
 
     def _on_install_voice_from_tar(self, event):
-        open_file_dialog = wx.FileDialog(
-            parent=gui.mainFrame,
-            message=_("Choose voice archive file "),
-            defaultDir=wx.GetUserHome(),
-            wildcard=(
-                _("Tar archives (*.tar.gz, *.tgz)")
-                + "|*.tar.gz;*.tgz|"
-                + _("All files")
-                + "|*.*"
-            ),
-            style=wx.FD_OPEN,
-        )
-        gui.runScriptModalDialog(
-            open_file_dialog,
-            functools.partial(self._get_process_tar_archive, open_file_dialog),
+        install_voice_from_local_file(
+            on_installed=self._on_voice_installed_from_local_file
         )
 
-    def _get_process_tar_archive(self, dialog, res):
-        if res != wx.ID_OK:
-            return
-        filepath = dialog.GetPath().strip()
-        if not filepath:
-            return
-        try:
-            voice_key = voice_download.install_voice_from_tar_archive(
-                filepath, DENGJEN_VOICES_DIR
-            )
-        except Exception as exc:
-            log.error("Failed to install voice from archive", exc_info=True)
-            gui.messageBox(
-                _(
-                    "Failed to install voice from archive.\n\n{detail}\n\n"
-                    "See NVDA's log for more details."
-                ).format(detail=str(exc) or type(exc).__name__),
-                _("Voice installation failed"),
-                style=wx.ICON_ERROR,
-                parent=gui.mainFrame,
-            )
-        else:
-            gui.messageBox(
-                _("Voice {voice} has been installed successfully.").format(
-                    voice=voice_key
-                ),
-                _("Voice installed successfully"),
-                style=wx.ICON_INFORMATION,
-            )
-            self.update_voices_list(set_focus=True, invalidate_synth_voices_cache=True)
+    def _on_voice_installed_from_local_file(self, voice_key):
+        self.update_voices_list(set_focus=True, invalidate_synth_voices_cache=True)
 
 
 class OnlinePiperVoicesPanel(SizedPanel):
