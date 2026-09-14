@@ -1,8 +1,8 @@
 name: Tag and release
 
 # build_addon.yml's push:tags listener already publishes the GitHub Release, so pushing the tag
-# here IS the release -- that's why environment:release gates the tag push itself, unlike
-# dengjen-tts's release.yml, which gates a downstream publish step instead.
+# here IS the release. No approval gate -- merging the version-bump PR is the real decision
+# point; a gate after that can't cleanly undo anything.
 on:
   push:
     branches:
@@ -58,24 +58,10 @@ jobs:
           fi
           echo "version=${version}" >> "$GITHUB_OUTPUT"
 
-  approve:
-    name: Approve release
-    needs: resolve
-    if: inputs.dry_run != true
-    runs-on: ubuntu-latest
-    environment: release
-    permissions: {}
-    steps:
-      - env:
-          VERSION: ${{ needs.resolve.outputs.version }}
-        run: echo "Approved v${VERSION} for release"
-
-  # always() is paired with an explicit success-or-skipped check, not a bare "run regardless" --
-  # needed because `approve` is legitimately skipped, not failed, on a dry run.
   tag:
     name: Push release tag
-    needs: [resolve, approve]
-    if: always() && needs.resolve.result == 'success' && (needs.approve.result == 'success' || needs.approve.result == 'skipped') && inputs.dry_run != true
+    needs: resolve
+    if: inputs.dry_run != true
     runs-on: ubuntu-latest
     permissions:
       contents: write
