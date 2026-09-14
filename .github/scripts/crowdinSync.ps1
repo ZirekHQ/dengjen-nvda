@@ -1,6 +1,16 @@
 #!/usr/bin/env pwsh
 $ErrorActionPreference = 'Stop'
 
+function Invoke-L10nUtil {
+    # $ErrorActionPreference = 'Stop' does not treat a non-zero exit code from a
+    # native executable as a terminating error, so failures here must be checked
+    # explicitly or the script silently continues with bad/missing output (see #182).
+    & ./l10nUtil.exe @Args
+    if ($LASTEXITCODE -ne 0) {
+        throw "l10nUtil.exe $($Args -join ' ') failed with exit code $LASTEXITCODE"
+    }
+}
+
 git config user.name "github-actions[bot]"
 git config user.email "github-actions[bot]@users.noreply.github.com"
 
@@ -33,7 +43,7 @@ if (Test-Path $mdFile) {
         try {
             Copy-Item "$addonId.xliff" $tempXliff -Force
             Write-Host "DEBUG: Updating XLIFF source based on readme.md..."
-            ./l10nUtil.exe md2xliff $mdFile $xliffFile -o $tempXliff
+            Invoke-L10nUtil md2xliff $mdFile $xliffFile -o $tempXliff
         }
         finally {
             if (Test-Path $tempXliff) {
@@ -43,7 +53,7 @@ if (Test-Path $mdFile) {
     }
     else {
         Write-Host "DEBUG: XLIFF template not found. Creating new one from readme.md..."
-        ./l10nUtil.exe md2xliff $mdFile $xliffFile
+        Invoke-L10nUtil md2xliff $mdFile $xliffFile
     }
 }
 
@@ -54,12 +64,12 @@ $potFile = "$addonId.pot"
 
 if (Test-Path $potFile) {
     Write-Host "DEBUG: Uploading updated POT source to Crowdin..."
-    ./l10nUtil.exe uploadSourceFile "$potFile" -c $env:L10N_UTIL_CONFIG
+    Invoke-L10nUtil uploadSourceFile "$potFile" -c $env:L10N_UTIL_CONFIG
 }
 
 if (Test-Path $xliffFile) {
     Write-Host "DEBUG: Uploading updated XLIFF source to Crowdin..."
-    ./l10nUtil.exe uploadSourceFile "$xliffFile" -c $env:L10N_UTIL_CONFIG
+    Invoke-L10nUtil uploadSourceFile "$xliffFile" -c $env:L10N_UTIL_CONFIG
 
     git add "$xliffFile"
     git diff --staged --quiet
@@ -72,7 +82,7 @@ if (Test-Path $xliffFile) {
 # --- STEP 3: EXPORT AND PROCESS TRANSLATIONS ---
 
 Write-Host "DEBUG: Exporting translations from Crowdin..."
-./l10nUtil.exe exportTranslations -o _addonL10n -c $env:L10N_UTIL_CONFIG
+Invoke-L10nUtil exportTranslations -o _addonL10n -c $env:L10N_UTIL_CONFIG
 
 New-Item -ItemType Directory -Force -Path addon/locale | Out-Null
 New-Item -ItemType Directory -Force -Path addon/doc | Out-Null
@@ -144,7 +154,7 @@ foreach ($dir in Get-ChildItem -Path "_addonL10n/$addonId" -Directory) {
 
         Write-Host "ACTION: Uploading local legacy PO to Crowdin ($crowdinLang) as fallback."
 
-        ./l10nUtil.exe uploadTranslationFile $crowdinLang "$addonId.po" $localPoPath -c $env:L10N_UTIL_CONFIG
+        Invoke-L10nUtil uploadTranslationFile $crowdinLang "$addonId.po" $localPoPath -c $env:L10N_UTIL_CONFIG
     }
 
     # --- 3.2 DOCUMENTATION PROCESSING (XLIFF ONLY) ---
@@ -178,7 +188,7 @@ foreach ($dir in Get-ChildItem -Path "_addonL10n/$addonId" -Directory) {
 
         Write-Host "SUCCESS: Importing documentation from XLIFF ($langCode)..."
 
-        ./l10nUtil.exe xliff2md $remoteXliff $localMd
+        Invoke-L10nUtil xliff2md $remoteXliff $localMd
 
         $docImported = $true
     }
