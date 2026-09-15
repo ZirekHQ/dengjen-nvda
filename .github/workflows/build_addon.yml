@@ -209,7 +209,7 @@ jobs:
         echo -e "\nSHA256: " >> changelog.md
         sha256sum -- *.nvda-addon >> changelog.md
 
-    # tag-and-release.yml unconditionally re-dispatches this workflow on a retry, including
+    # release.yml unconditionally re-dispatches this workflow on a retry, including
     # after a run that already published the release -- `gh release create` on an existing
     # tag fails outright, so branch to edit+upload instead of erroring out on a rerun.
     - name: Create or update release
