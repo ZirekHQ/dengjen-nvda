@@ -1,4 +1,4 @@
-name: Tag and release
+name: Release
 
 # build_addon.yml's push:tags listener already publishes the GitHub Release, so pushing the tag
 # here IS the release. No approval gate -- merging the version-bump PR is the real decision
