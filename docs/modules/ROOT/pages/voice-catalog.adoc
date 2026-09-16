@@ -1,0 +1,105 @@
+= Voice catalog and model format
+
+This add-on ships two model backends today -- Piper and Kokoro -- selected
+through a common `ModelCatalog` protocol
+(`addon/globalPlugins/dengjen_tts_global_plugin/model_catalog.py`) so the
+voice manager can check install state without hardcoding either one's shape.
+See xref:architecture.adoc[Architecture] for how a third backend plugs into
+the same seam.
+
+== Directory layout
+
+Voices live under `DENGJEN_VOICES_BASE_DIR`
+(`<NVDA config dir>/dengjen`), one subdirectory per model type:
+`voices/piper/` and `voices/kokoro/`. No install directory is shared
+between model types, and a backend's directory is only scanned once its
+constant is registered in
+`DengjenTextToSpeechSystem.load_all_voices_from_nvda_config_dir()`
+(`domain/tts_system.py`) -- that method iterates a fixed tuple of
+directories, not a dynamic scan.
+
+== The `voice.json` sidecar
+
+Every installed voice directory carries a `voice.json` sidecar, written by
+`domain/voice_metadata.py`. It decouples NVDA-facing voice identity from
+each backend's own config format and from Piper's legacy
+`lang-name-quality` directory-naming convention.
+
+Fields: `model_type`, `name`, `language`, and an optional `description`
+(defaults to an empty string).
+
+Voices installed before this sidecar existed have none.
+`voice_metadata.read_or_migrate()` falls back to parsing the legacy Piper
+directory name (`lang-name-quality`) and writes the sidecar so later reads
+skip that fallback.
+
+== Piper voice catalog (`piper-voices.json`)
+
+The catalog of downloadable Piper voices comes from
+https://huggingface.co/rhasspy/piper-voices[rhasspy/piper-voices]' own
+`voices.json`, merged with the fast/RT variant list from
+https://huggingface.co/datasets/mush42/piper-rt[mush42/piper-rt]: a voice
+is flagged `has_rt_variant` when its base name appears in the RT dataset.
+
+`update_voice_catalog.py` refreshes the bundled offline snapshot at
+`addon/synthDrivers/dengjen_neural_voices/data/piper-voices.json` before
+each release; at runtime the add-on caches its own copy under
+`DENGJEN_VOICES_DIR/piper-voices.json` and falls back to the bundled
+snapshot if a refresh fails, so `get_available_voices()` can serve a
+catalog offline on first run.
+
+Per-voice fields consumed by `PiperVoice.from_list_of_dicts()`
+(`voice_download.py`):
+
+* `key`, `name`
+* `quality` -- one of `x_low`, `low`, `medium`, `high`
+* `num_speakers`, `speaker_id_map`
+* `language` -- `code`, `family`, `region`, `name_native`, `name_english`,
+  `country_english`
+* `files` -- a map of archive path to `size_bytes` and `md5_digest`
+* `has_rt_variant`
+* `standard_variant_installed`, `fast_variant_installed` -- computed
+  locally against the user's installed voices, not present in the
+  upstream JSON
+
+A voice's `key` (e.g. `en_US-lessac-medium`) follows
+`<language>-<name>-<quality>`. Installing from a local archive derives it
+from the `.onnx` filename (`VOICE_INFO_REGEX`), or, if the filename
+doesn't match that convention, from the voice's own bundled `config.json`
+(`language.code`, `dataset`, `audio.quality`). The archive must contain at
+least one `.onnx` and one `.json` file; an optional `MODEL_CARD` file is
+extracted too and is what `Voice model card...`
+(xref:usage.adoc[Using the voice manager]) displays.
+
+== Kokoro voice format
+
+Unlike Piper's many independent per-voice downloads, Kokoro installs as a
+single shared unit: one `model.onnx` (full precision only -- quantized
+variants crash `dengjen-tts-grpc.exe`), one `tokenizer.json`, and one
+`voices/<preset>.bin` per preset (510 tokens x 256 dims x 4 bytes =
+522240 bytes each), sourced from
+https://huggingface.co/onnx-community/Kokoro-82M-v1.0-ONNX[onnx-community/Kokoro-82M-v1.0-ONNX]
+on Hugging Face.
+
+The install directory's `config.json` (`build_kokoro_config()` in
+`kokoro_download.py`) carries:
+
+* `model_type: "kokoro"`
+* `model_path`, `vocab_path`, `voices_dir`
+* `sample_rate` (`24000`)
+* `voices` -- the list of the 54 preset names
+
+This is the file `dengjen-tts`'s Rust Kokoro model loader reads; its
+shape and the voice-embedding byte layout are verified against
+`crates/dengjen/models/kokoro/src/{config,voice_style}.rs` in the
+`zirekhq/dengjen-tts` repo, and any schema change needs to stay in sync
+with that loader. Presets are selected after install through NVDA's
+existing multi-speaker `Speaker` setting, not through a separate download
+per preset.
+
+== Adding a model backend
+
+See xref:architecture.adoc[Architecture]'s "Adding a model backend"
+section for the full checklist: implementing `ModelCatalog`, writing the
+two files a voice directory needs (the backend's own config plus the
+`voice.json` sidecar above), and registering the new directory constant.

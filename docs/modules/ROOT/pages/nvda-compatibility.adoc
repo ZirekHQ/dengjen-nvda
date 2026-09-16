@@ -1,0 +1,54 @@
+= NVDA version compatibility
+
+== Declared range
+
+`buildVars.py` declares `addon_minimumNVDAVersion = "2026.1"` and
+`addon_lastTestedNVDAVersion = "2026.1"`. `tests/test_buildvars.py` keeps
+the two in sync and well-formed:
+
+* Both must be strings with at least a `major.minor` component, each part
+  an integer.
+* `lastTestedNVDAVersion` must be greater than or equal to
+  `minimumNVDAVersion`.
+
+The floor comes from a real runtime dependency, not an aspirational
+target: the bundled `dengjen-tts-grpc.exe` binary needs NVDA's Python
+3.13 64-bit runtime, a requirement in place since v3.2-beta.1. See
+xref:index.adoc[Requirements] and xref:architecture.adoc[Container] for
+how that subprocess is launched.
+
+== Why the floor moved
+
+The v4.0.1 changelog documents a correction, not a new restriction: the
+add-on previously declared support for NVDA 2025.1+, but any NVDA older
+than the Python 3.13 switch failed to load the driver with an
+`ImportError`. `minimumNVDAVersion` was corrected to `2026.1` to match
+the runtime the bundled engine actually requires, rather than leaving
+users on older NVDA releases to hit that failure at load time.
+
+== Bumping the floor
+
+Change `addon_minimumNVDAVersion` and/or `addon_lastTestedNVDAVersion` in
+`buildVars.py` -- `CLAUDE.md`'s guardrails call for configuring through
+`buildVars.py` before modifying `sconstruct` directly. Bump
+`lastTestedNVDAVersion` whenever a new NVDA release has been verified,
+even when the minimum doesn't move; `test_buildvars.py` fails the build
+if `lastTested` ever drops below `minimum`.
+
+The Microsoft Visual C++ 2015-2022 Redistributable requirement
+(xref:index.adoc[Requirements]) is a separate, OS-level dependency of the
+bundled MSVC-built speech engine -- it isn't gated by NVDA's own version
+and applies regardless of which NVDA release is running.
+
+== Verifying against a specific NVDA release
+
+`pytest tests_e2e/` drives a full, real NVDA install end to end via
+https://pypi.org/project/nvda-addon-testkit/[nvda-addon-testkit] --
+installing the built add-on, working through its no-voice modal,
+downloading a real voice, and speaking with it. It's CI-only: it needs
+the `e2e` job's provisioned NVDA and `requirements-test-e2e.txt`, and
+isn't meant to be reproduced on a personal machine.
+
+xref:troubleshooting.adoc[Troubleshooting] covers the symptoms of an
+incompatible NVDA/runtime pairing -- the driver missing from NVDA's
+synthesizer list, or failing to load.
