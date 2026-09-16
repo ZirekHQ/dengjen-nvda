@@ -2,4 +2,7 @@
 * xref:architecture.adoc[Architecture]
 * xref:installation.adoc[Installation]
 * xref:usage.adoc[Usage]
+* xref:voice-catalog.adoc[Voice catalog and model format]
+* xref:addon-store.adoc[NVDA Add-on Store submission and updates]
+* xref:nvda-compatibility.adoc[NVDA version compatibility]
 * xref:troubleshooting.adoc[Troubleshooting]
