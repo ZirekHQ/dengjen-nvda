@@ -9,6 +9,13 @@ on:
 
   workflow_dispatch:
 
+  workflow_call:
+    inputs:
+      ref:
+        description: "Tag ref to build and release (set by release.yml; other triggers leave this empty and fall back to github.sha/github.ref)"
+        required: false
+        type: string
+
 jobs:
   build:
 
@@ -19,6 +26,7 @@ jobs:
     steps:
     - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5.1.0
       with:
+        ref: ${{ inputs.ref || github.sha }}
         persist-credentials: false
 
     - name: Set up Python
@@ -57,6 +65,7 @@ jobs:
     steps:
       - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5.1.0
         with:
+          ref: ${{ inputs.ref || github.sha }}
           persist-credentials: false
 
       - name: Set up Python
@@ -111,6 +120,7 @@ jobs:
     steps:
       - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5.1.0
         with:
+          ref: ${{ inputs.ref || github.sha }}
           persist-credentials: false
 
       - name: Set up Python
@@ -152,18 +162,23 @@ jobs:
 
   upload_release:
     runs-on: ubuntu-latest
-    if: ${{ startsWith(github.ref, 'refs/tags/') }}
+    if: ${{ startsWith(inputs.ref || github.ref, 'refs/tags/') }}
     needs: ["build", "test"]
     permissions:
       contents: write
+    env:
+      # github.ref points at release.yml's own ref (e.g. refs/heads/main) when this job runs
+      # via workflow_call, not the tag being released -- REF carries the right one either way.
+      REF: ${{ inputs.ref || github.ref }}
     steps:
     - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5.1.0
       with:
+        ref: ${{ inputs.ref || github.sha }}
         persist-credentials: false
 
     - name: Validate release tag format
       run: |
-        TAG=${GITHUB_REF#refs/tags/}
+        TAG=${REF#refs/tags/}
         if ! [[ "$TAG" =~ ^v[0-9]+\.[0-9]+\.[0-9]+(-beta\.[0-9]+)?$ ]]; then
           echo "::error::Tag '$TAG' does not match the required vMAJOR.MINOR.PATCH(-beta.N) format"
           exit 1
@@ -186,7 +201,7 @@ jobs:
         GH_TOKEN: ${{ github.token }}
       run: |
         set -euo pipefail
-        TAG=${GITHUB_REF#refs/tags/}
+        TAG=${REF#refs/tags/}
         previous_tag="$(gh release list --exclude-drafts --json tagName -q '.[].tagName' \
           | grep -E '^v[0-9]+\.[0-9]+\.[0-9]+(-beta\.[0-9]+)?$' | grep -vFx "$TAG" | sort -rV | head -n1 || true)"
         echo "tag=${previous_tag}" >> "$GITHUB_OUTPUT"
@@ -200,7 +215,7 @@ jobs:
         PREVIOUS_TAG: ${{ steps.prev.outputs.tag }}
       run: |
         set -euo pipefail
-        TAG=${GITHUB_REF#refs/tags/}
+        TAG=${REF#refs/tags/}
         args=(-f tag_name="$TAG")
         if [ -n "$PREVIOUS_TAG" ]; then
           args+=(-f previous_tag_name="$PREVIOUS_TAG")
@@ -217,7 +232,7 @@ jobs:
         GH_TOKEN: ${{ github.token }}
       run: |
         set -euo pipefail
-        TAG=${GITHUB_REF#refs/tags/}
+        TAG=${REF#refs/tags/}
         prerelease_args=()
         if [[ "$TAG" == *-* ]]; then
           prerelease_args=(--prerelease)
@@ -238,7 +253,7 @@ jobs:
       run: |
         ADDON_FILE=$(ls -- *.nvda-addon)
         SHA256=$(sha256sum "$ADDON_FILE" | awk '{print $1}')
-        TAG=${GITHUB_REF#refs/tags/}
+        TAG=${REF#refs/tags/}
         REPO="${GITHUB_REPOSITORY}"
         DOWNLOAD_URL="https://github.com/${REPO}/releases/download/${TAG}/${ADDON_FILE}"
         {

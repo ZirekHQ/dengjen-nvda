@@ -1,8 +1,8 @@
 name: Release
 
-# build_addon.yml's push:tags listener already publishes the GitHub Release, so pushing the tag
-# here IS the release. No approval gate -- merging the version-bump PR is the real decision
-# point; a gate after that can't cleanly undo anything.
+# build-and-release calls build_addon.yml directly (workflow_call) rather than relying on its
+# push:tags listener, which a bot-authored tag push doesn't fire anyway (GitHub's recursion
+# guard). No approval gate -- merging the version-bump PR is the real decision point.
 on:
   push:
     branches:
@@ -65,10 +65,6 @@ jobs:
     runs-on: ubuntu-latest
     permissions:
       contents: write
-      # actions: write is for the explicit dispatch below -- a GITHUB_TOKEN-authored
-      # tag push doesn't trigger build_addon.yml's push:tags listener (GitHub's
-      # recursion guard), so nothing would build without it.
-      actions: write
     steps:
       - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5.1.0
         with:
@@ -97,11 +93,11 @@ jobs:
             exit 1
           fi
 
-      - name: Trigger build_addon.yml
-        env:
-          GH_TOKEN: ${{ github.token }}
-          VERSION: ${{ needs.resolve.outputs.version }}
-        # Dispatched against the tag ref, not main, so github.ref resolves to refs/tags/v${VERSION}
-        # and satisfies upload_release's tag-prefix gate. Runs unconditionally, including on the
-        # tag-reuse branch, so a retry after a prior failed dispatch still gets one.
-        run: gh workflow run build_addon.yml --ref "v${VERSION}"
+  build-and-release:
+    name: Build and publish release
+    needs: [resolve, tag]
+    permissions:
+      contents: write
+    uses: ./.github/workflows/build_addon.yml # zizmor: ignore[self-repository] CI is pinned to zizmor v1.28.0, which predates $/ syntax support
+    with:
+      ref: refs/tags/v${{ needs.resolve.outputs.version }}
