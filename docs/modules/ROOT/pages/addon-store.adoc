@@ -1,11 +1,13 @@
 = NVDA Add-on Store submission and updates
 
-== Manifest fields the store requires
+== Manifest fields enforced before release
 
 The add-on's manifest metadata is declared once, in `buildVars.py`'s
 `addon_info`, and rendered into the packaged add-on via
-`manifest.ini.tpl`. `tests/test_buildvars.py` enforces the fields the
-store needs before a build is considered releasable:
+`manifest.ini.tpl`. `tests/test_buildvars.py` enforces these as
+repository release guardrails before a build is considered releasable --
+they are stricter than what the Store itself requires at submission
+time (see <<Submitting to the Add-on Store>> below for that form):
 
 * Required and non-empty: `addon_name`, `addon_summary`,
   `addon_description`, `addon_version`, `addon_author`, `addon_url`,
