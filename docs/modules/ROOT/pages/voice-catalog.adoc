@@ -20,10 +20,13 @@ directories, not a dynamic scan.
 
 == The `voice.json` sidecar
 
-Every installed voice directory carries a `voice.json` sidecar, written by
-`domain/voice_metadata.py`. It decouples NVDA-facing voice identity from
-each backend's own config format and from Piper's legacy
-`lang-name-quality` directory-naming convention.
+Every current-format voice directory carries a `voice.json` sidecar,
+written by `domain/voice_metadata.py`. It decouples NVDA-facing voice
+identity from each backend's own config format and from Piper's legacy
+`lang-name-quality` directory-naming convention. Voices installed before
+this module existed have no sidecar; `read_or_migrate()` falls back to
+parsing the legacy directory name and writes the sidecar so later reads
+skip the fallback.
 
 Fields: `model_type`, `name`, `language`, and an optional `description`
 (defaults to an empty string).
