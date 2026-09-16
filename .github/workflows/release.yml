@@ -98,6 +98,6 @@ jobs:
     needs: [resolve, tag]
     permissions:
       contents: write
-    uses: $/.github/workflows/build_addon.yml
+    uses: ./.github/workflows/build_addon.yml # zizmor: ignore[self-repository] CI is pinned to zizmor v1.28.0, which predates $/ syntax support
     with:
       ref: refs/tags/v${{ needs.resolve.outputs.version }}
