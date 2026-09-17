@@ -1,9 +1,8 @@
 name: Release
 
-# build-and-release calls build_addon.yml directly (workflow_call) rather than relying on its
-# push:tags listener, which a bot-authored tag push doesn't fire anyway (GitHub's recursion
-# guard). No trigger or gate of its own -- prepare-release.yml is the single entry point (its
-# `prepare` job for the PR-merge path, `gate`+`release-now` for the override path).
+# build-and-release calls build_addon.yml via workflow_call, not push:tags -- a bot-authored
+# tag push doesn't fire that listener (GitHub's recursion guard). prepare-release.yml is the
+# single entry point; this file has no trigger/gate of its own.
 on:
   push:
     branches:
@@ -23,10 +22,9 @@ permissions: {}
 jobs:
   resolve:
     runs-on: ubuntu-latest
-    # github.event_name inherits the top-level caller's event through nested workflow_call hops,
-    # not literally 'workflow_call' -- inputs.new_tag != '' detects the override path directly.
-    # It's also the single new commit a squash/rebase merge produces; a push landing more than one
-    # new commit at once (not this repo's normal PR flow) would only inspect the last of them.
+    # github.event_name isn't literally 'workflow_call' through nested hops -- it inherits the
+    # top-level caller's event, so inputs.new_tag != '' detects the override path directly. A
+    # push landing >1 new commit (not this repo's squash/rebase PR flow) would miss earlier ones.
     if: "inputs.new_tag != '' || startsWith(github.event.head_commit.message, 'chore: bump workspace version -> ')"
     permissions:
       contents: read
