@@ -1,20 +1,18 @@
 name: Release
 
-# build-and-release calls build_addon.yml directly (workflow_call) rather than relying on its
-# push:tags listener, which a bot-authored tag push doesn't fire anyway (GitHub's recursion
-# guard). No approval gate -- merging the version-bump PR is the real decision point.
+# build-and-release calls build_addon.yml via workflow_call, not push:tags -- a bot-authored
+# tag push doesn't fire that listener (GitHub's recursion guard). prepare-release.yml is the
+# single entry point; this file has no trigger/gate of its own.
 on:
   push:
     branches:
       - main
-  workflow_dispatch:
+  workflow_call:
     inputs:
       new_tag:
-        description: "Override the vX.Y.Z tag"
         required: false
         type: string
       dry_run:
-        description: "Dry Run: resolve the version but don't push a tag"
         required: false
         type: boolean
         default: false
@@ -24,10 +22,10 @@ permissions: {}
 jobs:
   resolve:
     runs-on: ubuntu-latest
-    # head_commit is absent on workflow_dispatch, hence the event_name check first. It's also
-    # the single new commit a squash/rebase merge produces; a push landing more than one new
-    # commit at once (not this repo's normal PR flow) would only inspect the last of them.
-    if: "github.event_name == 'workflow_dispatch' || startsWith(github.event.head_commit.message, 'chore: bump workspace version -> ')"
+    # github.event_name isn't literally 'workflow_call' through nested hops -- it inherits the
+    # top-level caller's event, so inputs.new_tag != '' detects the override path directly. A
+    # push landing >1 new commit (not this repo's squash/rebase PR flow) would miss earlier ones.
+    if: "inputs.new_tag != '' || startsWith(github.event.head_commit.message, 'chore: bump workspace version -> ')"
     permissions:
       contents: read
     outputs:

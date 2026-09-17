@@ -129,15 +129,49 @@ Conventions used in this project:
 
 ## Cutting a release
 
-Releases are tag-driven. Push an annotated tag from `main`:
+Maintainers only. `buildVars.py`'s `addon_version` is the single source of truth for the addon's
+version.
 
-```bash
-git tag -a v3.2.0-beta.1 -m "v3.2.0-beta.1: <summary>"
-git push origin v3.2.0-beta.1
-```
+1. Run the **Prepare release** workflow (`workflow_dispatch`, from the Actions tab), leaving
+   `new_tag` blank. It computes the next semver version from Conventional Commit subjects merged
+   since the last `vX.Y.Z` tag (`fix:`/etc → patch, `feat:` → minor, `!`/`BREAKING CHANGE:` →
+   major, only docs/chore/style/refactor/test since the last tag means no release) and opens a PR
+   bumping `buildVars.py`.
+2. Review and merge that PR. **This is the release gate** — merging it releases the version in the
+   diff, with nothing further to confirm: [`release.yml`](workflows/release.yml) tags that merge
+   commit `vX.Y.Z`, which calls [`build_addon.yml`](workflows/build_addon.yml) directly and
+   publishes a GitHub Release with the `.nvda-addon`, the `.pot`, and notes from
+   `gh release create --generate-notes` (scoped to the previous `vX.Y.Z(-beta.N)` tag) with the
+   SHA256 appended.
+3. **Direct-release override**: setting `new_tag` (and optionally `dry_run`) on **Prepare
+   release** skips `next-version.sh`, `bump-version.sh`, and the PR entirely, and hands off
+   straight to `release.yml` for the tag/publish given in `new_tag`. Because this bypasses the PR
+   review that's normally the release gate, it requires approval on the `release` environment
+   (Maintainers team) before it runs. **Self-approval is currently still possible** — the
+   environment's `prevent_self_review` setting hasn't been flipped to `true` yet (repo Settings,
+   tracked separately, not part of any workflow file); until it is, "requires approval" means a
+   click, not necessarily a second person. The override only accepts a plain `vX.Y.Z` tag, not a
+   `-beta.N` prerelease — cut a beta by pushing an annotated tag directly (`git tag -a` /
+   `git push`), same as before this workflow existed.
 
-CI builds on Ubuntu, runs pytest on `windows-latest`, and publishes a GitHub Release with the `.nvda-addon`, the `.pot`, and notes from `gh release create --generate-notes` (scoped to the previous `vX.Y.Z(-beta.N)` tag) with the SHA256 appended.
+If publishing fails partway through, retry — no new tag needed either way, since the build/publish
+steps re-run cleanly against the same tag:
+- Same version, still current on `main`: use GitHub's "Re-run failed jobs" on the original
+  `release.yml` run (Actions tab). It re-runs just the failed job(s) against that run's own
+  commit, no new dispatch needed.
+- Stale version (a newer version has since bumped past it on `main`): run **Prepare release**
+  again, this time from the old tag (`--ref v<old-version>` on the CLI, or pick it from the
+  branch/tag dropdown in the Actions tab) with `new_tag: v<old-version>` set. This is the
+  direct-release override path above. Only works for tags cut *after* this override path shipped —
+  dispatching against an older tag runs *that tag's* copy of these workflow files, which won't
+  have the `new_tag` input or the `workflow_call` trigger this retry path depends on.
 
-Tag scheme: standard semver `vMAJOR.MINOR.PATCH(-beta.N)`, e.g. `v3.2.0-beta.5` for a beta or `v3.2.0` for a stable cut — the release workflow's tag check accepts only these two forms, not other prerelease labels like `-rc.N` or `-alpha.N`. The `-beta.N` portion stays in the git tag only; `addon_version` in `buildVars.py` must remain strict three-part semver (e.g. `3.2.0`) per `tests/test_buildvars.py`.
+Tag scheme: standard semver `vMAJOR.MINOR.PATCH(-beta.N)`, e.g. `v3.2.0-beta.5` for a beta or
+`v3.2.0` for a stable cut — `build_addon.yml`'s tag check accepts only these two forms, not other
+prerelease labels like `-rc.N` or `-alpha.N`. The `-beta.N` portion stays in the git tag only;
+`addon_version` in `buildVars.py` must remain strict three-part semver (e.g. `3.2.0`) per
+`tests/test_buildvars.py`.
 
-Historical tags `v3.2-beta.1` through `v3.2-beta.4` used a non-standard two-part scheme (no `.0` patch component). They're left as-is — already published, already linked — but new tags use the standard form so the previous-tag lookup can anchor against them correctly.
+Historical tags `v3.2-beta.1` through `v3.2-beta.4` used a non-standard two-part scheme (no `.0`
+patch component). They're left as-is — already published, already linked — but new tags use the
+standard form so the previous-tag lookup can anchor against them correctly.
