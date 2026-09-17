@@ -42,6 +42,7 @@ __all__ = [
     "voice_migration",
 ]
 
+from . import feedback
 from .voice_manager import DengjenVoiceManagerDialog, install_voice_from_local_file
 
 
@@ -59,11 +60,40 @@ class GlobalPlugin(globalPluginHandler.GlobalPlugin):
         gui.mainFrame.sysTrayIcon.menu.Bind(
             wx.EVT_MENU, self.on_manager, self.itemHandle
         )
+        self.feedbackMenuHandle = self._build_feedback_submenu()
+
+    def _build_feedback_submenu(self):
+        feedback_menu = wx.Menu()
+        bug_item = feedback_menu.Append(
+            wx.ID_ANY,
+            _("Report a &bug..."),
+            _("Open a pre-filled bug report for this add-on in your browser"),
+        )
+        feature_item = feedback_menu.Append(
+            wx.ID_ANY,
+            _("Request a &feature..."),
+            _("Open a pre-filled feature request for this add-on in your browser"),
+        )
+        gui.mainFrame.sysTrayIcon.menu.Bind(wx.EVT_MENU, self.on_report_bug, bug_item)
+        gui.mainFrame.sysTrayIcon.menu.Bind(
+            wx.EVT_MENU, self.on_request_feature, feature_item
+        )
+        return gui.mainFrame.sysTrayIcon.menu.AppendSubMenu(
+            feedback_menu,
+            _("Send &feedback"),
+            _("Report a bug or request a feature for this add-on"),
+        )
 
     def on_manager(self, event):
         manager_dialog = DengjenVoiceManagerDialog()
         gui.runScriptModalDialog(manager_dialog)
         self.__voice_manager_shown = True
+
+    def on_report_bug(self, event):
+        feedback.open_bug_report()
+
+    def on_request_feature(self, event):
+        feedback.open_feature_request()
 
     def _perform_voice_check(self):
         if self.__voice_manager_shown:
@@ -120,3 +150,7 @@ class GlobalPlugin(globalPluginHandler.GlobalPlugin):
             gui.mainFrame.sysTrayIcon.menu.DestroyItem(self.itemHandle)
         except Exception:
             log.debug("Failed to remove the Dengjen menu item", exc_info=True)
+        try:
+            gui.mainFrame.sysTrayIcon.menu.DestroyItem(self.feedbackMenuHandle)
+        except Exception:
+            log.debug("Failed to remove the Dengjen feedback menu", exc_info=True)
