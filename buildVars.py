@@ -11,12 +11,13 @@ addon_info = AddonInfo(
     addon_description=_(
         """Adds fast, local neural text-to-speech voices to NVDA. Provides a synthesizer driver for Piper voice models via the dengjen engine, together with a voice manager for downloading and installing voices."""
     ),
-    addon_version="4.0.1",
+    addon_version="4.0.2",
     addon_changelog=_(
-        "Corrected the declared minimum NVDA version to 2026.1. "
-        "The bundled speech engine has required NVDA's Python 3.13 64-bit runtime since v3.2-beta.1; "
-        "the add-on previously claimed support for NVDA 2025.1+ and failed to load with an ImportError "
-        "on those older, incompatible NVDA versions."
+        "Deferred the NVDA restart triggered after installing a downloaded voice by one wx idle "
+        "cycle, instead of calling core.restart() immediately when the confirmation dialog closes. "
+        "This is a best-effort mitigation for a suspected NVDA-core race between that dialog closing "
+        "and NVDA's own foreground-window handoff, which can cause the restart to be silently refused "
+        "(issue #191)."
     ),
     addon_author="Musharraf Omer (original) <ibnomer2011@hotmail.com>, Ali Ustek (maintainer) <13117393+austek@users.noreply.github.com>",
     addon_url="https://github.com/zirekhq/dengjen-nvda",

@@ -246,7 +246,9 @@ class BaseVoiceDownloader:
                 parent=gui.mainFrame,
             )
             if retval == wx.YES:
-                core.restart()
+                # Restarting immediately can race NVDA core's own foreground-
+                # window handoff check and get silently refused (#191).
+                wx.CallLater(200, core.restart)
         else:
             gui.messageBox(
                 self._failure_message(),
