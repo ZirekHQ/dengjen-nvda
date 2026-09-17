@@ -341,6 +341,34 @@ msgstr "&Rêveberê dengên Dengjen..."
 msgid "Open the voice manager to preview, install or download dengjen voices"
 msgstr "Ji bo pêşdîtin, sazkirin an daxistina dengên Dengjen rêveberê dengan veke"
 
+#: addon\globalPlugins\dengjen_tts_global_plugin\__init__.py:69
+msgid "Report a &bug..."
+msgstr ""
+
+#: addon\globalPlugins\dengjen_tts_global_plugin\__init__.py:70
+msgid "Open a pre-filled bug report for this add-on in your browser"
+msgstr ""
+
+#: addon\globalPlugins\dengjen_tts_global_plugin\__init__.py:74
+msgid "Request a &feature..."
+msgstr ""
+
+#: addon\globalPlugins\dengjen_tts_global_plugin\__init__.py:75
+msgid "Open a pre-filled feature request for this add-on in your browser"
+msgstr ""
+
+#: addon\globalPlugins\dengjen_tts_global_plugin\__init__.py:83
+msgid "Send &feedback"
+msgstr ""
+
+#: addon\globalPlugins\dengjen_tts_global_plugin\__init__.py:84
+msgid "Report a bug or request a feature for this add-on"
+msgstr ""
+
+#: addon\globalPlugins\dengjen_tts_global_plugin\feedback.py:54
+msgid "Couldn't open your browser automatically. Copy this link and open it manually:\n{url}"
+msgstr ""
+
 #: addon\globalPlugins\dengjen_tts_global_plugin\__init__.py:91
 msgid "&Open voice manager"
 msgstr ""

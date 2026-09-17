@@ -58,14 +58,53 @@ class TestMenuLifecycle:
 
         assert isinstance(plugin_module.GlobalPlugin, type)
 
-    def test_it_appends_one_menu_item(self, plugin, nvda_gui):
-        assert nvda_gui.sysTrayIcon.menu.GetMenuItemCount() == 1
+    def test_it_appends_the_voice_manager_and_feedback_menu_items(
+        self, plugin, nvda_gui
+    ):
+        assert nvda_gui.sysTrayIcon.menu.GetMenuItemCount() == 2
 
     def test_the_item_is_labelled_for_the_voice_manager(self, plugin, nvda_gui):
         label = nvda_gui.sysTrayIcon.menu.GetMenuItems()[0].GetItemLabelText()
         assert "voice manager" in label.lower()
 
-    def test_terminate_removes_the_item(self, plugin, nvda_gui):
+    def test_the_second_item_is_the_feedback_submenu(self, plugin, nvda_gui):
+        item = nvda_gui.sysTrayIcon.menu.GetMenuItems()[1]
+        assert "feedback" in item.GetItemLabelText().lower()
+        subItems = item.GetSubMenu().GetMenuItems()
+        assert [i.GetItemLabelText().lower() for i in subItems] == [
+            "report a bug...",
+            "request a feature...",
+        ]
+
+    def test_the_bug_item_is_wired_to_open_bug_report(
+        self, plugin, plugin_module, nvda_gui, monkeypatch
+    ):
+        calls = []
+        monkeypatch.setattr(
+            plugin_module.feedback, "open_bug_report", lambda: calls.append("bug")
+        )
+        sub_menu = nvda_gui.sysTrayIcon.menu.GetMenuItems()[1].GetSubMenu()
+        bug_item = sub_menu.GetMenuItems()[0]
+        event = wx.CommandEvent(wx.EVT_MENU.typeId, bug_item.GetId())
+        nvda_gui.sysTrayIcon.menu.ProcessEvent(event)
+        assert calls == ["bug"]
+
+    def test_the_feature_item_is_wired_to_open_feature_request(
+        self, plugin, plugin_module, nvda_gui, monkeypatch
+    ):
+        calls = []
+        monkeypatch.setattr(
+            plugin_module.feedback,
+            "open_feature_request",
+            lambda: calls.append("feature"),
+        )
+        sub_menu = nvda_gui.sysTrayIcon.menu.GetMenuItems()[1].GetSubMenu()
+        feature_item = sub_menu.GetMenuItems()[1]
+        event = wx.CommandEvent(wx.EVT_MENU.typeId, feature_item.GetId())
+        nvda_gui.sysTrayIcon.menu.ProcessEvent(event)
+        assert calls == ["feature"]
+
+    def test_terminate_removes_the_items(self, plugin, nvda_gui):
         plugin.terminate()
         assert nvda_gui.sysTrayIcon.menu.GetMenuItemCount() == 0
 
