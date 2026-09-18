@@ -9,7 +9,9 @@ nvda-addon-testkit's own tests_e2e/test_demo_addon.py.
 from __future__ import annotations
 
 import os
+import shutil
 import sys
+from pathlib import Path
 
 import pytest
 
@@ -238,18 +240,86 @@ KOKORO_VOICE_KEY = "kokoro-multilingual"
 # generous on purpose to tolerate a slow real download.
 # Overridable via env for a CI runner with a slower or throttled connection.
 KOKORO_INSTALL_TIMEOUT = int(os.environ.get("KOKORO_INSTALL_TIMEOUT_SECONDS", "300"))
+KOKORO_CACHE_DIR = (
+    Path(
+        os.environ.get(
+            "DENGJEN_KOKORO_CACHE_DIR", Path.home() / ".cache" / "dengjen-kokoro"
+        )
+    ).expanduser()
+    / KOKORO_VOICE_KEY
+)
+
+
+def _resolve_kokoro_install_dir(nvda) -> Path:
+    """The real, on-disk install dir inside the fresh portable's own config,
+    read from NVDA itself rather than nvda-addon-testkit's private
+    Provisioned.workdir -- mirrors const.py's DENGJEN_KOKORO_VOICES_DIR
+    construction without depending on that internal attribute."""
+    config_path = nvda.eval("__import__('globalVars').appArgs.configPath")
+    return Path(config_path) / "dengjen" / "voices" / "kokoro" / KOKORO_VOICE_KEY
+
+
+def _refresh_installed_tab_after_out_of_band_install(nvda) -> None:
+    """Re-reads the Installed tab, which populates once and would otherwise
+    keep its pre-Kokoro list. Only that tab: invalidating the Download tab
+    too would make its next visit refetch the online voice list."""
+    voice_manager_state(
+        nvda,
+        "(lambda page: (page.invalidate_cache(), page.populate_list()))"
+        "(manager.notebookCtrl.GetPage(0))",
+    )
+
+
+def _selected_tab(nvda):
+    return voice_manager_state(nvda, "manager and manager.notebookCtrl.GetSelection()")
+
+
+def _switch_to_installed_tab(nvda) -> None:
+    """A no-op when already there: the Kokoro tab has no enabled control once
+    installed, so a stray control+tab through it strands focus on Close."""
+    if _selected_tab(nvda) == 0:
+        return
+    press_until(
+        nvda,
+        "control+tab",
+        lambda: _selected_tab(nvda) == 0,
+        description="the notebook to switch to the Installed tab",
+    )
+
+
+def _copy_voice_tree(src: Path, dest: Path) -> None:
+    """config.json copied last, same invariant _install() documents in
+    kokoro_download.py: it's the only file is_installed() checks, so a copy
+    interrupted partway must not leave a directory that looks installed."""
+    dest.mkdir(parents=True, exist_ok=True)
+    shutil.copytree(
+        src, dest, dirs_exist_ok=True, ignore=shutil.ignore_patterns("config.json")
+    )
+    shutil.copy(src / "config.json", dest / "config.json")
 
 
 @pytest.fixture(scope="session")
 def kokoro_installed(nvda_session, downloaded_voice_key):
-    """Installs the real Kokoro voice via the real Kokoro tab, once per
-    session. Depends on downloaded_voice_key (not just nvda_session) so the
-    voice manager dialog is already open on the Installed tab -- reusing it
+    """Installs the real Kokoro voice, once per session -- from a warm local
+    cache when one exists (seeded by build_addon.yml's "Restore Kokoro voice
+    cache" step), otherwise via the real Kokoro tab exactly as before, which
+    then warms the cache for "Save Kokoro voice cache" to persist.
+
+    Depends on downloaded_voice_key (not just nvda_session) so the voice
+    manager dialog is already open on the Installed tab -- reusing it
     instead of re-deriving how to open it a second time, since the no-voice
     modal that opened it originally only fires when zero voices are
     installed."""
     nvda = nvda_session
     nvda.wait_until_idle(timeout=15)
+
+    install_dir = _resolve_kokoro_install_dir(nvda)
+
+    if (KOKORO_CACHE_DIR / "config.json").exists():
+        _copy_voice_tree(KOKORO_CACHE_DIR, install_dir)
+        assert (install_dir / "config.json").exists()
+        _refresh_installed_tab_after_out_of_band_install(nvda)
+        return KOKORO_VOICE_KEY
 
     press_until(
         nvda,
@@ -327,21 +397,15 @@ def kokoro_installed(nvda_session, downloaded_voice_key):
             description="focus to return to the voice manager dialog",
         )
     nvda.wait_until_idle(timeout=15)
+
+    _copy_voice_tree(install_dir, KOKORO_CACHE_DIR)
     return KOKORO_VOICE_KEY
 
 
 def test_kokoro_installs_and_lists_alongside_the_piper_voice(
     nvda, kokoro_installed, downloaded_voice_key, assert_no_unexpected_errors
 ):
-    press_until(
-        nvda,
-        "control+tab",
-        lambda: (
-            voice_manager_state(nvda, "manager and manager.notebookCtrl.GetSelection()")
-            == 0
-        ),
-        description="the notebook to switch to the Installed tab",
-    )
+    _switch_to_installed_tab(nvda)
     installed_keys = wait_until(
         lambda: voice_manager_state(
             nvda,

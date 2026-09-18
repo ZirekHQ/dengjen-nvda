@@ -143,6 +143,13 @@ jobs:
           key: nvda-launcher-stable-${{ github.run_id }}
           restore-keys: nvda-launcher-stable-
 
+      - name: Restore Kokoro voice cache (exact key match only)
+        id: kokoro-cache
+        uses: actions/cache/restore@0057852bfaa89a56745cba8c7296529d2fc39830 # v4.3.0
+        with:
+          path: ~/.cache/dengjen-kokoro
+          key: kokoro-voice-${{ hashFiles('addon/globalPlugins/dengjen_tts_global_plugin/kokoro_download.py', 'addon/globalPlugins/dengjen_tts_global_plugin/voice_manager.py') }}
+
       - run: nvda-testkit doctor
       - run: pytest tests_e2e/ -v
 
@@ -152,6 +159,19 @@ jobs:
         with:
           path: ~/.cache/nvda-testkit
           key: nvda-launcher-stable-${{ github.run_id }}
+
+      - name: Check Kokoro voice cache is complete
+        id: kokoro-complete
+        if: always() && steps.kokoro-cache.outputs.cache-hit != 'true'
+        shell: pwsh
+        run: echo "complete=$(Test-Path $HOME/.cache/dengjen-kokoro/kokoro-multilingual/config.json)" >> $env:GITHUB_OUTPUT
+
+      - name: Save Kokoro voice cache (complete installs only)
+        if: always() && steps.kokoro-complete.outputs.complete == 'True'
+        uses: actions/cache/save@0057852bfaa89a56745cba8c7296529d2fc39830 # v4.3.0
+        with:
+          path: ~/.cache/dengjen-kokoro
+          key: ${{ steps.kokoro-cache.outputs.cache-primary-key }}
 
       - if: failure()
         uses: actions/upload-artifact@330a01c490aca151604b8cf639adc76d48f6c5d4 # v5.0.0
