@@ -70,7 +70,7 @@ class TestDownloadToFile:
         )
 
         def fake_stream_to_file(response, target_file, total_size, progress_callback):
-            Path(target_file).write_bytes(b"short")  # 5 bytes, not 10
+            Path(target_file).write_bytes(b"short")
 
         monkeypatch.setattr(kokoro_download, "stream_to_file", fake_stream_to_file)
         target = tmp_path / "model.onnx"
@@ -86,7 +86,7 @@ class TestDownloadToFile:
         )
 
         def fake_stream_to_file(response, target_file, total_size, progress_callback):
-            Path(target_file).write_bytes(b"exact")  # 5 bytes, matches
+            Path(target_file).write_bytes(b"exact")
 
         monkeypatch.setattr(kokoro_download, "stream_to_file", fake_stream_to_file)
         target = tmp_path / "model.onnx"
