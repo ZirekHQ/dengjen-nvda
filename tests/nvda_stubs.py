@@ -300,6 +300,9 @@ def install(*, stub_wx: bool = True) -> None:
             ICON_INFORMATION=32,
             EVT_MENU=MagicMock(),
             CallAfter=MagicMock(side_effect=lambda func, *a, **kw: func(*a, **kw)),
+            CallLater=MagicMock(
+                side_effect=lambda _delay_ms, func, *a, **kw: func(*a, **kw)
+            ),
             ProgressDialog=MagicMock(return_value=MagicMock()),
         )
     _stub_module(
