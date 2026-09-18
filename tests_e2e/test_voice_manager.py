@@ -259,10 +259,32 @@ def _resolve_kokoro_install_dir(nvda) -> Path:
     return Path(config_path) / "dengjen" / "voices" / "kokoro" / KOKORO_VOICE_KEY
 
 
-def _invalidate_pages_after_out_of_band_install(nvda) -> None:
-    """Does what the install success callback does for a UI install: the
-    Installed tab populates once and would otherwise keep its pre-Kokoro list."""
-    voice_manager_state(nvda, "manager._invalidate_pages_voice_cache()")
+def _refresh_installed_tab_after_out_of_band_install(nvda) -> None:
+    """Re-reads the Installed tab, which populates once and would otherwise
+    keep its pre-Kokoro list. Only that tab: invalidating the Download tab
+    too would make its next visit refetch the online voice list."""
+    voice_manager_state(
+        nvda,
+        "(lambda page: (page.invalidate_cache(), page.populate_list()))"
+        "(manager.notebookCtrl.GetPage(0))",
+    )
+
+
+def _selected_tab(nvda):
+    return voice_manager_state(nvda, "manager and manager.notebookCtrl.GetSelection()")
+
+
+def _switch_to_installed_tab(nvda) -> None:
+    """A no-op when already there: the Kokoro tab has no enabled control once
+    installed, so a stray control+tab through it strands focus on Close."""
+    if _selected_tab(nvda) == 0:
+        return
+    press_until(
+        nvda,
+        "control+tab",
+        lambda: _selected_tab(nvda) == 0,
+        description="the notebook to switch to the Installed tab",
+    )
 
 
 def _copy_voice_tree(src: Path, dest: Path) -> None:
@@ -296,7 +318,7 @@ def kokoro_installed(nvda_session, downloaded_voice_key):
     if (KOKORO_CACHE_DIR / "config.json").exists():
         _copy_voice_tree(KOKORO_CACHE_DIR, install_dir)
         assert (install_dir / "config.json").exists()
-        _invalidate_pages_after_out_of_band_install(nvda)
+        _refresh_installed_tab_after_out_of_band_install(nvda)
         return KOKORO_VOICE_KEY
 
     press_until(
@@ -383,15 +405,7 @@ def kokoro_installed(nvda_session, downloaded_voice_key):
 def test_kokoro_installs_and_lists_alongside_the_piper_voice(
     nvda, kokoro_installed, downloaded_voice_key, assert_no_unexpected_errors
 ):
-    press_until(
-        nvda,
-        "control+tab",
-        lambda: (
-            voice_manager_state(nvda, "manager and manager.notebookCtrl.GetSelection()")
-            == 0
-        ),
-        description="the notebook to switch to the Installed tab",
-    )
+    _switch_to_installed_tab(nvda)
     installed_keys = wait_until(
         lambda: voice_manager_state(
             nvda,
