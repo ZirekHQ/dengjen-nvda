@@ -510,10 +510,10 @@ def _get_voices_from_cache(path=None):
     try:
         with open(path, "rb") as file:
             voices = json.load(file)
+        return PiperVoice.from_list_of_dicts(_select_not_installed_voices(voices))
     except Exception:
-        log.exception("Failed to get voices from local file", exc_info=True)
+        log.exception("Failed to read the voice catalog file", exc_info=True)
         return None
-    return PiperVoice.from_list_of_dicts(_select_not_installed_voices(voices))
 
 
 def _refresh_voices_cache():

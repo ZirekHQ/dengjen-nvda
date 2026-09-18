@@ -160,10 +160,15 @@ class AsyncEngine:
         @wraps(func)
         def wrapper(*args, **kwargs):
             self.ensure_running()
-            try:
-                return self._executor.submit(func, *args, **kwargs)
-            except RuntimeError:
-                log.debug(f"Failed to submit function {func}.")
+            with self._lifecycle_lock:
+                executor = self._executor
+                if executor is None:
+                    log.debug(f"Executor unavailable; dropped call to {func}.")
+                    return None
+                try:
+                    return executor.submit(func, *args, **kwargs)
+                except RuntimeError:
+                    log.debug(f"Failed to submit function {func}.")
 
         return wrapper
 
