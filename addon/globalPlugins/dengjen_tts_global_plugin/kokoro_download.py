@@ -125,6 +125,12 @@ def _download_to_file(relative_path, target_path):
     with follow_redirects(url, relative_path) as response:
         total_size = int(response.getheader("Content-Length", 0))
         stream_to_file(response, target_path, total_size, lambda _percent: None)
+    if total_size and target_path.stat().st_size != total_size:
+        log.error(
+            f"Downloaded size for {relative_path} does not match the expected size"
+        )
+        target_path.unlink(missing_ok=True)
+        raise RuntimeError(f"Downloaded size for {relative_path} does not match")
 
 
 class KokoroVoiceDownloader(BaseVoiceDownloader):

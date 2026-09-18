@@ -50,7 +50,8 @@ class GlobalPlugin(globalPluginHandler.GlobalPlugin):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
         self.__voice_manager_shown = False
-        self._voice_checker = lambda: wx.CallLater(3000, self._perform_voice_check)
+        self._voice_check_timer = None
+        self._voice_checker = self._schedule_voice_check
         core.postNvdaStartup.register(self._voice_checker)
         self.itemHandle = gui.mainFrame.sysTrayIcon.menu.Append(
             wx.ID_ANY,
@@ -94,6 +95,9 @@ class GlobalPlugin(globalPluginHandler.GlobalPlugin):
 
     def on_request_feature(self, event):
         feedback.open_feature_request()
+
+    def _schedule_voice_check(self):
+        self._voice_check_timer = wx.CallLater(3000, self._perform_voice_check)
 
     def _perform_voice_check(self):
         if self.__voice_manager_shown:
@@ -146,6 +150,14 @@ class GlobalPlugin(globalPluginHandler.GlobalPlugin):
             synth.__init__()
 
     def terminate(self):
+        try:
+            core.postNvdaStartup.unregister(self._voice_checker)
+        except Exception:
+            log.debug(
+                "Failed to unregister the post-startup voice check", exc_info=True
+            )
+        if self._voice_check_timer is not None and self._voice_check_timer.IsRunning():
+            self._voice_check_timer.Stop()
         try:
             gui.mainFrame.sysTrayIcon.menu.DestroyItem(self.itemHandle)
         except Exception:

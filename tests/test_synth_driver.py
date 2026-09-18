@@ -225,6 +225,20 @@ class TestBuildSpeechTasks:
         tasks = driver._build_speech_tasks(seq)
         assert [type(t) for t in tasks] == [SpeechTask, SpeechTask, DoneSpeakingTask]
 
+    def test_a_lone_empty_string_still_produces_a_speech_task(self, driver):
+        """any(text_list) is False for [""] -- an empty string is a
+        legitimate collected value, not "no text", and must still flush
+        into a SpeechTask."""
+        tasks = driver._build_speech_tasks([""])
+        assert [type(t) for t in tasks] == [SpeechTask, DoneSpeakingTask]
+
+    def test_a_lone_index_zero_still_produces_an_index_reached_task(self, driver):
+        """any(index_command_list) is False for [0] -- index 0 is a
+        legitimate index value, not "no index commands"."""
+        tasks = driver._build_speech_tasks([_index_command(0)])
+        assert [type(t) for t in tasks] == [IndexReachedTask, DoneSpeakingTask]
+        assert tasks[0].index_list == [0]
+
     def test_a_mid_sequence_lang_change_switches_to_the_new_voices_player(
         self, configured_voice, fake_backend
     ):
@@ -263,8 +277,64 @@ class TestBuildSpeechTasks:
         finally:
             driver.terminate()
 
+    def test_a_later_call_resyncs_the_player_after_a_restored_synthesis_context(
+        self, configured_voice, fake_backend
+    ):
+        """create_synthesis_context() restores tts.speech_options (and thus
+        .voice) once a speak() call exits, but nothing previously resynced
+        self._player to match -- a later speak() call with no
+        LangChangeCommand of its own kept using whichever player a prior
+        mid-sequence switch left behind: a sample-rate mismatch produces
+        audible distortion, not an exception."""
+        second_voice_dir = _write_voice(configured_voice, key="fr_FR-test-medium")
+        second_config_path = str(next(second_voice_dir.glob("*.json")))
+        fake_backend.voices_by_config_path[second_config_path] = LoadedVoice(
+            backend_voice_id="fake-remote-id-fr",
+            supports_streaming_output=False,
+            sample_rate=24000,
+            speakers={},
+            defaults=SynthOptions(
+                speaker=None, length_scale=1.0, noise_scale=0.667, noise_w=0.8
+            ),
+        )
+        driver = SynthDriver()
+        try:
+            first_player = driver._player
+
+            with driver.tts.create_synthesis_context():
+                driver._build_speech_tasks(
+                    ["hello", _lang_change_command("fr_FR"), "bonjour"]
+                )
+            assert driver.tts.speech_options.voice.key == VOICE_KEY
+
+            tasks = driver._build_speech_tasks(["hi again"])
+
+            speech_task = next(t for t in tasks if isinstance(t, SpeechTask))
+            assert speech_task.player is first_player
+        finally:
+            driver.terminate()
+
 
 class TestLifecycle:
+    def test_speak_with_no_backend_does_not_raise(self, configured_voice, monkeypatch):
+        """__init__ leaves self.tts as None when the backend fails to start
+        (test_backend_unavailable_leaves_the_driver_without_voices above),
+        but check() always returns True, so NVDA can still select this
+        driver and call speak() on it -- it must not crash with an
+        AttributeError on self.tts.create_synthesis_context()."""
+        from dengjen_neural_voices.ports.tts_backend import BackendUnavailableError
+
+        def _boom():
+            raise BackendUnavailableError("no vcruntime")
+
+        monkeypatch.setattr(driver_module, "_bootstrap_backend", _boom)
+        d = SynthDriver()
+        assert d.tts is None
+        try:
+            d.speak(["hello"])
+        finally:
+            d.terminate()
+
     def test_cancel_stops_the_player(self, driver):
         driver._player.stop = MagicMock()
         driver.cancel()

@@ -258,6 +258,9 @@ class SynthDriver(NvdaSynthDriver):
         self._active_players = set()
 
     def speak(self, speechSequence):
+        if self.tts is None:
+            log.error("speak() called with no TTS backend available; dropping speech.")
+            return
         with self.tts.create_synthesis_context():
             self._fast_prepare_and_run_speech_task(speechSequence)
 
@@ -272,6 +275,9 @@ class SynthDriver(NvdaSynthDriver):
         text_list = []
         index_command_list = []
         default_lang = self.tts.language
+        self._player = self._get_or_create_player(
+            self.tts.speech_options.voice.sample_rate
+        )
         players_used = {self._player}
         for item in speech_sequence:
             item_type = type(item)
@@ -282,16 +288,16 @@ class SynthDriver(NvdaSynthDriver):
                 text_list.append(item)
                 continue
 
-            if any(text_list):
+            if text_list:
                 speech_seq.append(self._create_speech_task(text_list))
                 text_list.clear()
             break_task = self._apply_speech_command(item, default_lang)
             if break_task is not None:
                 speech_seq.append(break_task)
             players_used.add(self._player)
-        if any(text_list):
+        if text_list:
             speech_seq.append(self._create_speech_task(text_list))
-        if any(index_command_list):
+        if index_command_list:
             speech_seq.append(
                 IndexReachedTask(self._on_index_reached, index_command_list)
             )

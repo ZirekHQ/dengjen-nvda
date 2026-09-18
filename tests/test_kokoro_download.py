@@ -8,6 +8,9 @@ tests already; these tests cover kokoro_download.py's own logic only.
 
 import json
 import os
+from contextlib import contextmanager
+from pathlib import Path
+from unittest.mock import MagicMock
 
 import pytest
 
@@ -43,6 +46,54 @@ class TestBuildKokoroConfig:
         assert len(set(KOKORO_PRESET_NAMES)) == 54
         assert "af_heart" in KOKORO_PRESET_NAMES
         assert "zm_yunyang" in KOKORO_PRESET_NAMES
+
+
+class TestDownloadToFile:
+    """_download_to_file streams straight to disk; total_size comes from a
+    real Content-Length header, so a truncated/corrupt download is
+    detectable without a checksum."""
+
+    def _fake_follow_redirects(self, content_length):
+        @contextmanager
+        def follow_redirects(url, label, headers=None):
+            response = MagicMock()
+            response.getheader.return_value = str(content_length)
+            yield response
+
+        return follow_redirects
+
+    def test_raises_and_deletes_the_file_when_the_size_does_not_match(
+        self, tmp_path, monkeypatch
+    ):
+        monkeypatch.setattr(
+            kokoro_download, "follow_redirects", self._fake_follow_redirects(10)
+        )
+
+        def fake_stream_to_file(response, target_file, total_size, progress_callback):
+            Path(target_file).write_bytes(b"short")
+
+        monkeypatch.setattr(kokoro_download, "stream_to_file", fake_stream_to_file)
+        target = tmp_path / "model.onnx"
+
+        with pytest.raises(RuntimeError):
+            kokoro_download._download_to_file("onnx/model.onnx", target)
+
+        assert not target.exists()
+
+    def test_keeps_the_file_when_the_size_matches(self, tmp_path, monkeypatch):
+        monkeypatch.setattr(
+            kokoro_download, "follow_redirects", self._fake_follow_redirects(5)
+        )
+
+        def fake_stream_to_file(response, target_file, total_size, progress_callback):
+            Path(target_file).write_bytes(b"exact")
+
+        monkeypatch.setattr(kokoro_download, "stream_to_file", fake_stream_to_file)
+        target = tmp_path / "model.onnx"
+
+        kokoro_download._download_to_file("onnx/model.onnx", target)
+
+        assert target.read_bytes() == b"exact"
 
 
 class TestKokoroVoiceDownloaderInstall:

@@ -117,6 +117,29 @@ class TestMenuLifecycle:
             plugin._voice_checker
         )
 
+    def test_terminate_unregisters_the_post_startup_check(self, plugin, plugin_module):
+        """core.postNvdaStartup is a process-wide singleton that outlives any
+        one GlobalPlugin instance -- a reload that doesn't unregister leaks
+        one more stale closure onto it per reload, each holding a reference
+        to an already-terminated instance."""
+        plugin.terminate()
+        plugin_module.core.postNvdaStartup.unregister.assert_called_with(
+            plugin._voice_checker
+        )
+
+    def test_terminate_stops_the_pending_voice_check_timer(self, plugin):
+        """_voice_checker (the postNvdaStartup callback) arms a 3s
+        wx.CallLater. If a reload happens inside that window, the pending
+        timer must not go on to fire _perform_voice_check against an
+        already-terminated plugin instance."""
+        plugin._voice_checker()
+        timer = plugin._voice_check_timer
+        assert timer.IsRunning()
+
+        plugin.terminate()
+
+        assert not timer.IsRunning()
+
 
 class TestVoiceCheck:
     """_ask_first_run_voice_action shows a real wx.MessageDialog via

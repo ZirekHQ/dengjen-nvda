@@ -511,6 +511,25 @@ class TestVoicesCache:
     def test_get_voices_from_cache_returns_none_when_file_is_missing(self, cache_path):
         assert voice_download._get_voices_from_cache() is None
 
+    def test_get_voices_from_cache_returns_none_on_malformed_entries(
+        self, cache_path, monkeypatch
+    ):
+        """A voice dict missing 'files'/'language' (a schema change, or a
+        write interrupted mid-flight producing valid-but-wrong-shaped JSON)
+        must not raise past the try/except -- it has to be treated the same
+        as a corrupt/unreadable file, so get_available_voices falls back to
+        an online refresh instead of crashing."""
+        cache_path.write_text(
+            json.dumps({"en_US-lessac-medium": {"key": "en_US-lessac-medium"}}),
+            encoding="utf-8",
+        )
+        monkeypatch.setattr(
+            voice_download.DengjenTextToSpeechSystem,
+            "load_piper_voices_from_nvda_config_dir",
+            classmethod(lambda cls, backend: []),
+        )
+        assert voice_download._get_voices_from_cache() is None
+
     def test_get_available_voices_uses_the_cache_without_going_online(
         self, cache_path, monkeypatch
     ):

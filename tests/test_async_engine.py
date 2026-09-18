@@ -162,6 +162,28 @@ class TestCallThreaded:
         assert documented.__name__ == "documented"
         assert documented.__doc__ == "Another docstring."
 
+    def test_does_not_raise_when_terminated_between_ensure_running_and_submit(
+        self, running_engine
+    ):
+        """wrapper used to read self._executor unguarded after
+        ensure_running() returned -- a concurrent terminate() nulling
+        self._executor in that window raised AttributeError instead of
+        being treated as "can't submit right now"."""
+
+        @running_engine.call_threaded
+        def noop():
+            return "ran"
+
+        real_ensure_running = running_engine.ensure_running
+
+        def race_with_terminate():
+            real_ensure_running()
+            running_engine._executor = None
+
+        running_engine.ensure_running = race_with_terminate
+
+        assert noop() is None
+
 
 class TestRunInExecutor:
     def test_awaits_a_sync_function_from_inside_the_loop(self, running_engine):
