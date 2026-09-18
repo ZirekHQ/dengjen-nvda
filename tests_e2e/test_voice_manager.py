@@ -245,7 +245,7 @@ KOKORO_CACHE_DIR = (
         os.environ.get(
             "DENGJEN_KOKORO_CACHE_DIR", Path.home() / ".cache" / "dengjen-kokoro"
         )
-    )
+    ).expanduser()
     / KOKORO_VOICE_KEY
 )
 
