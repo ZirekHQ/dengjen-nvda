@@ -896,6 +896,8 @@ class TestPiperVoiceDownloaderDoneCallback:
         )
         restart_mock = MagicMock()
         monkeypatch.setattr(download_infra.core, "restart", restart_mock)
+        call_later_mock = MagicMock()
+        monkeypatch.setattr(download_infra.wx, "CallLater", call_later_mock)
 
         voice = _piper_voice(key="en_US-lessac-medium")
         downloader = PiperVoiceDownloader(voice, success_callback=MagicMock())
@@ -907,7 +909,8 @@ class TestPiperVoiceDownloaderDoneCallback:
         installed_file = voices_dir / "en_US-lessac-medium" / file.name
         assert installed_file.read_bytes() == b"model-bytes"
         downloader.success_callback.assert_called_once()
-        restart_mock.assert_called_once()
+        call_later_mock.assert_called_once_with(200, restart_mock)
+        restart_mock.assert_not_called()
 
     def test_hash_mismatch_does_not_install_and_reports_failure(
         self, tmp_path, monkeypatch
@@ -1161,6 +1164,8 @@ class TestPiperRTVoiceDownloader:
         )
         restart_mock = MagicMock()
         monkeypatch.setattr(download_infra.core, "restart", restart_mock)
+        call_later_mock = MagicMock()
+        monkeypatch.setattr(download_infra.wx, "CallLater", call_later_mock)
 
         tar_path = _make_tar(
             tmp_path,
@@ -1181,7 +1186,8 @@ class TestPiperRTVoiceDownloader:
         )
         assert installed.read_bytes() == b"rt-model"
         downloader.success_callback.assert_called_once()
-        restart_mock.assert_called_once()
+        call_later_mock.assert_called_once_with(200, restart_mock)
+        restart_mock.assert_not_called()
 
     def test_extraction_failure_is_reported_without_crashing(
         self, tmp_path, monkeypatch
