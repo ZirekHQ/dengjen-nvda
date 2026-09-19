@@ -15,7 +15,7 @@ jobs:
   build:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5.1.0
+      - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6.1.0
         with:
           persist-credentials: false
 
@@ -33,7 +33,7 @@ jobs:
 
       - run: scons
 
-      - uses: actions/upload-artifact@330a01c490aca151604b8cf639adc76d48f6c5d4 # v5.0.0
+      - uses: actions/upload-artifact@b7c566a772e6b6bfb58ed0dc250532a479d7789f # v6.0.0
         with:
           name: packaged_addon
           path: ./*.nvda-addon
@@ -48,7 +48,7 @@ jobs:
     env:
       NVDA_CHANNEL: ${{ matrix.channel }}
     steps:
-      - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5.1.0
+      - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6.1.0
         with:
           persist-credentials: false
 
@@ -66,7 +66,7 @@ jobs:
         run: "pip install --only-binary :all: -r requirements-test-e2e.txt"
 
       - name: Restore Kokoro voice cache (exact key match only)
-        uses: actions/cache/restore@caa296126883cff596d87d8935842f9db880ef25 # v5.1.0
+        uses: actions/cache/restore@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
         with:
           path: ~/.cache/dengjen-kokoro
           key: kokoro-voice-${{ hashFiles('addon/globalPlugins/dengjen_tts_global_plugin/kokoro_download.py', 'addon/globalPlugins/dengjen_tts_global_plugin/voice_manager.py') }}
@@ -74,7 +74,7 @@ jobs:
       - run: pytest tests_e2e/ -v --nvda-channel "$env:NVDA_CHANNEL"
 
       - if: failure()
-        uses: actions/upload-artifact@330a01c490aca151604b8cf639adc76d48f6c5d4 # v5.0.0
+        uses: actions/upload-artifact@b7c566a772e6b6bfb58ed0dc250532a479d7789f # v6.0.0
         with:
           name: e2e-artifacts-${{ matrix.channel }}
           path: testOutput/
