@@ -450,6 +450,91 @@ def test_the_downloaded_voice_produces_real_speech(
     assert_no_unexpected_errors(nvda)
 
 
+_VOICE_PANEL = (
+    "next((w.currentCategory.voicePanel for w in wx.GetTopLevelWindows()"
+    " if hasattr(getattr(w, 'currentCategory', None), 'voicePanel')), None)"
+)
+
+
+def _voice_panel_state(nvda, expr: str):
+    """`expr` sees `wx` and `panel`: the Speech settings voice panel, None when closed."""
+    return nvda.eval(
+        f"(lambda wx, panel: {expr})(__import__('wx'), "
+        f"(lambda wx: {_VOICE_PANEL})(__import__('wx')))"
+    )
+
+
+def _activate_dengjen(nvda, voice_key: str) -> None:
+    nvda.config.set(["speech", "synth"], ADDON_NAME)
+    nvda.config.set(["speech", ADDON_NAME, "voice"], voice_key)
+    nvda.restart()
+    assert nvda.eval("__import__('synthDriverHandler').getSynth().name") == ADDON_NAME
+
+
+def _open_speech_settings(nvda) -> None:
+    nvda.eval(
+        "__import__('wx').CallAfter("
+        "__import__('gui').mainFrame.onSpeechSettingsCommand, None)"
+    )
+    wait_until(
+        lambda: _voice_panel_state(nvda, "panel is not None"),
+        timeout=15,
+        description="the Speech settings dialog to open",
+    )
+
+
+def _close_speech_settings(nvda) -> None:
+    nvda.eval(
+        "(lambda wx: wx.CallAfter(next(w for w in wx.GetTopLevelWindows()"
+        " if hasattr(getattr(w, 'currentCategory', None), 'voicePanel')).Close))"
+        "(__import__('wx'))"
+    )
+    wait_until(
+        lambda: _voice_panel_state(nvda, "panel is None"),
+        timeout=15,
+        description="the Speech settings dialog to close",
+    )
+
+
+def test_speech_settings_offer_rate_pitch_and_volume(
+    nvda, downloaded_voice_key, assert_no_unexpected_errors
+):
+    """The driver's own settings must reach NVDA's voice panel."""
+    _activate_dengjen(nvda, downloaded_voice_key)
+    _open_speech_settings(nvda)
+    try:
+        controls = _voice_panel_state(
+            nvda, "[a for a in dir(panel) if a.endswith('Slider')]"
+        )
+        assert {"rateSlider", "pitchSlider", "volumeSlider"} <= set(controls)
+    finally:
+        _close_speech_settings(nvda)
+    assert_no_unexpected_errors(nvda)
+
+
+def test_speech_settings_list_the_installed_voice_and_its_variants(
+    nvda, downloaded_voice_key, assert_no_unexpected_errors
+):
+    _activate_dengjen(nvda, downloaded_voice_key)
+    _open_speech_settings(nvda)
+    try:
+        assert _voice_panel_state(nvda, "panel.voiceList.GetCount()") >= 1
+        assert _voice_panel_state(nvda, "panel.variantList.GetCount()") >= 1
+    finally:
+        _close_speech_settings(nvda)
+    assert_no_unexpected_errors(nvda)
+
+
+def test_speech_settings_dialog_closes_and_nvda_stays_responsive(
+    nvda, downloaded_voice_key, assert_no_unexpected_errors
+):
+    _activate_dengjen(nvda, downloaded_voice_key)
+    _open_speech_settings(nvda)
+    _close_speech_settings(nvda)
+    assert nvda.eval("1 + 1") == 2
+    assert_no_unexpected_errors(nvda)
+
+
 def test_removal_is_also_two_phase(nvda):
     """Must stay last in this file: uninstalls what addon_under_test set up."""
     nvda.addons.remove(ADDON_NAME)
