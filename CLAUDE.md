@@ -9,7 +9,7 @@
   - `aio.py`: `AsyncEngine` singleton managing dedicated background thread, event loop, and thread pool for async gRPC calls[cite: 3].
   - `adapters/dengjen_grpc/`: the `TTSBackend` adapter; spawns detached `dengjen-tts-grpc.exe` subprocess on an OS-assigned port it reports back through its log, explicitly validates `vcruntime140_1.dll` presence prior to spawn[cite: 3].
   - `_config.py` & `voice_migration.py`: `DengjenConfig` persists per-voice configuration; migration handles legacy Sonata settings on first run[cite: 3].
-- **Vendored Dependencies**: Do NOT edit `lib/` directly; refresh native wheels via `update_grpc.py`, `update_miniaudio.py`, `update_cffi.py`[cite: 3].
+- **Vendored Dependencies**: Do NOT edit `lib/` directly; refresh native wheels via `update_grpc.py`, `update_miniaudio.py`, `update_cffi.py`[cite: 3]. `bin/dengjen-tts-grpc.exe` is not committed: run `python update_dengjen_tts.py fetch` before `scons`/`tests_contract/`; re-pin `dengjen-tts.lock` with `update_dengjen_tts.py bump` (`update-dengjen-tts.yml` opens the bump PR daily, on dispatch, or manually; it skips when a PR for that version exists).
 - **Build & Versioning**: SCons-driven (`scons`)[cite: 3]. Prefer configuring via `buildVars.py` before modifying `sconstruct`[cite: 3]. `addon_version` MUST be strict 3-part semver[cite: 3].
 - **Release Workflow**: Tag-driven from `main` via `git tag -a vMAJOR.MINOR.PATCH(-beta.N) -m "..."`[cite: 3]. CI builds on Ubuntu, executes Windows tests, and drafts release artifacts[cite: 3].
 

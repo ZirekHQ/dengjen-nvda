@@ -21,3 +21,8 @@ coverage.xml
 .superpowers/
 uv.lock
 .worktrees/
+
+# Installed by update_dengjen_tts.py fetch from the release pinned in dengjen-tts.lock
+addon/synthDrivers/dengjen_neural_voices/bin/dengjen-tts-grpc.exe
+addon/synthDrivers/dengjen_neural_voices/bin/.dengjen-tts-fetched
+addon/synthDrivers/dengjen_neural_voices/bin/NOTICES/COPYING - dengjen-tts-grpc
