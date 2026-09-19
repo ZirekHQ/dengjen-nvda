@@ -27,9 +27,14 @@ from unittest.mock import MagicMock
 import config
 import pytest
 import ui
+from dengjen_neural_voices._config import DengjenConfig
 from dengjen_neural_voices.const import FALLBACK_SPEAKER_NAME
 from dengjen_neural_voices.domain import tts_system
-from dengjen_neural_voices.ports.tts_backend import LoadedVoice, SynthOptions
+from dengjen_neural_voices.ports.tts_backend import (
+    LoadedVoice,
+    SynthOptions,
+    VoiceLoadError,
+)
 from logHandler import log
 from speech.commands import BreakCommand, IndexCommand, LangChangeCommand
 
@@ -652,6 +657,45 @@ def _reset_mocks():
     ui.message.reset_mock()
     log.exception.reset_mock()
     yield
+
+
+class TestEngineLostMidSession:
+    """Setters swallow BackendError and log it instead of raising, so NVDA's
+    loadSettings() cannot fail when the engine is gone."""
+
+    @pytest.fixture
+    def dead_engine(self, driver, fake_backend):
+        fake_backend.raise_on_set_synth_options(VoiceLoadError("engine gone"))
+        return driver
+
+    def test_reapplying_the_voice_does_not_raise(self, dead_engine):
+        dead_engine.voice = dead_engine.voice
+
+    def test_switching_variant_does_not_raise(self, dead_engine):
+        dead_engine.variant = dead_engine.variant
+
+    @pytest.mark.parametrize("name", ["noise_scale", "length_scale", "noise_w"])
+    def test_moving_a_scale_slider_does_not_raise(self, dead_engine, name):
+        setattr(dead_engine, name, 60)
+
+    def test_setting_the_speaker_does_not_raise(self, driver, monkeypatch):
+        def fail(_self, _value):
+            raise VoiceLoadError("engine gone")
+
+        monkeypatch.setattr(
+            type(driver.tts), "speaker", property(lambda _self: "x", fail)
+        )
+        driver.speaker = "anyone"
+        assert DengjenConfig[driver.voice]["speaker"] == "anyone"
+
+    def test_the_slider_value_is_kept_for_when_the_engine_returns(self, dead_engine):
+        dead_engine.noise_scale = 60
+        assert dead_engine.noise_scale == 60
+
+    def test_the_failure_is_logged(self, dead_engine):
+        log.exception.reset_mock()
+        dead_engine.noise_scale = 60
+        log.exception.assert_called_once()
 
 
 class TestSetVoiceFailure:
