@@ -1,11 +1,47 @@
 {
   "$schema": "https://docs.renovatebot.com/renovate-schema.json",
-  "extends": ["github>austek/renovate-config"],
+  "extends": [
+    "github>austek/renovate-config"
+  ],
+  "customManagers": [
+    {
+      "customType": "regex",
+      "description": "addon_lastTestedNVDAVersion tracks the latest stable NVDA release.",
+      "matchStrings": [
+        "addon_lastTestedNVDAVersion=\"(?<currentValue>[^\"]+)\""
+      ],
+      "depNameTemplate": "nvaccess/nvda",
+      "datasourceTemplate": "github-releases",
+      "extractVersionTemplate": "^release-(?<version>\\d+\\.\\d+(\\.\\d+)?)$",
+      "versioningTemplate": "loose",
+      "managerFilePatterns": [
+        "/^buildVars\\.py$/"
+      ]
+    }
+  ],
   "packageRules": [
     {
       "description": "Python version is the NVDA runtime ABI (vendored cp313 wheels); bump only when NVDA changes Python.",
-      "matchDepNames": ["python"],
+      "matchDepNames": [
+        "python"
+      ],
       "enabled": false
+    },
+    {
+      "description": "wxPython is pinned to NVDA master's own pin so the GUI suite tests the wx the add-on runs against.",
+      "matchDepNames": [
+        "wxPython"
+      ],
+      "enabled": false
+    },
+    {
+      "description": "Raising the tested NVDA version is a compatibility claim: own PR, human review, e2e runs against stable NVDA.",
+      "matchDepNames": [
+        "nvaccess/nvda"
+      ],
+      "groupName": "NVDA compatibility",
+      "automerge": false,
+      "semanticCommitType": "chore"
     }
   ]
 }
