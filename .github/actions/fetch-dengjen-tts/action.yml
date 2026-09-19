@@ -1,0 +1,15 @@
+name: Fetch dengjen-tts engine
+description: Installs the dengjen-tts-grpc.exe and its NOTICE pinned in dengjen-tts.lock into the add-on's bin/, cached per lock hash. Needs Python on PATH.
+
+runs:
+  using: composite
+  steps:
+    - uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+      with:
+        path: |
+          addon/synthDrivers/dengjen_neural_voices/bin/dengjen-tts-grpc.exe
+          addon/synthDrivers/dengjen_neural_voices/bin/.dengjen-tts-fetched
+          addon/synthDrivers/dengjen_neural_voices/bin/NOTICES/COPYING - dengjen-tts-grpc
+        key: dengjen-tts-engine-${{ runner.os }}-${{ hashFiles('dengjen-tts.lock') }}
+    - shell: bash
+      run: python update_dengjen_tts.py fetch

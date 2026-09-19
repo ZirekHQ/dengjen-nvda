@@ -1,0 +1,87 @@
+name: Update dengjen-tts engine pin
+
+on:
+  schedule:
+    - cron: '17 6 * * *'
+  # payload: {"version": "MAJOR.MINOR.PATCH"}; omitted or empty means latest.
+  repository_dispatch:
+    types: [dengjen-tts-release]
+  workflow_dispatch:
+    inputs:
+      version:
+        description: dengjen-tts gRPC release to pin, MAJOR.MINOR.PATCH (defaults to the latest stable release)
+        required: false
+        type: string
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ${{ github.workflow }}
+  cancel-in-progress: false
+
+jobs:
+  bump:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+      pull-requests: write
+    steps:
+      - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5.1.0
+        with:
+          persist-credentials: false
+
+      - name: Set up Python
+        uses: actions/setup-python@ece7cb06caefa5fff74198d8649806c4678c61a1 # v6.3.0
+        with:
+          python-version: "3.13"
+
+      - name: Pin the release
+        id: pin
+        env:
+          REQUESTED: ${{ github.event.client_payload.version || inputs.version }}
+          GITHUB_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          python update_dengjen_tts.py bump ${REQUESTED:+"$REQUESTED"}
+          echo "version=$(sed -n 's/^version = //p' dengjen-tts.lock)" >> "$GITHUB_OUTPUT"
+          if git diff --quiet -- dengjen-tts.lock; then
+            echo "changed=false" >> "$GITHUB_OUTPUT"
+          else
+            echo "changed=true" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Open the update PR
+        if: steps.pin.outputs.changed == 'true'
+        env:
+          VERSION: ${{ steps.pin.outputs.version }}
+          # Without PR_SYNC_TOKEN the PR falls back to github.token and never gets its required checks.
+          GH_TOKEN: ${{ secrets.PR_SYNC_TOKEN || github.token }}
+        run: |
+          set -euo pipefail
+          branch="chore/update-dengjen-tts-${VERSION}"
+          if [ -n "$(gh pr list --head "$branch" --state all --json number --jq '.[].number')" ]; then
+            echo "A PR for ${branch} already exists (open, closed or merged); leaving it alone."
+            exit 0
+          fi
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git remote set-url origin "https://x-access-token:${GH_TOKEN}@github.com/${GITHUB_REPOSITORY}.git"
+          git switch -c "$branch"
+          git add dengjen-tts.lock
+          git commit -m "chore: update dengjen-tts engine to v${VERSION}" \
+            -m "Pins the dengjen-tts-grpc ${VERSION} release and its zip sha256 in dengjen-tts.lock."
+          git push origin "$branch"
+          gh pr create --base main --head "$branch" \
+            --title "chore: update dengjen-tts engine to v${VERSION}" \
+            --body "## Summary
+
+          Pins [dengjen-tts gRPC ${VERSION}](https://github.com/ZirekHQ/dengjen-tts/releases/tag/grpc-release-v${VERSION}) in \`dengjen-tts.lock\`.
+
+          ## Changes
+
+          - \`dengjen-tts.lock\`: version and zip sha256.
+
+          ## Test plan
+
+          - [ ] CI fetches the binary, checks its sha256 against the pin, and runs the contract tests against it."

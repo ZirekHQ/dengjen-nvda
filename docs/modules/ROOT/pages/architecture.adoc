@@ -20,7 +20,7 @@ C4Container
 
     System_Boundary(addon, "dengjen-nvda") {
         Container(synthdriver, "dengjen_neural_voices", "Python 3.13 add-on", "Loaded in-process by NVDA as a synthesizer driver")
-        Container(grpcbin, "dengjen-tts-grpc.exe", "Vendored Rust binary", "Launched via subprocess.Popen; a gRPC-frontend build of dengjen-tts")
+        Container(grpcbin, "dengjen-tts-grpc.exe", "Fetched Rust binary (pinned in dengjen-tts.lock)", "Launched via subprocess.Popen; a gRPC-frontend build of dengjen-tts")
     }
 
     System_Ext(voices, "Voice catalogue", "External download source for voices")

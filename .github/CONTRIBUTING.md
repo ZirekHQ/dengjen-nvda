@@ -116,6 +116,15 @@ python update_cffi.py        # C FFI runtime
 
 Each script fetches the matching `cp313-win_amd64` wheel from PyPI and swaps the contents under `addon/synthDrivers/dengjen_neural_voices/lib/`.
 
+The engine binary `bin/dengjen-tts-grpc.exe` is not committed. It comes from a [dengjen-tts](https://github.com/ZirekHQ/dengjen-tts) release pinned (version and zip sha256) in `dengjen-tts.lock`:
+
+```bash
+python update_dengjen_tts.py fetch          # install the pinned release; run before scons or tests_contract/
+python update_dengjen_tts.py bump [VERSION] # re-pin (default: latest stable grpc release)
+```
+
+`fetch` fails on a sha256 mismatch and skips the download when the pinned release and its `.exe` are already installed. CI caches it per `dengjen-tts.lock` via `.github/actions/fetch-dengjen-tts`. `update-dengjen-tts.yml` runs `bump` daily, on a `dengjen-tts-release` `repository_dispatch` event, or manually. It opens a PR only when the pin changed and no PR for `chore/update-dengjen-tts-<version>` exists in any state.
+
 ## Submitting a PR
 
 Use the pull request template. Link the issue with `Closes #N` in the PR body — GitHub will auto-close the issue when the PR merges.
