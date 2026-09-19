@@ -30,12 +30,15 @@ The exit code is pytest's. Untracked test files run, so a throwaway probe test i
 2. A user is logged in on the guest console. `-interactive` attaches to that
    session; without it `GetForegroundWindow()` is always 0. Ask the user to log
    in; do not configure autologon.
-3. Guest has a repo checkout with a `.venv` (default `C:\Users\<user>\dengjen-nvda`).
+3. Nothing else: each run idempotently provisions Python, the VC++ runtime, root certificates and the `.venv`
+   under `C:\Users\<user>\dengjen-nvda` (`scripts/vm-guest-provision.bat`).
 
 ## Gotchas
 
 - `vmrun runProgramInGuest` must be given the `.bat` itself. `cmd.exe /c ...`
   exits 1 without running anything.
+- After roughly ten runs the guest starts showing an nvdaHelper "Error registering focus win Event hook"
+  dialog and the no-voice modal never appears. Reboot the guest (`vmrun reset soft`), then log in on the console again.
 - If a result contradicts GitHub's Windows CI, trust CI: the VM drifts across
   restarts and re-logins. First check the baseline
   (`-k "install_is_two_phase or no_voice_modal"`); if existing tests fail the

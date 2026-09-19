@@ -8,9 +8,6 @@ user="${DENGJEN_VM_USER:-ali}"
 repo="${DENGJEN_VM_REPO:-C:\\Users\\${user}\\dengjen-nvda}"
 timeout_s="${DENGJEN_VM_TIMEOUT:-1500}"
 pytest_args=("${@:-tests_e2e/}")
-bat_args=""
-for a in "${pytest_args[@]}"; do [[ $a == *" "* ]] && a="\"$a\""; bat_args+="$a "; done
-
 root="$(git rev-parse --show-toplevel)"
 work="$(mktemp -d)"
 trap 'rm -rf "$work"' EXIT
@@ -24,30 +21,49 @@ vm listProcessesInGuest "$DENGJEN_VM_VMX" | grep -qi "explorer.exe" \
   || die "no interactive desktop session in the guest. Log in on the VM console."
 
 cd "$root"
+# scons treats the bundle as up to date after edits inside addon/, so a stale one would be tested.
+rm -f dengjen_neural_voices-*.nvda-addon
+python3 update_dengjen_tts.py fetch >/dev/null
 uv run --no-project --with-requirements requirements-build.txt scons >/dev/null
 bundle="$(ls -t dengjen_neural_voices-*.nvda-addon | head -n1)"
 
 { git ls-files -co --exclude-standard | while IFS= read -r f; do [ -e "$f" ] && echo "$f"; done
   echo "$bundle"; } | zip -q "$work/src.zip" -@
 
-guest_zip="C:\\Users\\${user}\\dengjen-vm-src.zip"
-guest_bat="C:\\Users\\${user}\\dengjen-vm-run.bat"
-guest_log="C:\\Users\\${user}\\dengjen-vm-run.log"
+guest_dir="C:\\Users\\${user}"
+guest_zip="${guest_dir}\\dengjen-vm-src.zip"
+guest_bat="${guest_dir}\\dengjen-vm-run.bat"
+guest_log="${guest_dir}\\dengjen-vm-run.log"
+guest_args="${guest_dir}\\dengjen-vm-args.txt"
+
+printf '%s\n' "${pytest_args[@]}" >"$work/args.txt"
 
 cat >"$work/run.bat" <<EOF
 @echo off
-cd /d ${repo}
+call "${guest_dir}\\dengjen-vm-provision.bat" "${repo}" > ${guest_log} 2>&1
+cd /d "${repo}"
 del /q dengjen_neural_voices-*.nvda-addon 2>nul
-powershell -NoProfile -Command "Remove-Item -Recurse -Force addon,tests,tests_e2e,tests_gui,tests_contract -ErrorAction SilentlyContinue; Expand-Archive -Force '${guest_zip}' ."
+powershell -NoProfile -Command "\$ErrorActionPreference='Stop'; Get-Item addon,tests,tests_e2e,tests_gui,tests_contract -ErrorAction SilentlyContinue | Remove-Item -Recurse -Force; Expand-Archive -Force '${guest_zip}' ."
+if errorlevel 1 (
+  echo DONE_EXIT_1>> ${guest_log}
+  exit /b 1
+)
 taskkill /F /IM nvda.exe /T >nul 2>&1
-${repo}\\.venv\\Scripts\\python.exe -m pip install -q -r requirements-test-e2e.txt > ${guest_log} 2>&1
-${repo}\\.venv\\Scripts\\python.exe -m pytest ${bat_args}>> ${guest_log} 2>&1
+"${repo}\\.venv\\Scripts\\python.exe" -m pip install -q -r requirements-test-e2e.txt "pytest>=8.2" >> ${guest_log} 2>&1
+if errorlevel 1 (
+  echo DONE_EXIT_1>> ${guest_log}
+  exit /b 1
+)
+"${repo}\\.venv\\Scripts\\python.exe" -m pytest @${guest_args} >> ${guest_log} 2>&1
 echo DONE_EXIT_%ERRORLEVEL%>> ${guest_log}
 EOF
 
 vm deleteFileInGuest "$DENGJEN_VM_VMX" "$guest_log" >/dev/null 2>&1 || true
 vm CopyFileFromHostToGuest "$DENGJEN_VM_VMX" "$work/src.zip" "$guest_zip"
 sed -i "s/\$/\r/" "$work/run.bat"
+vm CopyFileFromHostToGuest "$DENGJEN_VM_VMX" "$work/args.txt" "$guest_args"
+sed 's/$/\r/' "$root/scripts/vm-guest-provision.bat" >"$work/provision.bat"
+vm CopyFileFromHostToGuest "$DENGJEN_VM_VMX" "$work/provision.bat" "${guest_dir}\\dengjen-vm-provision.bat"
 vm CopyFileFromHostToGuest "$DENGJEN_VM_VMX" "$work/run.bat" "$guest_bat"
 # -interactive attaches to the console session; without it GetForegroundWindow() is always 0.
 vm runProgramInGuest "$DENGJEN_VM_VMX" -interactive -noWait "$guest_bat"
