@@ -1,0 +1,80 @@
+name: Update dengjen-tts engine
+
+# repository_dispatch payload: {"version": "MAJOR.MINOR.PATCH"}; omitted or empty means latest.
+on:
+  repository_dispatch:
+    types: [dengjen-tts-release]
+  workflow_dispatch:
+    inputs:
+      version:
+        description: dengjen-tts gRPC release to vendor, MAJOR.MINOR.PATCH (defaults to the latest stable release)
+        required: false
+        type: string
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ${{ github.workflow }}
+  cancel-in-progress: false
+
+jobs:
+  update:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+      pull-requests: write
+    steps:
+      - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5.1.0
+        with:
+          persist-credentials: false
+
+      - name: Set up Python
+        uses: actions/setup-python@ece7cb06caefa5fff74198d8649806c4678c61a1 # v6.3.0
+        with:
+          python-version: "3.13"
+
+      - name: Vendor the release
+        id: vendor
+        env:
+          REQUESTED: ${{ github.event.client_payload.version || inputs.version }}
+          GITHUB_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          python update_dengjen_tts.py ${REQUESTED:+"$REQUESTED"}
+          version=$(sed -n 's/^dengjen-tts-grpc==//p' addon/synthDrivers/dengjen_neural_voices/bin/VENDORED.txt)
+          echo "version=${version}" >> "$GITHUB_OUTPUT"
+          if git diff --quiet && [ -z "$(git ls-files --others --exclude-standard)" ]; then
+            echo "Already vendoring ${version}; nothing to do."
+            echo "changed=false" >> "$GITHUB_OUTPUT"
+          else
+            echo "changed=true" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Open the update PR
+        if: steps.vendor.outputs.changed == 'true'
+        env:
+          VERSION: ${{ steps.vendor.outputs.version }}
+          # A PR authored with GITHUB_TOKEN doesn't trigger the required status checks.
+          GH_TOKEN: ${{ secrets.PR_SYNC_TOKEN || github.token }}
+        run: |
+          set -euo pipefail
+          branch="chore/update-dengjen-tts-${VERSION}"
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git remote set-url origin "https://x-access-token:${GH_TOKEN}@github.com/${GITHUB_REPOSITORY}.git"
+          git switch -c "$branch"
+          git add -A addon/synthDrivers/dengjen_neural_voices/bin
+          git commit -m "chore: update dengjen-tts engine to v${VERSION}" \
+            -m "Vendors the dengjen-tts-grpc ${VERSION} release binary and its NOTICE via update_dengjen_tts.py."
+          git push --force origin "$branch"
+          if [ -n "$(gh pr list --head "$branch" --state open --json number --jq '.[].number')" ]; then
+            echo "PR for ${branch} already open."
+            exit 0
+          fi
+          gh pr create --base main --head "$branch" \
+            --title "chore: update dengjen-tts engine to v${VERSION}" \
+            --body "### Description of your changes
+          Vendors the [dengjen-tts gRPC ${VERSION}](https://github.com/ZirekHQ/dengjen-tts/releases/tag/grpc-release-v${VERSION}) binary and NOTICE into \`bin/\` via \`update_dengjen_tts.py\`, and records the version in \`bin/VENDORED.txt\`.
+
+          Opened automatically when dengjen-tts published the release."

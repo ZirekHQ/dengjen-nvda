@@ -19,7 +19,7 @@ reviews:
     - Focus strictly on correctness, thread/asyncio safety, and resource lifecycle (subprocess, socket, and file handles).
     - Avoid nitpicking style, naming conventions, or formatting unless it impacts a public/NVDA-facing API.
     - Flag any silent exception swallowing, especially around gRPC calls, subprocess spawning, and speech task processing that could leave NVDA silently mute.
-    - Never suggest edits to vendored code under `lib/`; vendored wheels are refreshed only via `update_grpc.py`, `update_miniaudio.py`, `update_cffi.py`.
+    - Never suggest edits to vendored code under `lib/`; vendored wheels are refreshed only via `update_grpc.py`, `update_miniaudio.py`, `update_cffi.py`; `bin/dengjen-tts-grpc.exe` only via `update_dengjen_tts.py`.
     - Keep comments concise: explain the root cause and provide a targeted code fix.
 
   path_instructions:
