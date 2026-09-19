@@ -3,8 +3,8 @@
   "extends": ["github>austek/renovate-config"],
   "packageRules": [
     {
+      "description": "Python version is the NVDA runtime ABI (vendored cp313 wheels); bump only when NVDA changes Python.",
       "matchDepNames": ["python"],
-      "matchManagers": ["github-actions"],
       "enabled": false
     }
   ]
