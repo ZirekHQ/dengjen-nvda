@@ -465,9 +465,11 @@ def _voice_panel_state(nvda, expr: str):
 
 
 def _activate_dengjen(nvda, voice_key: str) -> None:
-    nvda.config.set(["speech", "synth"], ADDON_NAME)
-    nvda.config.set(["speech", ADDON_NAME, "voice"], voice_key)
+    """Switch the running NVDA to dengjen with `voice_key` selected. Restarts
+    first to close the voice manager the download fixture leaves open."""
     nvda.restart()
+    nvda.config.set(["speech", ADDON_NAME, "voice"], voice_key)
+    assert nvda.eval(f"__import__('synthDriverHandler').setSynth('{ADDON_NAME}')")
     assert nvda.eval("__import__('synthDriverHandler').getSynth().name") == ADDON_NAME
 
 
@@ -518,8 +520,10 @@ def test_speech_settings_list_the_installed_voice_and_its_variants(
     _activate_dengjen(nvda, downloaded_voice_key)
     _open_speech_settings(nvda)
     try:
-        assert _voice_panel_state(nvda, "panel.voiceList.GetCount()") >= 1
-        assert _voice_panel_state(nvda, "panel.variantList.GetCount()") >= 1
+        voices = _voice_panel_state(nvda, "[v.id for v in panel._voices]")
+        variants = _voice_panel_state(nvda, "[v.id for v in panel._variants]")
+        assert downloaded_voice_key.replace("+RT", "") in voices
+        assert variants == ["fast"]
     finally:
         _close_speech_settings(nvda)
     assert_no_unexpected_errors(nvda)
@@ -532,6 +536,18 @@ def test_speech_settings_dialog_closes_and_nvda_stays_responsive(
     _open_speech_settings(nvda)
     _close_speech_settings(nvda)
     assert nvda.eval("1 + 1") == 2
+    assert_no_unexpected_errors(nvda)
+
+
+def test_speech_settings_list_every_speaker_of_a_multi_speaker_voice(
+    nvda, kokoro_installed, assert_no_unexpected_errors
+):
+    _activate_dengjen(nvda, kokoro_installed)
+    _open_speech_settings(nvda)
+    try:
+        assert _voice_panel_state(nvda, "panel.speakerList.GetCount()") > 1
+    finally:
+        _close_speech_settings(nvda)
     assert_no_unexpected_errors(nvda)
 
 
