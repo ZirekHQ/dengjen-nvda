@@ -1,4 +1,11 @@
 {
   "$schema": "https://docs.renovatebot.com/renovate-schema.json",
-  "extends": ["github>austek/renovate-config"]
+  "extends": ["github>austek/renovate-config"],
+  "packageRules": [
+    {
+      "matchDepNames": ["python"],
+      "matchManagers": ["github-actions"],
+      "enabled": false
+    }
+  ]
 }
