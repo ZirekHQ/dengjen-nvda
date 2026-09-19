@@ -1,0 +1,81 @@
+name: NVDA compatibility guard
+
+# The vendored wheels are cp313-only, so the add-on breaks the day NVDA
+# ships another Python. Running the real-NVDA e2e suite against upcoming
+# NVDA builds surfaces that before the stable release does.
+on:
+  schedule:
+    - cron: "0 6 * * 1"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5.1.0
+        with:
+          persist-credentials: false
+
+      - name: Set up Python
+        uses: actions/setup-python@ece7cb06caefa5fff74198d8649806c4678c61a1 # v6.3.0
+        with:
+          python-version-file: .python-version
+
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade --only-binary :all: -r requirements-bootstrap.txt
+          pip install --only-binary :all: -r requirements-build.txt
+          sudo apt-get update -y
+          sudo apt-get install -y gettext
+
+      - run: scons
+
+      - uses: actions/upload-artifact@330a01c490aca151604b8cf639adc76d48f6c5d4 # v5.0.0
+        with:
+          name: packaged_addon
+          path: ./*.nvda-addon
+
+  e2e:
+    runs-on: windows-2025
+    needs: ["build"]
+    strategy:
+      fail-fast: false
+      matrix:
+        channel: [beta, alpha]
+    env:
+      NVDA_CHANNEL: ${{ matrix.channel }}
+    steps:
+      - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5.1.0
+        with:
+          persist-credentials: false
+
+      - name: Set up Python
+        uses: actions/setup-python@ece7cb06caefa5fff74198d8649806c4678c61a1 # v6.3.0
+        with:
+          python-version-file: .python-version
+
+      - name: download built addon
+        uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4.3.0
+        with:
+          name: packaged_addon
+
+      - name: Install e2e test dependencies
+        run: "pip install --only-binary :all: -r requirements-test-e2e.txt"
+
+      - name: Restore Kokoro voice cache (exact key match only)
+        uses: actions/cache/restore@0057852bfaa89a56745cba8c7296529d2fc39830 # v4.3.0
+        with:
+          path: ~/.cache/dengjen-kokoro
+          key: kokoro-voice-${{ hashFiles('addon/globalPlugins/dengjen_tts_global_plugin/kokoro_download.py', 'addon/globalPlugins/dengjen_tts_global_plugin/voice_manager.py') }}
+
+      - run: pytest tests_e2e/ -v --nvda-channel "$env:NVDA_CHANNEL"
+
+      - if: failure()
+        uses: actions/upload-artifact@330a01c490aca151604b8cf639adc76d48f6c5d4 # v5.0.0
+        with:
+          name: e2e-artifacts-${{ matrix.channel }}
+          path: testOutput/
+          if-no-files-found: warn
