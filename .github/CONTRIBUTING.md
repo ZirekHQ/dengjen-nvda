@@ -116,6 +116,14 @@ python update_cffi.py        # C FFI runtime
 
 Each script fetches the matching `cp313-win_amd64` wheel from PyPI and swaps the contents under `addon/synthDrivers/dengjen_neural_voices/lib/`.
 
+The engine binary `bin/dengjen-tts-grpc.exe` comes from a [dengjen-tts](https://github.com/ZirekHQ/dengjen-tts) release instead:
+
+```bash
+python update_dengjen_tts.py [VERSION]   # defaults to the latest stable grpc release
+```
+
+The `update-dengjen-tts.yml` workflow runs it and opens the PR on a `dengjen-tts-release` `repository_dispatch` event or a manual run. The vendored version lives in `bin/VENDORED.txt`.
+
 ## Submitting a PR
 
 Use the pull request template. Link the issue with `Closes #N` in the PR body — GitHub will auto-close the issue when the PR merges.

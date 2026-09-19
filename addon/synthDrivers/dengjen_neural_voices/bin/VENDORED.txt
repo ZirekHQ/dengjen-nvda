@@ -1,0 +1,6 @@
+# Prebuilt engine binary vendored into this directory.
+#
+# dengjen-tts-grpc.exe, NOTICES/COPYING - dengjen-tts-grpc and the version below
+# are rewritten by the repo-root update_dengjen_tts.py. Do not edit them by hand.
+
+dengjen-tts-grpc==2.0.2

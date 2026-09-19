@@ -1,4 +1,4 @@
-"""Shared helper for the update_*.py scripts: keeps lib/VENDORED.txt in sync."""
+"""Shared helper for the update_*.py scripts: keeps a VENDORED.txt manifest in sync."""
 
 import os
 import re
@@ -8,8 +8,8 @@ MANIFEST_PATH = os.path.join(
 )
 
 
-def record_version(package, version):
-    with open(MANIFEST_PATH, encoding="utf-8") as f:
+def record_version(package, version, manifest_path=MANIFEST_PATH):
+    with open(manifest_path, encoding="utf-8") as f:
         lines = f.readlines()
 
     pattern = re.compile(rf"^(\s*){re.escape(package)}==(\S+)(.*)$")
@@ -19,12 +19,12 @@ def record_version(package, version):
             continue
         indent, recorded, trailer = match.groups()
         if recorded == version:
-            print(f"{MANIFEST_PATH}: {package} already records {version}")
+            print(f"{manifest_path}: {package} already records {version}")
             return
         lines[index] = f"{indent}{package}=={version}{trailer}\n"
-        with open(MANIFEST_PATH, "w", encoding="utf-8") as f:
+        with open(manifest_path, "w", encoding="utf-8") as f:
             f.writelines(lines)
-        print(f"{MANIFEST_PATH}: {package} {recorded} -> {version}")
+        print(f"{manifest_path}: {package} {recorded} -> {version}")
         return
 
-    raise SystemExit(f"{MANIFEST_PATH} has no {package} entry; add one first.")
+    raise SystemExit(f"{manifest_path} has no {package} entry; add one first.")
