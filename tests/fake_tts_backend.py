@@ -44,6 +44,7 @@ class FakeTTSBackend:
         self._raise_on_initialize = None
         self._raise_on_load_voice = None
         self._raise_on_synthesize = None
+        self._raise_on_set_synth_options = None
 
     # -- test configuration --------------------------------------------
 
@@ -55,6 +56,9 @@ class FakeTTSBackend:
 
     def raise_on_synthesize(self, exc):
         self._raise_on_synthesize = exc
+
+    def raise_on_set_synth_options(self, exc):
+        self._raise_on_set_synth_options = exc
 
     # -- TTSBackend surface --------------------------------------------
 
@@ -86,6 +90,8 @@ class FakeTTSBackend:
 
     def set_synth_options(self, backend_voice_id, **kwargs):
         self.set_synth_options_calls.append((backend_voice_id, kwargs))
+        if self._raise_on_set_synth_options is not None:
+            raise self._raise_on_set_synth_options
         current = self._synth_options_by_voice_id[backend_voice_id]
         updates = {k: v for k, v in kwargs.items() if v is not None}
         self._synth_options_by_voice_id[backend_voice_id] = replace(current, **updates)

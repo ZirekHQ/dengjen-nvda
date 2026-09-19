@@ -43,7 +43,7 @@ from ...domain.tts_system import (
     SpeechOptions,
 )
 from ...helpers import update_displaied_params_on_voice_change
-from ...ports.tts_backend import BackendUnavailableError
+from ...ports.tts_backend import BackendError, BackendUnavailableError
 
 addonHandler.initTranslation()
 
@@ -431,7 +431,13 @@ class SynthDriver(NvdaSynthDriver):
             and getattr(self, factor_attr, None) == value
         ):
             return
-        voice = self.tts.speech_options.voice
+        try:
+            self._push_scale(self.tts.speech_options.voice, name, value, spec)
+        except BackendError:
+            log.exception(f"Could not apply {name}: the speech engine is unreachable")
+        setattr(self, factor_attr, value)
+
+    def _push_scale(self, voice, name, value, spec):
         default = getattr(voice.default_scales, name)
         if value == 50:
             setattr(voice, name, default)
@@ -447,7 +453,6 @@ class SynthDriver(NvdaSynthDriver):
                     ),
                 ),
             )
-        setattr(self, factor_attr, value)
 
     def _reapply_scale_settings(self):
 
@@ -570,6 +575,10 @@ class SynthDriver(NvdaSynthDriver):
             DengjenConfig.setdefault(self.voice, {})["speaker"] = value
         except SpeakerNotFoundError:
             DengjenConfig.setdefault(self.voice, {})["speaker"] = self.tts.speaker
+        except BackendError:
+            log.exception(
+                "Could not apply the speaker: the speech engine is unreachable"
+            )
 
     def _get_availableSpeakers(self):
         return {spk: VoiceInfo(spk, spk, None) for spk in self.tts.get_speakers()}
