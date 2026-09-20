@@ -22,15 +22,12 @@ from .conftest import press_until, voice_manager_state, wait_until
 
 ADDON_NAME = "dengjen_neural_voices"
 NO_VOICE_MODAL_TEXT = "no dengjen voice was found"
-NO_VOICE_MODAL_TITLE = "Dengjen Neural Voices"
 VOICE_MANAGER_TITLE = "dengjen voice manager"
 VOICE_DOWNLOADED_TITLE = "Voice downloaded"
 
 
 @pytest.mark.fresh_nvda
-def test_install_is_two_phase_and_completes_on_restart(
-    nvda, addon_bundle, assert_no_unexpected_errors
-):
+def test_install_is_two_phase_and_completes_on_restart(nvda, addon_bundle):
     """Owns its own install/remove cycle so the rest of this file can rely
     on addon_under_test staying installed -- same reasoning as
     nvda-addon-testkit's own equivalent test."""
@@ -40,44 +37,34 @@ def test_install_is_two_phase_and_completes_on_restart(
     assert info.name == ADDON_NAME
     assert nvda.addons.state(ADDON_NAME) is AddonState.PENDING_INSTALL
 
-    nvda.restart()
+    nvda.relaunch()
     assert nvda.addons.state(ADDON_NAME) is AddonState.ENABLED
-    assert_no_unexpected_errors(nvda)
+    nvda.should_have_no_errors()
 
     nvda.addons.remove(ADDON_NAME)
-    nvda.restart()
+    nvda.relaunch()
     assert nvda.addons.state(ADDON_NAME) is AddonState.NOT_INSTALLED
 
 
-def test_the_no_voice_modal_appears_and_no_declines_it(
-    nvda, addon_under_test, assert_no_unexpected_errors
-):
+def test_the_no_voice_modal_appears_and_no_declines_it(nvda, addon_under_test):
     """_perform_voice_check calls _ask_first_run_voice_action, which shows a
     real, blocking wx.MessageDialog 3s after startup when no voice is
     installed (__init__.py:68-106). This is exactly the behavior
     tests_gui/test_global_plugin.py cannot prove, since it monkeypatches
     _ask_first_run_voice_action outright rather than risk a real ShowModal
     hanging the test run."""
-    nvda.restart()
+    nvda.relaunch()
 
-    before = nvda.speech.index()
-    nvda.speech.wait_for(NO_VOICE_MODAL_TEXT, timeout=15, since=before)
-
-    nvda.keys.press("n")
-
-    wait_until(
-        lambda: (
-            voice_manager_state(nvda, "dialog.GetTitle() if dialog else ''")
-            != NO_VOICE_MODAL_TITLE
-        ),
-        timeout=5,
-        description="the no-voice message box to close",
-    )
+    # simulate_modal only fires on a window that appears after it starts
+    # polling, so arm it before the startup prompt shows, not after hearing it.
+    assert nvda.simulate_modal("no", timeout=20)
+    nvda.should_hear(NO_VOICE_MODAL_TEXT)
+    nvda.wait_until_idle(timeout=15)
     has_voice_manager = voice_manager_state(
         nvda, "any(hasattr(w, 'notebookCtrl') for w in wx.GetTopLevelWindows())"
     )
     assert not has_voice_manager
-    assert_no_unexpected_errors(nvda)
+    nvda.should_have_no_errors()
 
 
 @pytest.fixture(scope="session")
@@ -92,7 +79,7 @@ def downloaded_voice_key(nvda_session, addon_under_test):
     nvda_session is the same underlying NvdaClient nvda wraps with a
     per-test reset()."""
     nvda = nvda_session
-    nvda.restart()
+    nvda.restart_harness()
     before = nvda.speech.index()
     nvda.speech.wait_for(NO_VOICE_MODAL_TEXT, timeout=15, since=before)
     nvda.keys.press("o")
@@ -204,9 +191,7 @@ def downloaded_voice_key(nvda_session, addon_under_test):
     return f"{lang}-{name}+RT-{quality}"
 
 
-def test_downloading_the_fast_variant_voice_installs_it(
-    nvda, downloaded_voice_key, assert_no_unexpected_errors
-):
+def test_downloading_the_fast_variant_voice_installs_it(nvda, downloaded_voice_key):
     """Depends on downloaded_voice_key leaving the voice manager dialog open on the Download tab."""
 
     nvda.wait_until_idle(timeout=15)
@@ -231,7 +216,7 @@ def test_downloading_the_fast_variant_voice_installs_it(
         description="the Installed tab to list the just-downloaded voice",
     )
     assert downloaded_voice_key in installed_keys
-    assert_no_unexpected_errors(nvda)
+    nvda.should_have_no_errors()
 
 
 KOKORO_TAB_INDEX = 2
@@ -403,7 +388,7 @@ def kokoro_installed(nvda_session, downloaded_voice_key):
 
 
 def test_kokoro_installs_and_lists_alongside_the_piper_voice(
-    nvda, kokoro_installed, downloaded_voice_key, assert_no_unexpected_errors
+    nvda, kokoro_installed, downloaded_voice_key
 ):
     _switch_to_installed_tab(nvda)
     installed_keys = wait_until(
@@ -417,42 +402,32 @@ def test_kokoro_installs_and_lists_alongside_the_piper_voice(
     )
     assert kokoro_installed in installed_keys
     assert downloaded_voice_key in installed_keys
-    assert_no_unexpected_errors(nvda)
+    nvda.should_have_no_errors()
 
 
-def test_kokoro_produces_real_speech(
-    nvda, kokoro_installed, assert_no_unexpected_errors
-):
+def test_kokoro_produces_real_speech(nvda, kokoro_installed):
     nvda.config.set(["speech", "synth"], ADDON_NAME)
     nvda.config.set(["speech", ADDON_NAME, "voice"], kokoro_installed)
-    nvda.restart()
+    nvda.relaunch()
 
-    before = nvda.speech.index()
-    phrase = "dengjen kokoro testkit smoke phrase"
-    nvda.speech.speak(phrase)
-    found = nvda.speech.wait_for(phrase, timeout=15, since=before)
-    assert phrase in found.text.lower()
-    assert_no_unexpected_errors(nvda)
+    with nvda.expecting_speech("dengjen kokoro testkit smoke phrase", within=15):
+        nvda.speech.speak("dengjen kokoro testkit smoke phrase")
+    nvda.should_have_no_errors()
 
 
-def test_the_downloaded_voice_produces_real_speech(
-    nvda, downloaded_voice_key, assert_no_unexpected_errors
-):
+def test_the_downloaded_voice_produces_real_speech(nvda, downloaded_voice_key):
     nvda.config.set(["speech", "synth"], ADDON_NAME)
     nvda.config.set(["speech", ADDON_NAME, "voice"], downloaded_voice_key)
-    nvda.restart()
+    nvda.relaunch()
 
-    before = nvda.speech.index()
-    phrase = "dengjen testkit smoke phrase"
-    nvda.speech.speak(phrase)
-    found = nvda.speech.wait_for(phrase, timeout=15, since=before)
-    assert phrase in found.text.lower()
-    assert_no_unexpected_errors(nvda)
+    with nvda.expecting_speech("dengjen testkit smoke phrase", within=15):
+        nvda.speech.speak("dengjen testkit smoke phrase")
+    nvda.should_have_no_errors()
 
 
 def test_removal_is_also_two_phase(nvda):
     """Must stay last in this file: uninstalls what addon_under_test set up."""
     nvda.addons.remove(ADDON_NAME)
     assert nvda.addons.state(ADDON_NAME) is AddonState.PENDING_REMOVE
-    nvda.restart()
+    nvda.relaunch()
     assert nvda.addons.state(ADDON_NAME) is AddonState.NOT_INSTALLED

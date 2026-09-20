@@ -10,58 +10,15 @@ tests_gui/conftest.py. Run it with `pytest tests_e2e/`.
 
 from __future__ import annotations
 
-import re
 import sys
 import time
-import warnings
 from collections.abc import Callable
 from typing import Any
-
-import pytest
 
 if sys.platform == "win32":
     from nvda_testkit.errors import AuthError, RpcError
 
 collect_ignore_glob = [] if sys.platform == "win32" else ["test_*.py"]
-
-
-RUNNER_ENVIRONMENT_ERRORS = (
-    r"nvwave|WASAPI|audio (?:device|output|session|endpoint)",
-    r"synthDriver|synthesi[sz]|espeak|oneCore|SAPI",
-    r"braille ?display|brailleDisplayDriver|brailleInput",
-    r"UIAHandler|IAccessible|interactive desktop|desktop object",
-)
-
-_RUNNER_ENVIRONMENT = re.compile("|".join(RUNNER_ENVIRONMENT_ERRORS), re.IGNORECASE)
-
-
-def check_no_unexpected_errors(client, *, since: int = 0) -> None:
-    """nvda.log.assert_no_errors(), minus what a headless runner logs by itself."""
-    environmental, unexpected = [], []
-    for record in client.log.errors(since=since):
-        target = (
-            environmental if _RUNNER_ENVIRONMENT.search(record.message) else unexpected
-        )
-        target.append(record)
-
-    if environmental:
-        joined = "; ".join(str(r) for r in environmental)
-        warnings.warn(
-            f"ignored {len(environmental)} runner-environment error(s): {joined}",
-            stacklevel=2,
-        )
-    if unexpected:
-        listed = "\n".join(f"  {r}" for r in unexpected)
-        allow_listed = "\n".join(f"  {r}" for r in environmental) or "  (none)"
-        raise AssertionError(
-            f"NVDA logged {len(unexpected)} unexpected error(s):\n{listed}"
-            f"\n\nAlso logged, and allowlisted as runner-environment noise:\n{allow_listed}"
-        )
-
-
-@pytest.fixture
-def assert_no_unexpected_errors():
-    return check_no_unexpected_errors
 
 
 def wait_until(

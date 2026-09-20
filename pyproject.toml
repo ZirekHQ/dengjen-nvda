@@ -2,6 +2,12 @@
 addon-bundle = "dengjen_neural_voices-*.nvda-addon"
 nvda-channel = "stable"
 allow-eval = true
+ignore-log-errors = [
+    'nvwave|WASAPI|audio (?:device|output|session|endpoint)',
+    'synthDriver|synthesi[sz]|espeak|oneCore|SAPI',
+    'braille ?display|brailleDisplayDriver|brailleInput',
+    'UIAHandler|IAccessible|interactive desktop|desktop object',
+]
 
 [tool.ruff]
 extend-exclude = [
