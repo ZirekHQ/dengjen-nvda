@@ -113,6 +113,12 @@ def driver(configured_voice, fake_backend):
     d.terminate()
 
 
+def _first_player(driver):
+    """Players are created on first speech, so create the current voice's now."""
+    driver._build_speech_tasks(["hi"])
+    return driver._player
+
+
 class TestConstruction:
     def test_loads_the_voice_on_disk(self, driver):
         assert [v.key for v in driver.voices] == [VOICE_KEY]
@@ -162,6 +168,20 @@ class TestConstruction:
         d = SynthDriver()
         try:
             assert len(calls) == 1
+        finally:
+            d.terminate()
+
+    def test_loads_without_an_audio_device(
+        self, configured_voice, fake_backend, monkeypatch
+    ):
+        def no_device(_sample_rate):
+            raise OSError("Couldn't open specified or default audio device")
+
+        monkeypatch.setattr(driver_module, "create_wave_player", no_device)
+        d = SynthDriver()
+        try:
+            assert d.tts is not None
+            d.variant = d.variant
         finally:
             d.terminate()
 
@@ -265,7 +285,7 @@ class TestBuildSpeechTasks:
         )
         driver = SynthDriver()
         try:
-            first_player = driver._player
+            first_player = _first_player(driver)
             seq = ["hello", _lang_change_command("fr_FR"), "bonjour"]
 
             tasks = driver._build_speech_tasks(seq)
@@ -304,7 +324,7 @@ class TestBuildSpeechTasks:
         )
         driver = SynthDriver()
         try:
-            first_player = driver._player
+            first_player = _first_player(driver)
 
             with driver.tts.create_synthesis_context():
                 driver._build_speech_tasks(
@@ -341,6 +361,7 @@ class TestLifecycle:
             d.terminate()
 
     def test_cancel_stops_the_player(self, driver):
+        _first_player(driver)
         driver._player.stop = MagicMock()
         driver.cancel()
         driver._player.stop.assert_called_once()
@@ -361,6 +382,7 @@ class TestLifecycle:
         cancel_mock.assert_called_once_with(driver._current_task)
 
     def test_pause_delegates_to_the_player(self, driver):
+        _first_player(driver)
         driver._player.pause = MagicMock()
         driver.pause(True)
         driver._player.pause.assert_called_once_with(True)
@@ -385,7 +407,7 @@ class TestLifecycle:
         )
         driver = SynthDriver()
         try:
-            first_player = driver._player
+            first_player = _first_player(driver)
             driver._build_speech_tasks(
                 ["hello", _lang_change_command("fr_FR"), "bonjour"]
             )
@@ -416,7 +438,7 @@ class TestLifecycle:
         )
         driver = SynthDriver()
         try:
-            first_player = driver._player
+            first_player = _first_player(driver)
             driver._build_speech_tasks(
                 ["hello", _lang_change_command("fr_FR"), "bonjour"]
             )
@@ -434,7 +456,7 @@ class TestLifecycle:
     def test_terminate_closes_every_player_and_clears_them(self, driver):
         extra_player = MagicMock()
         driver._players["extra"] = extra_player
-        real_player = driver._player
+        real_player = _first_player(driver)
         real_player.close = MagicMock()
         driver.terminate()
         real_player.close.assert_called_once()
@@ -521,10 +543,20 @@ class TestSettings:
         assert driver.rate == 100
 
     def test_volume_updates_the_player_gain(self, driver):
+        _first_player(driver)
         driver._player.setVolume = MagicMock()
         driver.volume = 42
         assert driver.volume == 42
         driver._player.setVolume.assert_called_once_with(all=0.42)
+
+    def test_a_player_created_after_a_volume_change_gets_that_volume(
+        self, driver, monkeypatch
+    ):
+        driver.volume = 42
+        created = MagicMock()
+        monkeypatch.setattr(driver_module, "create_wave_player", lambda _rate: created)
+        driver._get_or_create_player(12345)
+        created.setVolume.assert_called_once_with(all=0.42)
 
     def test_pitch_round_trips(self, driver):
         driver.pitch = 60
