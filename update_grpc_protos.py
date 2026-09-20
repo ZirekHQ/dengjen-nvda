@@ -1,7 +1,10 @@
 """Regenerates the vendored gRPC stubs from the proto in the pinned dengjen-tts release.
 
+grpcio-tools 1.62.3 (protobuf 4.25 gencode; vendored runtime is 4.24.4) ships wheels
+only up to Python 3.12, so run this from a Python 3.12 (or older) venv.
+
 Usage:
-    pip install grpcio-tools==1.62.3    # protobuf 4.25 gencode; vendored runtime is 4.24.4
+    uv venv --python 3.12 && uv pip install --only-binary=:all: grpcio-tools==1.62.3
     python update_grpc_protos.py         # proto version comes from dengjen-tts.lock
 """
 
@@ -52,7 +55,8 @@ def main():
     _run_protoc(proto_file)
     if GENCODE_MARKER not in (PROTO_DIR / "dengjen_grpc_pb2.py").read_text():
         raise SystemExit(
-            f"Generated code is not '{GENCODE_MARKER}'; install grpcio-tools==1.62.3."
+            f"Generated code is not '{GENCODE_MARKER}'; "
+            "install grpcio-tools==1.62.3 in a Python 3.12 or older venv."
         )
     grpc_file = PROTO_DIR / "dengjen_grpc_pb2_grpc.py"
     grpc_file.write_text(relativize_imports(grpc_file.read_text()))
