@@ -1,6 +1,10 @@
 name: Notify docs site
 
 on:
+  push:
+    branches: [main]
+    paths:
+      - 'docs/**'
   release:
     types: [published]
   workflow_dispatch:
