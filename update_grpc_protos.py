@@ -10,6 +10,7 @@ Usage:
     /tmp/proto-venv/bin/python update_grpc_protos.py    # proto version comes from dengjen-tts.lock
 """
 
+import importlib.metadata
 import importlib.util
 import re
 import subprocess
@@ -24,6 +25,7 @@ PROTO_DIR = Path(
 PROTO_NAME = "dengjen_grpc.proto"
 PROTO_PATH_IN_REPO = "crates/frontends/grpc/proto/dengjen_grpc.proto"
 GENCODE_MARKER = "Protobuf Python Version: 4.25"
+GRPCIO_TOOLS_VERSION = "1.62.3"
 ABSOLUTE_IMPORT = re.compile(r"^import (\w+_pb2) as (\w+)$", re.MULTILINE)
 
 
@@ -52,11 +54,12 @@ def _run_protoc(proto_file):
 
 
 def _require_grpc_tools():
+    hint = f"run from a Python 3.12 or older venv with grpcio-tools=={GRPCIO_TOOLS_VERSION} installed."
     if importlib.util.find_spec("grpc_tools") is None:
-        raise SystemExit(
-            "grpc_tools is not installed; run from a Python 3.12 or older venv "
-            "with grpcio-tools==1.62.3 installed."
-        )
+        raise SystemExit(f"grpc_tools is not installed; {hint}")
+    installed = importlib.metadata.version("grpcio-tools")
+    if sys.version_info >= (3, 13) or installed != GRPCIO_TOOLS_VERSION:
+        raise SystemExit(f"Unsupported toolchain (grpcio-tools {installed}); {hint}")
 
 
 def main():

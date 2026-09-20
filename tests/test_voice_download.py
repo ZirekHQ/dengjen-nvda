@@ -1621,3 +1621,82 @@ class TestVoiceJsonSidecarWrittenOnInstall:
         assert sidecar.exists()
         data = json.loads(sidecar.read_text())
         assert data["model_type"] == "piper"
+
+
+class TestMeloTTSInstallSafety:
+    @pytest.mark.parametrize(
+        "model_path",
+        [
+            None,
+            "",
+            "  ",
+            5,
+            "../model.onnx",
+            "/etc/model.onnx",
+            "C:\\model.onnx",
+            "a/../../x.onnx",
+        ],
+    )
+    def test_rejects_an_unusable_model_path(self, tmp_path, model_path):
+        manifest = {**MELOTTS_MANIFEST, "model_path": model_path}
+        tar_path = _melotts_tar(tmp_path, manifest=manifest)
+        voices_dir = tmp_path / "voices"
+        with pytest.raises(ValueError, match="model_path"):
+            voice_download.install_voice_from_tar_archive(
+                str(tar_path), str(voices_dir)
+            )
+        assert not voices_dir.exists()
+
+    def test_rejects_a_model_path_the_archive_does_not_contain(self, tmp_path):
+        manifest = {**MELOTTS_MANIFEST, "model_path": "weights.onnx"}
+        tar_path = _melotts_tar(tmp_path, manifest=manifest)
+        voices_dir = tmp_path / "voices"
+        with pytest.raises(ValueError, match="missing"):
+            voice_download.install_voice_from_tar_archive(
+                str(tar_path), str(voices_dir)
+            )
+        assert not voices_dir.exists()
+
+    def test_accepts_a_nested_relative_model_path(self, tmp_path):
+        manifest = {**MELOTTS_MANIFEST, "model_path": "models/model.onnx"}
+        tar_path = _melotts_tar(
+            tmp_path, manifest=manifest, extra={"models/model.onnx": b"nested"}
+        )
+        voices_dir = tmp_path / "voices"
+        key = voice_download.install_voice_from_tar_archive(
+            str(tar_path), str(voices_dir)
+        )
+        assert (voices_dir / key / "models" / "model.onnx").read_bytes() == b"nested"
+
+    def test_reinstall_replaces_stale_files(self, tmp_path):
+        (tmp_path / "one").mkdir()
+        (tmp_path / "two").mkdir()
+        first = _melotts_tar(tmp_path / "one", extra={"stale.txt": b"old"})
+        second = _melotts_tar(tmp_path / "two")
+        voices_dir = tmp_path / "voices"
+        key = voice_download.install_voice_from_tar_archive(str(first), str(voices_dir))
+        voice_download.install_voice_from_tar_archive(str(second), str(voices_dir))
+        assert not (voices_dir / key / "stale.txt").exists()
+        assert (voices_dir / key / "model.onnx").exists()
+        assert [p.name for p in voices_dir.iterdir()] == [key]
+
+    def test_failed_reinstall_keeps_the_existing_voice_and_leaves_no_debris(
+        self, tmp_path
+    ):
+        (tmp_path / "one").mkdir()
+        (tmp_path / "two").mkdir()
+        first = _melotts_tar(tmp_path / "one")
+        broken = _melotts_tar(tmp_path / "two", extra={"../evil.txt": b"x"})
+        voices_dir = tmp_path / "voices"
+        key = voice_download.install_voice_from_tar_archive(str(first), str(voices_dir))
+        with pytest.raises(tarfile.FilterError):
+            voice_download.install_voice_from_tar_archive(str(broken), str(voices_dir))
+        assert (voices_dir / key / "model.onnx").read_bytes() == b"model-bytes"
+        assert [p.name for p in voices_dir.iterdir()] == [key]
+
+    def test_key_keeps_only_ascii_word_characters(self, tmp_path):
+        tar_path = _melotts_tar(tmp_path, name="m\u00e9lo en.tar.gz")
+        key = voice_download.install_voice_from_tar_archive(
+            str(tar_path), str(tmp_path / "voices")
+        )
+        assert key == "melotts-m_lo_en"

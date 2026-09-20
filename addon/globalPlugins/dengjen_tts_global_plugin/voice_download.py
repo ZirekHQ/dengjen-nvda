@@ -3,6 +3,7 @@ import os
 import re
 import shutil
 import tarfile
+import tempfile
 from dataclasses import dataclass
 from enum import Enum, auto
 from fnmatch import fnmatch
@@ -28,7 +29,7 @@ from .download_infra import (
 )
 
 with helpers.import_bundled_library():
-    from pathlib import Path
+    from pathlib import Path, PurePosixPath, PureWindowsPath
 
 
 PIPER_VOICE_LIST_URL = (
@@ -503,27 +504,73 @@ def _melotts_language(manifest, sidecar):
     )
 
 
+def _is_relative_inside(path_text):
+    posix, windows = PurePosixPath(path_text), PureWindowsPath(path_text)
+    return not (
+        posix.is_absolute()
+        or windows.is_absolute()
+        or windows.drive
+        or ".." in posix.parts
+        or ".." in windows.parts
+    )
+
+
+def _require_model_file(manifest, members):
+    model_path = manifest.get("model_path")
+    if not isinstance(model_path, str) or not model_path.strip():
+        raise ValueError("The MeloTTS manifest needs a `model_path`.")
+    if not _is_relative_inside(model_path):
+        raise ValueError("The MeloTTS `model_path` must stay inside the archive.")
+    member = _resolve_member_name(members, model_path)
+    if member is None or not members[member].isfile():
+        raise ValueError(f"The MeloTTS archive is missing `{model_path}`.")
+
+
+def _extract_regular_files(tar, members, folder):
+    for member in members.values():
+        if member.isfile():
+            tar.extract(member, path=folder, set_attrs=False, filter="data")
+
+
+def _swap_in(staging, target):
+    backup = target.with_name(target.name + ".old")
+    shutil.rmtree(backup, ignore_errors=True)
+    if target.exists():
+        target.rename(backup)
+    try:
+        staging.rename(target)
+    except OSError:
+        if backup.exists():
+            backup.rename(target)
+        raise
+    shutil.rmtree(backup, ignore_errors=True)
+
+
 def _install_melotts_archive(tar, members, manifest, tar_path, voices_dir):
     if (manifest.get("phonemizer") or {}).get("type") == "pinyin":
         raise ValueError(PINYIN_UNSUPPORTED_MESSAGE)
     sidecar = _read_json_member(tar, members, voice_metadata.VOICE_METADATA_FILENAME)
     stem = _archive_stem(tar_path)
     language = _melotts_language(manifest, sidecar)
-    voice_key = f"{MELOTTS_MODEL_TYPE}-{re.sub(r'[^0-9A-Za-z_]+', '_', stem)}"
-    voice_folder = Path(voices_dir) / voice_key
-    voice_folder.mkdir(parents=True, exist_ok=True)
-    for member in members.values():
-        if member.isfile():
-            tar.extract(member, path=voice_folder, set_attrs=False, filter="data")
-    voice_metadata.write(
-        voice_folder,
-        voice_metadata.VoiceMetadata(
-            model_type=MELOTTS_MODEL_TYPE,
-            name=sidecar.get("name") or stem,
-            language=language,
-            description=sidecar.get("description", ""),
-        ),
-    )
+    _require_model_file(manifest, members)
+    voice_key = f"{MELOTTS_MODEL_TYPE}-{re.sub(r'\W+', '_', stem, flags=re.ASCII)}"
+    voices_root = Path(voices_dir)
+    voices_root.mkdir(parents=True, exist_ok=True)
+    staging = Path(tempfile.mkdtemp(prefix=".melotts_staging_", dir=voices_root))
+    try:
+        _extract_regular_files(tar, members, staging)
+        voice_metadata.write(
+            staging,
+            voice_metadata.VoiceMetadata(
+                model_type=MELOTTS_MODEL_TYPE,
+                name=sidecar.get("name") or stem,
+                language=language,
+                description=sidecar.get("description", ""),
+            ),
+        )
+        _swap_in(staging, voices_root / voice_key)
+    finally:
+        shutil.rmtree(staging, ignore_errors=True)
     return voice_key
 
 

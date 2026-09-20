@@ -65,7 +65,10 @@ add-on needs:
 
 No install directory is shared between model types: each gets its own
 `DENGJEN_VOICES_BASE_DIR/voices/<model_type>/` (see `const.py`), scanned
-only once its constant is registered per step 5 above.
+only once its constant is registered per step 5 above. The one exception is
+MeloTTS: voices installed from a local archive currently land in
+`voices/piper/`, because local install passes a single directory and no
+MeloTTS directory constant is registered.
 
 == Code
 

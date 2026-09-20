@@ -1,3 +1,4 @@
+import importlib.metadata
 import importlib.util
 import os
 import sys
@@ -31,3 +32,26 @@ def test_main_exits_with_an_install_hint_when_grpc_tools_is_missing(monkeypatch)
     monkeypatch.setattr(importlib.util, "find_spec", lambda name: None)
     with pytest.raises(SystemExit, match="grpc_tools is not installed"):
         protos.main()
+
+
+def _toolchain(monkeypatch, *, python, grpcio_tools):
+    monkeypatch.setattr(protos.importlib.util, "find_spec", lambda name: object())
+    monkeypatch.setattr(protos.importlib.metadata, "version", lambda name: grpcio_tools)
+    monkeypatch.setattr(protos.sys, "version_info", python)
+
+
+def test_accepts_the_pinned_toolchain(monkeypatch):
+    _toolchain(monkeypatch, python=(3, 12, 0), grpcio_tools="1.62.3")
+    protos._require_grpc_tools()
+
+
+def test_rejects_another_grpcio_tools_version(monkeypatch):
+    _toolchain(monkeypatch, python=(3, 12, 0), grpcio_tools="1.63.0")
+    with pytest.raises(SystemExit, match="1.63.0"):
+        protos._require_grpc_tools()
+
+
+def test_rejects_python_3_13(monkeypatch):
+    _toolchain(monkeypatch, python=(3, 13, 0), grpcio_tools="1.62.3")
+    with pytest.raises(SystemExit, match="3.12 or older"):
+        protos._require_grpc_tools()
