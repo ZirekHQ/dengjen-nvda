@@ -81,6 +81,11 @@ class SpeechProvider(AudioProvider):
         return self.speech_options.speak_text(self.text)
 
 
+def _default_scale(profile, defaults, name):
+    value = profile.read(defaults, name)
+    return getattr(defaults, name) if value is None else value
+
+
 @dataclass
 class DengjenVoice:
     key: str
@@ -136,8 +141,7 @@ class DengjenVoice:
         profile = profile_for(self.model_type)
         self.default_scales = Scales(
             **{
-                name: v if (v := profile.read(loaded.defaults, name)) is not None
-                else getattr(loaded.defaults, name)
+                name: _default_scale(profile, loaded.defaults, name)
                 for name in SCALE_NAMES
             }
         )

@@ -568,9 +568,7 @@ class TestModelTypeScales:
             length_scale=1.0, noise_scale=0.667, noise_w=0.55
         )
 
-    def test_kokoro_load_falls_back_to_engine_defaults(
-        self, backend, tmp_path
-    ):
+    def test_kokoro_load_falls_back_to_engine_defaults(self, backend, tmp_path):
         config = tmp_path / "config.json"
         config.write_text("{}")
         backend.voices_by_config_path[str(config)] = LoadedVoice(

@@ -157,7 +157,9 @@ def test_load_voice_carries_engine_parameters_into_defaults(monkeypatch):
             noise_w = 0.8
             parameters = {"noise_scale_w": 0.8}
 
-    monkeypatch.setattr(dengjen_grpc, "load_voice", lambda path: _resolved_future(_Info()))
+    monkeypatch.setattr(
+        dengjen_grpc, "load_voice", lambda path: _resolved_future(_Info())
+    )
 
     loaded = backend.load_voice("/tmp/v/config.json")
 
