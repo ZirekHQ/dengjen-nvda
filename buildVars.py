@@ -11,7 +11,7 @@ addon_info = AddonInfo(
     addon_description=_(
         """Adds fast, local neural text-to-speech voices to NVDA. Provides a synthesizer driver for Piper voice models via the dengjen engine, together with a voice manager for downloading and installing voices."""
     ),
-    addon_version="4.0.2",
+    addon_version="4.1.0",
     addon_changelog=_(
         "Deferred the NVDA restart triggered after installing a downloaded voice by 200ms, "
         "instead of calling core.restart() immediately when the confirmation dialog closes. "
