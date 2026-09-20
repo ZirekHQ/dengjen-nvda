@@ -440,27 +440,55 @@ def _archive_stem(tar_path):
     return name
 
 
+def _bare_name(name):
+    return name.removeprefix("./")
+
+
+def _resolve_member_name(names, wanted):
+    return next((n for n in names if _bare_name(n) == _bare_name(wanted)), None)
+
+
+def _is_root_manifest_candidate(name):
+    bare = _bare_name(name)
+    return (
+        "/" not in bare
+        and bare.endswith(".json")
+        and bare != voice_metadata.VOICE_METADATA_FILENAME
+    )
+
+
 def _root_manifest_name(members):
-    candidates = [
-        name
-        for name in members
-        if "/" not in name
-        and name.endswith(".json")
-        and name != voice_metadata.VOICE_METADATA_FILENAME
-    ]
-    if "config.json" in candidates:
-        return "config.json"
+    candidates = [name for name in members if _is_root_manifest_candidate(name)]
+    config = _resolve_member_name(candidates, "config.json")
+    if config is not None:
+        return config
     return candidates[0] if len(candidates) == 1 else None
 
 
 def _read_json_member(tar, members, name):
-    if name is None or name not in members:
+    key = None if name is None else _resolve_member_name(members, name)
+    if key is None or not members[key].isfile():
         return {}
     try:
-        data = json.loads(tar.extractfile(members[name]).read().decode("utf-8"))
+        data = json.loads(tar.extractfile(members[key]).read().decode("utf-8"))
     except ValueError:
         return {}
     return data if isinstance(data, dict) else {}
+
+
+def _is_nested_melotts_manifest(tar, members, name):
+    bare = _bare_name(name)
+    if "/" not in bare or not bare.endswith(".json"):
+        return False
+    return _read_json_member(tar, members, name).get("model_type") == MELOTTS_MODEL_TYPE
+
+
+def _reject_nested_melotts_archive(tar, members):
+    if any(_is_nested_melotts_manifest(tar, members, name) for name in members):
+        raise ValueError(
+            "MeloTTS archive members must sit at the archive root; "
+            "create the archive from inside the voice folder."
+        )
 
 
 def _melotts_language(manifest, sidecar):
@@ -555,7 +583,10 @@ def _install_piper_archive(tar, filenames, tar_path, voices_dir):
 def install_voice_from_tar_archive(tar_path, voices_dir):
     with tarfile.open(tar_path) as tar:
         members = {member.name: member for member in tar.getmembers()}
-        manifest = _read_json_member(tar, members, _root_manifest_name(members))
+        root_name = _root_manifest_name(members)
+        if root_name is None:
+            _reject_nested_melotts_archive(tar, members)
+        manifest = _read_json_member(tar, members, root_name)
         if manifest.get("model_type") == MELOTTS_MODEL_TYPE:
             return _install_melotts_archive(
                 tar, members, manifest, tar_path, voices_dir

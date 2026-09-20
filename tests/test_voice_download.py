@@ -535,6 +535,83 @@ class TestInstallMeloTTSArchive:
         )
         assert key == "en_US-lessac-medium"
 
+    def test_installs_an_archive_whose_members_carry_a_dot_slash_prefix(self, tmp_path):
+        tar_path = _make_tar(
+            tmp_path,
+            "melo-en.tar.gz",
+            {
+                "./config.json": json.dumps(MELOTTS_MANIFEST).encode(),
+                "./model.onnx": b"model-bytes",
+            },
+        )
+        voices_dir = tmp_path / "voices"
+        key = voice_download.install_voice_from_tar_archive(
+            str(tar_path), str(voices_dir)
+        )
+        assert key == "melotts-melo_en"
+        installed = voices_dir / key
+        assert (installed / "model.onnx").read_bytes() == b"model-bytes"
+        sidecar = json.loads((installed / "voice.json").read_text())
+        assert sidecar["model_type"] == "melotts"
+        assert sidecar["language"] == "en_US"
+
+    def test_a_dot_slash_voice_json_overrides_name_and_language(self, tmp_path):
+        override = {"name": "Amy", "language": "fr_FR"}
+        tar_path = _make_tar(
+            tmp_path,
+            "melo-en.tar.gz",
+            {
+                "./config.json": json.dumps(MELOTTS_MANIFEST).encode(),
+                "./model.onnx": b"m",
+                "./voice.json": json.dumps(override).encode(),
+            },
+        )
+        voices_dir = tmp_path / "voices"
+        key = voice_download.install_voice_from_tar_archive(
+            str(tar_path), str(voices_dir)
+        )
+        sidecar = json.loads((voices_dir / key / "voice.json").read_text())
+        assert sidecar["name"] == "Amy"
+        assert sidecar["language"] == "fr_FR"
+
+    def test_rejects_a_nested_melotts_archive_with_a_clear_message(self, tmp_path):
+        tar_path = _make_tar(
+            tmp_path,
+            "melo-en.tar.gz",
+            {
+                "melo-en/config.json": json.dumps(MELOTTS_MANIFEST).encode(),
+                "melo-en/model.onnx": b"m",
+            },
+        )
+        with pytest.raises(ValueError, match="archive root"):
+            voice_download.install_voice_from_tar_archive(
+                str(tar_path), str(tmp_path / "voices")
+            )
+
+    @pytest.mark.parametrize("member_type", [tarfile.SYMTYPE, tarfile.DIRTYPE])
+    def test_a_non_file_member_named_config_json_does_not_crash_the_dispatcher(
+        self, tmp_path, member_type
+    ):
+        tar_path = tmp_path / "en_US-lessac-medium.tar.gz"
+        with tarfile.open(tar_path, "w:gz") as tar:
+            special = tarfile.TarInfo(name="config.json")
+            special.type = member_type
+            special.linkname = (
+                "missing-target" if member_type == tarfile.SYMTYPE else ""
+            )
+            tar.addfile(special)
+            for name, content in (
+                ("en_US-lessac-medium.onnx", b"m"),
+                ("en_US-lessac-medium.onnx.json", b"{}"),
+            ):
+                info = tarfile.TarInfo(name=name)
+                info.size = len(content)
+                tar.addfile(info, io.BytesIO(content))
+        key = voice_download.install_voice_from_tar_archive(
+            str(tar_path), str(tmp_path / "voices")
+        )
+        assert key == "en_US-lessac-medium"
+
 
 class TestSelectNotInstalledVoices:
     @pytest.fixture
