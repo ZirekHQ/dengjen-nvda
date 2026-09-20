@@ -5,9 +5,11 @@ platform (see issue #65). The widgets themselves stay untestable here --
 they subclass real wx types -- and are covered by tests_gui/ on Windows.
 """
 
+import json
 import os
 
 import addonHandler
+import pytest
 from dengjen_neural_voices.domain import tts_system
 
 from tests.conftest import GLOBAL_PLUGIN_PKG_DIR, load_module_from_path
@@ -262,3 +264,38 @@ class TestDownloadButtonState:
         state = logic.download_button_state(voice)
         assert state.speaker_enabled is True
         assert state.speakers == ("p3", "p1", "p2")
+
+
+class TestBundledCatalogDrivesTheDownloadButtons:
+    @pytest.fixture(scope="class")
+    def catalog(self):
+        with open(voice_download.BUNDLED_PIPER_VOICES_JSON, encoding="utf-8") as f:
+            entries = list(json.load(f).values())
+        for entry in entries:
+            entry["standard_variant_installed"] = False
+            entry["fast_variant_installed"] = False
+        return {v.key: v for v in voice_download.PiperVoice.from_list_of_dicts(entries)}
+
+    def test_every_voice_with_a_fast_variant_offers_the_fast_download(self, catalog):
+        with_rt = [v for v in catalog.values() if v.has_rt_variant]
+        assert with_rt
+        assert all(logic.download_button_state(v).rt_enabled for v in with_rt)
+
+    def test_a_voice_without_a_fast_variant_does_not_offer_it(self, catalog):
+        state = logic.download_button_state(catalog["en_US-libritts-high"])
+        assert state.rt_enabled is False
+        assert state.std_enabled is True
+
+    def test_every_multi_speaker_voice_lists_all_its_speakers(self, catalog):
+        multi = [v for v in catalog.values() if v.num_speakers > 1]
+        assert multi
+        for voice in multi:
+            state = logic.download_button_state(voice)
+            assert state.speaker_enabled is True
+            assert len(state.speakers) == voice.num_speakers
+
+    def test_libritts_high_offers_a_speaker_choice(self, catalog):
+        voice = catalog["en_US-libritts-high"]
+        state = logic.download_button_state(voice)
+        assert state.speaker_enabled is True
+        assert len(state.speakers) == voice.num_speakers

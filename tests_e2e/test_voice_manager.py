@@ -425,6 +425,116 @@ def test_the_downloaded_voice_produces_real_speech(nvda, downloaded_voice_key):
     nvda.should_have_no_errors()
 
 
+_VOICE_PANEL = (
+    "next((w.currentCategory.voicePanel for w in wx.GetTopLevelWindows()"
+    " if hasattr(getattr(w, 'currentCategory', None), 'voicePanel')), None)"
+)
+
+
+def _voice_panel_state(nvda, expr: str):
+    """`expr` sees `wx` and `panel`: the Speech settings voice panel, None when closed."""
+    return nvda.eval(
+        f"(lambda wx, panel: {expr})(__import__('wx'), "
+        f"(lambda wx: {_VOICE_PANEL})(__import__('wx')))"
+    )
+
+
+def _driver_log(nvda) -> str:
+    """NVDA log records that explain why a synth failed to load."""
+    keys = ("dengjen", "synth", "error", "traceback", "nvwave", "audio")
+    return "\n".join(
+        str(record)[:600]
+        for record in nvda.log.all()
+        if any(key in str(record).lower() for key in keys)
+    )
+
+
+def _activate_dengjen(nvda, voice_key: str) -> None:
+    """Switch the running NVDA to dengjen with `voice_key` selected. Restarts
+    first to close the voice manager the download fixture leaves open."""
+    nvda.relaunch()
+    nvda.config.set(["speech", ADDON_NAME, "voice"], voice_key)
+    loaded = nvda.eval(f"__import__('synthDriverHandler').setSynth('{ADDON_NAME}')")
+    assert loaded, f"dengjen failed to load; NVDA log:\n{_driver_log(nvda)}"
+    assert nvda.eval("__import__('synthDriverHandler').getSynth().name") == ADDON_NAME
+
+
+def _open_speech_settings(nvda) -> None:
+    nvda.eval(
+        "__import__('wx').CallAfter("
+        "__import__('gui').mainFrame.onSpeechSettingsCommand, None)"
+    )
+    wait_until(
+        lambda: _voice_panel_state(nvda, "panel is not None"),
+        timeout=15,
+        description="the Speech settings dialog to open",
+    )
+
+
+def _close_speech_settings(nvda) -> None:
+    nvda.eval(
+        "(lambda wx: wx.CallAfter(next(w for w in wx.GetTopLevelWindows()"
+        " if hasattr(getattr(w, 'currentCategory', None), 'voicePanel')).Close))"
+        "(__import__('wx'))"
+    )
+    wait_until(
+        lambda: _voice_panel_state(nvda, "panel is None"),
+        timeout=15,
+        description="the Speech settings dialog to close",
+    )
+
+
+def test_speech_settings_offer_rate_pitch_and_volume(nvda, downloaded_voice_key):
+    """The driver's own settings must reach NVDA's voice panel."""
+    _activate_dengjen(nvda, downloaded_voice_key)
+    _open_speech_settings(nvda)
+    try:
+        controls = _voice_panel_state(
+            nvda, "[a for a in dir(panel) if a.endswith('Slider')]"
+        )
+        assert {"rateSlider", "pitchSlider", "volumeSlider"} <= set(controls)
+    finally:
+        _close_speech_settings(nvda)
+    nvda.should_have_no_errors()
+
+
+def test_speech_settings_list_the_installed_voice_and_its_variants(
+    nvda, downloaded_voice_key
+):
+    _activate_dengjen(nvda, downloaded_voice_key)
+    _open_speech_settings(nvda)
+    try:
+        voices = _voice_panel_state(nvda, "[v.id for v in panel._voices]")
+        variants = _voice_panel_state(nvda, "[v.id for v in panel._variants]")
+        assert downloaded_voice_key.replace("+RT", "") in voices
+        assert variants == ["fast"]
+    finally:
+        _close_speech_settings(nvda)
+    nvda.should_have_no_errors()
+
+
+def test_speech_settings_dialog_closes_and_nvda_stays_responsive(
+    nvda, downloaded_voice_key
+):
+    _activate_dengjen(nvda, downloaded_voice_key)
+    _open_speech_settings(nvda)
+    _close_speech_settings(nvda)
+    assert nvda.eval("1 + 1") == 2
+    nvda.should_have_no_errors()
+
+
+def test_speech_settings_list_every_speaker_of_a_multi_speaker_voice(
+    nvda, kokoro_installed
+):
+    _activate_dengjen(nvda, kokoro_installed)
+    _open_speech_settings(nvda)
+    try:
+        assert _voice_panel_state(nvda, "panel.speakerList.GetCount()") > 1
+    finally:
+        _close_speech_settings(nvda)
+    nvda.should_have_no_errors()
+
+
 def test_removal_is_also_two_phase(nvda):
     """Must stay last in this file: uninstalls what addon_under_test set up."""
     nvda.addons.remove(ADDON_NAME)

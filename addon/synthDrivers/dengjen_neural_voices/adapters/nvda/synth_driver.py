@@ -43,7 +43,7 @@ from ...domain.tts_system import (
     SpeechOptions,
 )
 from ...helpers import update_displaied_params_on_voice_change
-from ...ports.tts_backend import BackendUnavailableError
+from ...ports.tts_backend import BackendError, BackendUnavailableError
 
 addonHandler.initTranslation()
 
@@ -237,10 +237,8 @@ class SynthDriver(NvdaSynthDriver):
         self.tts = DengjenTextToSpeechSystem(
             self.voices, speech_options=init_speech_options
         )
-        self._player = self._get_or_create_player(
-            self.tts.speech_options.voice.sample_rate
-        )
-        self._active_players = {self._player}
+        # WavePlayers are created on first speech: opening one fails on a machine
+        # with no audio device, and the synth must still load there.
         self.availableLanguages = {v.language for v in self.voices}
         self._voice_map = {v.key: v for v in self.voices}
         self._standard_voice_map = {v.standard_variant_key: v for v in self.voices}
@@ -352,7 +350,9 @@ class SynthDriver(NvdaSynthDriver):
 
     def _get_or_create_player(self, sample_rate):
         if sample_rate not in self._players:
-            self._players[sample_rate] = create_wave_player(sample_rate)
+            player = create_wave_player(sample_rate)
+            player.setVolume(all=self.tts.volume / 100)
+            self._players[sample_rate] = player
         return self._players[sample_rate]
 
     def _get_rateBoost(self):
@@ -382,7 +382,8 @@ class SynthDriver(NvdaSynthDriver):
 
     def _set_volume(self, value):
         self.tts.volume = value
-        self._player.setVolume(all=value / 100)
+        for player in self._players.values():
+            player.setVolume(all=value / 100)
 
     def _get_pitch(self):
         return self.tts.pitch
@@ -431,7 +432,13 @@ class SynthDriver(NvdaSynthDriver):
             and getattr(self, factor_attr, None) == value
         ):
             return
-        voice = self.tts.speech_options.voice
+        try:
+            self._push_scale(self.tts.speech_options.voice, name, value, spec)
+        except BackendError:
+            log.exception(f"Could not apply {name}: the speech engine is unreachable")
+        setattr(self, factor_attr, value)
+
+    def _push_scale(self, voice, name, value, spec):
         default = getattr(voice.default_scales, name)
         if value == 50:
             setattr(voice, name, default)
@@ -447,7 +454,6 @@ class SynthDriver(NvdaSynthDriver):
                     ),
                 ),
             )
-        setattr(self, factor_attr, value)
 
     def _reapply_scale_settings(self):
 
@@ -529,9 +535,6 @@ class SynthDriver(NvdaSynthDriver):
         self.tts.voice = voice_key
         self.tts.speech_options.voice.speaker = prev_speaker
         DengjenConfig.setdefault(self.voice, {})["variant"] = value
-        voice = self.tts.speech_options.voice
-        self._player = self._get_or_create_player(voice.sample_rate)
-        self._active_players = {self._player}
 
         self._reapply_scale_settings()
 
@@ -570,6 +573,11 @@ class SynthDriver(NvdaSynthDriver):
             DengjenConfig.setdefault(self.voice, {})["speaker"] = value
         except SpeakerNotFoundError:
             DengjenConfig.setdefault(self.voice, {})["speaker"] = self.tts.speaker
+        except BackendError:
+            log.exception(
+                "Could not apply the speaker: the speech engine is unreachable"
+            )
+            DengjenConfig.setdefault(self.voice, {})["speaker"] = value
 
     def _get_availableSpeakers(self):
         return {spk: VoiceInfo(spk, spk, None) for spk in self.tts.get_speakers()}
