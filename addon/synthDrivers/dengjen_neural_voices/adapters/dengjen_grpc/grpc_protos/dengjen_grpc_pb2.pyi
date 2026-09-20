@@ -78,16 +78,18 @@ class VoiceConfigLocation(_message.Message):
     def __init__(self, path: _Optional[str] = ...) -> None: ...
 
 class SynthesisRequest(_message.Message):
-    __slots__ = ("voice_key", "text", "prosody", "synthesis_mode")
+    __slots__ = ("voice_key", "text", "prosody", "synthesis_mode", "batch_size")
     VOICE_KEY_FIELD_NUMBER: _ClassVar[int]
     TEXT_FIELD_NUMBER: _ClassVar[int]
     PROSODY_FIELD_NUMBER: _ClassVar[int]
     SYNTHESIS_MODE_FIELD_NUMBER: _ClassVar[int]
+    BATCH_SIZE_FIELD_NUMBER: _ClassVar[int]
     voice_key: str
     text: str
     prosody: ProsodyControls
     synthesis_mode: SynthesisMode
-    def __init__(self, voice_key: _Optional[str] = ..., text: _Optional[str] = ..., prosody: _Optional[_Union[ProsodyControls, _Mapping]] = ..., synthesis_mode: _Optional[_Union[SynthesisMode, str]] = ...) -> None: ...
+    batch_size: int
+    def __init__(self, voice_key: _Optional[str] = ..., text: _Optional[str] = ..., prosody: _Optional[_Union[ProsodyControls, _Mapping]] = ..., synthesis_mode: _Optional[_Union[SynthesisMode, str]] = ..., batch_size: _Optional[int] = ...) -> None: ...
 
 class SynthesisSettings(_message.Message):
     __slots__ = ("speaker", "length_scale", "noise_scale", "noise_w", "parameters")
