@@ -36,7 +36,7 @@ jobs:
           python-version-file: .python-version
 
       - name: Fetch dengjen-tts engine
-        uses: $/.github/actions/fetch-dengjen-tts
+        uses: ./.github/actions/fetch-dengjen-tts
 
       - name: Install test dependencies
         run: |
