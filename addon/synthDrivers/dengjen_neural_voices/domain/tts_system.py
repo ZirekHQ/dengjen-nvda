@@ -135,7 +135,11 @@ class DengjenVoice:
         self.supports_streaming_output = loaded.supports_streaming_output
         profile = profile_for(self.model_type)
         self.default_scales = Scales(
-            **{name: profile.read(loaded.defaults, name) for name in SCALE_NAMES}
+            **{
+                name: v if (v := profile.read(loaded.defaults, name)) is not None
+                else getattr(loaded.defaults, name)
+                for name in SCALE_NAMES
+            }
         )
         self.sample_rate = loaded.sample_rate
         self.speakers = loaded.speakers

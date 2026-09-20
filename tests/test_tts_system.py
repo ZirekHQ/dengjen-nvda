@@ -568,6 +568,37 @@ class TestModelTypeScales:
             length_scale=1.0, noise_scale=0.667, noise_w=0.55
         )
 
+    def test_kokoro_load_falls_back_to_engine_defaults(
+        self, backend, tmp_path
+    ):
+        config = tmp_path / "config.json"
+        config.write_text("{}")
+        backend.voices_by_config_path[str(config)] = LoadedVoice(
+            backend_voice_id="kokoro",
+            supports_streaming_output=False,
+            sample_rate=44100,
+            speakers={},
+            defaults=SynthOptions(
+                speaker=None,
+                length_scale=1.0,
+                noise_scale=0.667,
+                noise_w=0.8,
+            ),
+        )
+        voice = DengjenVoice(
+            key="kokoro-x",
+            name="x",
+            language="en",
+            description="",
+            location=tmp_path,
+            backend=backend,
+            model_type="kokoro",
+        )
+        voice.load()
+        assert voice.default_scales == Scales(
+            length_scale=1.0, noise_scale=0.667, noise_w=0.8
+        )
+
     def test_kokoro_has_no_sliders_and_never_calls_the_backend(self, backend):
         voice = _make_voice(backend)
         voice.model_type = "kokoro"
