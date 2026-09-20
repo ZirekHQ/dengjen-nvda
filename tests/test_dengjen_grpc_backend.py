@@ -116,6 +116,7 @@ def test_load_voice_maps_the_response_fields(monkeypatch):
             length_scale = 1.0
             noise_scale = 0.5
             noise_w = 0.8
+            parameters = {}
 
     ready = Future()
     ready.set_result(_FakeInfo())
@@ -137,6 +138,68 @@ def test_set_synth_options_wraps_a_failure_as_voice_load_error(monkeypatch):
     )
     with pytest.raises(VoiceLoadError):
         backend.set_synth_options("v1", noise_scale=0.5)
+
+
+def test_load_voice_carries_engine_parameters_into_defaults(monkeypatch):
+    class _Info:
+        voice_key = "v1"
+        supports_streaming_output = False
+
+        class audio:
+            sample_rate = 44100
+
+        speakers = {}
+
+        class synthesis_options:
+            speaker = None
+            length_scale = 1.0
+            noise_scale = 0.667
+            noise_w = 0.8
+            parameters = {"noise_scale_w": 0.8}
+
+    monkeypatch.setattr(
+        dengjen_grpc, "load_voice", lambda path: _resolved_future(_Info())
+    )
+
+    loaded = backend.load_voice("/tmp/v/config.json")
+
+    assert loaded.defaults.parameters == {"noise_scale_w": 0.8}
+
+
+def test_get_synth_options_carries_engine_parameters(monkeypatch):
+    settings = types.SimpleNamespace(
+        speaker="Alice",
+        length_scale=1.0,
+        noise_scale=0.5,
+        noise_w=0.8,
+        parameters={"noise_scale_w": 0.7},
+    )
+    monkeypatch.setattr(
+        dengjen_grpc, "get_synth_options", lambda voice_id: _resolved_future(settings)
+    )
+
+    assert backend.get_synth_options("v1").parameters == {"noise_scale_w": 0.7}
+
+
+def test_set_synth_options_forwards_parameters(monkeypatch):
+    seen = {}
+
+    def fake(voice_id, **kwargs):
+        seen.update(kwargs)
+        return _resolved_future(None)
+
+    monkeypatch.setattr(dengjen_grpc, "set_synth_options", fake)
+
+    backend.set_synth_options("v1", parameters={"noise_scale_w": 0.7})
+
+    assert seen == {"parameters": {"noise_scale_w": 0.7}}
+
+
+def test_synthesis_settings_puts_parameters_on_the_request():
+    settings = dengjen_grpc._synthesis_settings(
+        None, None, None, None, {"noise_scale_w": 0.7}
+    )
+    assert dict(settings.parameters)["noise_scale_w"] == pytest.approx(0.7)
 
 
 def test_synthesize_wraps_a_failure_as_synthesis_error():

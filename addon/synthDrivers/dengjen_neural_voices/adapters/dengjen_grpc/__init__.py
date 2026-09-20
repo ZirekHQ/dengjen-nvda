@@ -505,17 +505,39 @@ async def get_synth_options(voice_id):
     return await DENGJEN_GRPC_SERVICE.GetSynthesisOptions(req)
 
 
+def _synthesis_settings(speaker, length_scale, noise_scale, noise_w, parameters):
+    return msgs.SynthesisSettings(
+        speaker=speaker,
+        length_scale=length_scale,
+        noise_scale=noise_scale,
+        noise_w=noise_w,
+        parameters=parameters,
+    )
+
+
+def _to_synth_options(settings):
+    return SynthOptions(
+        speaker=settings.speaker,
+        length_scale=settings.length_scale,
+        noise_scale=settings.noise_scale,
+        noise_w=settings.noise_w,
+        parameters=dict(settings.parameters),
+    )
+
+
 @aio.asyncio_coroutine_to_concurrent_future
 async def set_synth_options(
-    voice_id, speaker=None, length_scale=None, noise_scale=None, noise_w=None
+    voice_id,
+    speaker=None,
+    length_scale=None,
+    noise_scale=None,
+    noise_w=None,
+    parameters=None,
 ):
     req = msgs.VoiceSynthesisSettings(
         voice_key=voice_id,
-        synthesis_options=msgs.SynthesisSettings(
-            speaker=speaker,
-            length_scale=length_scale,
-            noise_scale=noise_scale,
-            noise_w=noise_w,
+        synthesis_options=_synthesis_settings(
+            speaker, length_scale, noise_scale, noise_w, parameters
         ),
     )
     return await DENGJEN_GRPC_SERVICE.SetSynthesisOptions(req)
@@ -607,12 +629,7 @@ class DengjenGrpcBackend:
             supports_streaming_output=info.supports_streaming_output,
             sample_rate=info.audio.sample_rate,
             speakers=dict(info.speakers),
-            defaults=SynthOptions(
-                speaker=info.synthesis_options.speaker,
-                length_scale=info.synthesis_options.length_scale,
-                noise_scale=info.synthesis_options.noise_scale,
-                noise_w=info.synthesis_options.noise_w,
-            ),
+            defaults=_to_synth_options(info.synthesis_options),
         )
 
     def get_synth_options(self, backend_voice_id):
@@ -620,12 +637,7 @@ class DengjenGrpcBackend:
             opts = get_synth_options(backend_voice_id).result(timeout=CALL_TIMEOUT)
         except Exception as exc:
             raise VoiceLoadError(str(exc)) from exc
-        return SynthOptions(
-            speaker=opts.speaker,
-            length_scale=opts.length_scale,
-            noise_scale=opts.noise_scale,
-            noise_w=opts.noise_w,
-        )
+        return _to_synth_options(opts)
 
     def set_synth_options(self, backend_voice_id, **kwargs):
         try:

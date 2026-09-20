@@ -48,3 +48,12 @@ def test_synthesize_records_the_call_and_yields_configured_chunks():
         assert backend.synthesize_calls == [(loaded.backend_voice_id, "hello")]
 
     asyncio.run(_collect())
+
+
+def test_set_synth_options_merges_parameters():
+    backend = FakeTTSBackend()
+    loaded = backend.load_voice("/tmp/v/config.json")
+    backend.set_synth_options(loaded.backend_voice_id, parameters={"a": 1.0})
+    backend.set_synth_options(loaded.backend_voice_id, parameters={"b": 2.0})
+    options = backend.get_synth_options(loaded.backend_voice_id)
+    assert options.parameters == {"a": 1.0, "b": 2.0}

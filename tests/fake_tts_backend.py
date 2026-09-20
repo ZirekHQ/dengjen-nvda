@@ -88,6 +88,8 @@ class FakeTTSBackend:
         self.set_synth_options_calls.append((backend_voice_id, kwargs))
         current = self._synth_options_by_voice_id[backend_voice_id]
         updates = {k: v for k, v in kwargs.items() if v is not None}
+        if "parameters" in updates:
+            updates["parameters"] = {**current.parameters, **updates["parameters"]}
         self._synth_options_by_voice_id[backend_voice_id] = replace(current, **updates)
 
     async def synthesize(

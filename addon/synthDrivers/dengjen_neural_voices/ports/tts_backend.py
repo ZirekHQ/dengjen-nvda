@@ -6,7 +6,7 @@ depend on.
 """
 
 from collections.abc import AsyncIterator, Mapping
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from typing import Protocol
 
 
@@ -16,13 +16,15 @@ class SynthOptions:
 
     Doubles as both "the defaults a voice loaded with" (LoadedVoice.defaults)
     and "the live value of one option" (TTSBackend.get_synth_options) --
-    both are the same four fields.
+    both share these fields. `parameters` carries backend-specific knobs
+    that have no named field (e.g. MeloTTS's noise_scale_w).
     """
 
     speaker: str | None
     length_scale: float
     noise_scale: float
     noise_w: float
+    parameters: Mapping[str, float] = field(default_factory=dict)
 
 
 @dataclass(frozen=True)

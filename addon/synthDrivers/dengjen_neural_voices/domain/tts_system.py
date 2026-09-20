@@ -30,10 +30,9 @@ from ..const import (
 )
 from ..ports.tts_backend import TTSBackend
 from ..voice_migration import migrate_voices_directory
+from .model_profiles import SCALE_NAMES, profile_for
 from .voice_metadata import VOICE_METADATA_FILENAME
 from .voice_metadata import read_or_migrate as _read_or_migrate_voice_metadata
-
-MODEL_TYPES_WITH_PROSODY_CONTROLS = frozenset({"piper", "melotts"})
 
 
 class VoiceNotFoundError(LookupError):
@@ -80,6 +79,11 @@ class SpeechProvider(AudioProvider):
 
     def generate_audio(self):
         return self.speech_options.speak_text(self.text)
+
+
+def _default_scale(profile, defaults, name):
+    value = profile.read(defaults, name)
+    return getattr(defaults, name) if value is None else value
 
 
 @dataclass
@@ -134,10 +138,12 @@ class DengjenVoice:
         loaded = self.backend.load_voice(str(self.config_path))
         self.remote_id = loaded.backend_voice_id
         self.supports_streaming_output = loaded.supports_streaming_output
+        profile = profile_for(self.model_type)
         self.default_scales = Scales(
-            length_scale=loaded.defaults.length_scale,
-            noise_scale=loaded.defaults.noise_scale,
-            noise_w=loaded.defaults.noise_w,
+            **{
+                name: _default_scale(profile, loaded.defaults, name)
+                for name in SCALE_NAMES
+            }
         )
         self.sample_rate = loaded.sample_rate
         self.speakers = loaded.speakers
@@ -148,15 +154,18 @@ class DengjenVoice:
         )
 
     def _get_prosody_option(self, name):
-        if self.model_type not in MODEL_TYPES_WITH_PROSODY_CONTROLS:
+        profile = profile_for(self.model_type)
+        if name not in profile.tunable:
             return None
-        options = self.backend.get_synth_options(self.remote_id)
-        return getattr(options, name)
+        return profile.read(self.backend.get_synth_options(self.remote_id), name)
 
-    def _set_prosody_option(self, **kwargs):
-        if self.model_type not in MODEL_TYPES_WITH_PROSODY_CONTROLS:
+    def _set_prosody_option(self, name, value):
+        profile = profile_for(self.model_type)
+        if name not in profile.tunable:
             return
-        self.backend.set_synth_options(self.remote_id, **kwargs)
+        self.backend.set_synth_options(
+            self.remote_id, **profile.write_kwargs(name, value)
+        )
 
     @property
     def speaker(self):
@@ -176,7 +185,7 @@ class DengjenVoice:
 
     @noise_scale.setter
     def noise_scale(self, value):
-        self._set_prosody_option(noise_scale=value)
+        self._set_prosody_option("noise_scale", value)
 
     @property
     def length_scale(self):
@@ -184,7 +193,7 @@ class DengjenVoice:
 
     @length_scale.setter
     def length_scale(self, value):
-        self._set_prosody_option(length_scale=value)
+        self._set_prosody_option("length_scale", value)
 
     @property
     def noise_w(self):
@@ -192,7 +201,7 @@ class DengjenVoice:
 
     @noise_w.setter
     def noise_w(self, value):
-        self._set_prosody_option(noise_w=value)
+        self._set_prosody_option("noise_w", value)
 
     @property
     def is_fast(self):

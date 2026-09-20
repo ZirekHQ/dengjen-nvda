@@ -27,8 +27,10 @@ from unittest.mock import MagicMock
 import addonHandler
 import pytest
 from dengjen_neural_voices.domain import tts_system
+from dengjen_neural_voices.ports.tts_backend import LoadedVoice, SynthOptions
 
 from tests.conftest import GLOBAL_PLUGIN_PKG_DIR, load_module_from_path
+from tests.fake_tts_backend import FakeTTSBackend
 
 addonHandler.initTranslation()
 
@@ -439,6 +441,213 @@ class TestInstallVoiceFromTarArchive:
             voice_download.install_voice_from_tar_archive(
                 str(tar_path), str(tmp_path / "voices")
             )
+
+
+MELOTTS_MANIFEST = {
+    "model_type": "melotts",
+    "model_path": "model.onnx",
+    "phonemizer": {"type": "espeak", "voice": "en-us"},
+}
+
+
+def _melotts_tar(tmp_path, name="melo-en.tar.gz", manifest=None, extra=None):
+    members = {
+        "config.json": json.dumps(manifest or MELOTTS_MANIFEST).encode(),
+        "model.onnx": b"model-bytes",
+    }
+    members.update(extra or {})
+    return _make_tar(tmp_path, name, members)
+
+
+class TestInstallMeloTTSArchive:
+    def test_installs_files_and_writes_a_melotts_sidecar(self, tmp_path):
+        tar_path = _melotts_tar(tmp_path)
+        voices_dir = tmp_path / "voices"
+        key = voice_download.install_voice_from_tar_archive(
+            str(tar_path), str(voices_dir)
+        )
+        assert key == "melotts-melo_en"
+        installed = voices_dir / key
+        assert (installed / "model.onnx").read_bytes() == b"model-bytes"
+        sidecar = json.loads((installed / "voice.json").read_text())
+        assert sidecar["model_type"] == "melotts"
+        assert sidecar["name"] == "melo-en"
+        assert sidecar["language"] == "en_US"
+
+    def test_key_never_looks_like_a_piper_variant_key(self, tmp_path):
+        tar_path = _melotts_tar(tmp_path, name="melo-en-us.tar.gz")
+        key = voice_download.install_voice_from_tar_archive(
+            str(tar_path), str(tmp_path / "voices")
+        )
+        assert key == "melotts-melo_en_us"
+        variants = tts_system.DengjenTextToSpeechSystem.get_voice_variants(key)
+        assert variants == (key, key)
+
+    def test_archive_voice_json_overrides_name_and_language(self, tmp_path):
+        override = {"model_type": "piper", "name": "Amy", "language": "fr_FR"}
+        tar_path = _melotts_tar(
+            tmp_path, extra={"voice.json": json.dumps(override).encode()}
+        )
+        voices_dir = tmp_path / "voices"
+        key = voice_download.install_voice_from_tar_archive(
+            str(tar_path), str(voices_dir)
+        )
+        sidecar = json.loads((voices_dir / key / "voice.json").read_text())
+        assert sidecar["model_type"] == "melotts"
+        assert sidecar["name"] == "Amy"
+        assert sidecar["language"] == "fr_FR"
+
+    def test_rejects_a_pinyin_voice_without_creating_a_folder(self, tmp_path):
+        manifest = {**MELOTTS_MANIFEST, "phonemizer": {"type": "pinyin"}}
+        tar_path = _melotts_tar(tmp_path, manifest=manifest)
+        voices_dir = tmp_path / "voices"
+        with pytest.raises(ValueError, match="pinyin"):
+            voice_download.install_voice_from_tar_archive(
+                str(tar_path), str(voices_dir)
+            )
+        assert not voices_dir.exists()
+
+    def test_rejects_a_voice_whose_language_cannot_be_determined(self, tmp_path):
+        manifest = {"model_type": "melotts", "phonemizer": {"type": "espeak"}}
+        tar_path = _melotts_tar(tmp_path, manifest=manifest)
+        with pytest.raises(ValueError, match="language"):
+            voice_download.install_voice_from_tar_archive(
+                str(tar_path), str(tmp_path / "voices")
+            )
+
+    def test_rejects_a_member_that_escapes_the_voice_folder(self, tmp_path):
+        tar_path = _melotts_tar(tmp_path, extra={"../evil.txt": b"x"})
+        with pytest.raises(tarfile.FilterError):
+            voice_download.install_voice_from_tar_archive(
+                str(tar_path), str(tmp_path / "voices")
+            )
+        assert not (tmp_path / "evil.txt").exists()
+
+    def test_a_vits_manifest_still_takes_the_piper_path(self, tmp_path):
+        tar_path = _make_tar(
+            tmp_path,
+            "voice.tar.gz",
+            {
+                "en_US-lessac-medium.onnx": b"m",
+                "config.json": json.dumps({"model_type": "vits"}).encode(),
+            },
+        )
+        key = voice_download.install_voice_from_tar_archive(
+            str(tar_path), str(tmp_path / "voices")
+        )
+        assert key == "en_US-lessac-medium"
+
+    def test_installs_an_archive_whose_members_carry_a_dot_slash_prefix(self, tmp_path):
+        tar_path = _make_tar(
+            tmp_path,
+            "melo-en.tar.gz",
+            {
+                "./config.json": json.dumps(MELOTTS_MANIFEST).encode(),
+                "./model.onnx": b"model-bytes",
+            },
+        )
+        voices_dir = tmp_path / "voices"
+        key = voice_download.install_voice_from_tar_archive(
+            str(tar_path), str(voices_dir)
+        )
+        assert key == "melotts-melo_en"
+        installed = voices_dir / key
+        assert (installed / "model.onnx").read_bytes() == b"model-bytes"
+        sidecar = json.loads((installed / "voice.json").read_text())
+        assert sidecar["model_type"] == "melotts"
+        assert sidecar["language"] == "en_US"
+
+    def test_a_dot_slash_voice_json_overrides_name_and_language(self, tmp_path):
+        override = {"name": "Amy", "language": "fr_FR"}
+        tar_path = _make_tar(
+            tmp_path,
+            "melo-en.tar.gz",
+            {
+                "./config.json": json.dumps(MELOTTS_MANIFEST).encode(),
+                "./model.onnx": b"m",
+                "./voice.json": json.dumps(override).encode(),
+            },
+        )
+        voices_dir = tmp_path / "voices"
+        key = voice_download.install_voice_from_tar_archive(
+            str(tar_path), str(voices_dir)
+        )
+        sidecar = json.loads((voices_dir / key / "voice.json").read_text())
+        assert sidecar["name"] == "Amy"
+        assert sidecar["language"] == "fr_FR"
+
+    def test_rejects_a_nested_melotts_archive_with_a_clear_message(self, tmp_path):
+        tar_path = _make_tar(
+            tmp_path,
+            "melo-en.tar.gz",
+            {
+                "melo-en/config.json": json.dumps(MELOTTS_MANIFEST).encode(),
+                "melo-en/model.onnx": b"m",
+            },
+        )
+        with pytest.raises(ValueError, match="archive root"):
+            voice_download.install_voice_from_tar_archive(
+                str(tar_path), str(tmp_path / "voices")
+            )
+
+    @pytest.mark.parametrize("member_type", [tarfile.SYMTYPE, tarfile.DIRTYPE])
+    def test_a_non_file_member_named_config_json_does_not_crash_the_dispatcher(
+        self, tmp_path, member_type
+    ):
+        tar_path = tmp_path / "en_US-lessac-medium.tar.gz"
+        with tarfile.open(tar_path, "w:gz") as tar:
+            special = tarfile.TarInfo(name="config.json")
+            special.type = member_type
+            special.linkname = (
+                "missing-target" if member_type == tarfile.SYMTYPE else ""
+            )
+            tar.addfile(special)
+            for name, content in (
+                ("en_US-lessac-medium.onnx", b"m"),
+                ("en_US-lessac-medium.onnx.json", b"{}"),
+            ):
+                info = tarfile.TarInfo(name=name)
+                info.size = len(content)
+                tar.addfile(info, io.BytesIO(content))
+        key = voice_download.install_voice_from_tar_archive(
+            str(tar_path), str(tmp_path / "voices")
+        )
+        assert key == "en_US-lessac-medium"
+
+    def test_an_installed_melotts_voice_loads_and_drives_the_noise_w_slider(
+        self, tmp_path
+    ):
+        voices_dir = tmp_path / "voices"
+        key = voice_download.install_voice_from_tar_archive(
+            str(_melotts_tar(tmp_path)), str(voices_dir)
+        )
+        backend = FakeTTSBackend()
+        voice = tts_system.DengjenVoice.from_path(voices_dir / key, backend)
+        assert voice.model_type == "melotts"
+        assert voice.language == "en_US"
+        variants = tts_system.DengjenTextToSpeechSystem.get_voice_variants(key)
+        assert variants == (key, key)
+        loaded = LoadedVoice(
+            backend_voice_id="melo-remote-id",
+            supports_streaming_output=False,
+            sample_rate=44100,
+            speakers={},
+            defaults=SynthOptions(
+                speaker=None,
+                length_scale=1.0,
+                noise_scale=0.667,
+                noise_w=0.8,
+                parameters={"noise_scale_w": 0.55},
+            ),
+        )
+        backend.voices_by_config_path[str(voices_dir / key / "config.json")] = loaded
+        voice.load()
+        assert voice.default_scales.noise_w == 0.55
+        voice.noise_w = 0.4
+        assert backend.set_synth_options_calls[-1] == (
+            loaded.backend_voice_id,
+            {"parameters": {"noise_scale_w": 0.4}},
+        )
 
 
 class TestSelectNotInstalledVoices:
@@ -1412,3 +1621,82 @@ class TestVoiceJsonSidecarWrittenOnInstall:
         assert sidecar.exists()
         data = json.loads(sidecar.read_text())
         assert data["model_type"] == "piper"
+
+
+class TestMeloTTSInstallSafety:
+    @pytest.mark.parametrize(
+        "model_path",
+        [
+            None,
+            "",
+            "  ",
+            5,
+            "../model.onnx",
+            "/etc/model.onnx",
+            "C:\\model.onnx",
+            "a/../../x.onnx",
+        ],
+    )
+    def test_rejects_an_unusable_model_path(self, tmp_path, model_path):
+        manifest = {**MELOTTS_MANIFEST, "model_path": model_path}
+        tar_path = _melotts_tar(tmp_path, manifest=manifest)
+        voices_dir = tmp_path / "voices"
+        with pytest.raises(ValueError, match="model_path"):
+            voice_download.install_voice_from_tar_archive(
+                str(tar_path), str(voices_dir)
+            )
+        assert not voices_dir.exists()
+
+    def test_rejects_a_model_path_the_archive_does_not_contain(self, tmp_path):
+        manifest = {**MELOTTS_MANIFEST, "model_path": "weights.onnx"}
+        tar_path = _melotts_tar(tmp_path, manifest=manifest)
+        voices_dir = tmp_path / "voices"
+        with pytest.raises(ValueError, match="missing"):
+            voice_download.install_voice_from_tar_archive(
+                str(tar_path), str(voices_dir)
+            )
+        assert not voices_dir.exists()
+
+    def test_accepts_a_nested_relative_model_path(self, tmp_path):
+        manifest = {**MELOTTS_MANIFEST, "model_path": "models/model.onnx"}
+        tar_path = _melotts_tar(
+            tmp_path, manifest=manifest, extra={"models/model.onnx": b"nested"}
+        )
+        voices_dir = tmp_path / "voices"
+        key = voice_download.install_voice_from_tar_archive(
+            str(tar_path), str(voices_dir)
+        )
+        assert (voices_dir / key / "models" / "model.onnx").read_bytes() == b"nested"
+
+    def test_reinstall_replaces_stale_files(self, tmp_path):
+        (tmp_path / "one").mkdir()
+        (tmp_path / "two").mkdir()
+        first = _melotts_tar(tmp_path / "one", extra={"stale.txt": b"old"})
+        second = _melotts_tar(tmp_path / "two")
+        voices_dir = tmp_path / "voices"
+        key = voice_download.install_voice_from_tar_archive(str(first), str(voices_dir))
+        voice_download.install_voice_from_tar_archive(str(second), str(voices_dir))
+        assert not (voices_dir / key / "stale.txt").exists()
+        assert (voices_dir / key / "model.onnx").exists()
+        assert [p.name for p in voices_dir.iterdir()] == [key]
+
+    def test_failed_reinstall_keeps_the_existing_voice_and_leaves_no_debris(
+        self, tmp_path
+    ):
+        (tmp_path / "one").mkdir()
+        (tmp_path / "two").mkdir()
+        first = _melotts_tar(tmp_path / "one")
+        broken = _melotts_tar(tmp_path / "two", extra={"../evil.txt": b"x"})
+        voices_dir = tmp_path / "voices"
+        key = voice_download.install_voice_from_tar_archive(str(first), str(voices_dir))
+        with pytest.raises(tarfile.FilterError):
+            voice_download.install_voice_from_tar_archive(str(broken), str(voices_dir))
+        assert (voices_dir / key / "model.onnx").read_bytes() == b"model-bytes"
+        assert [p.name for p in voices_dir.iterdir()] == [key]
+
+    def test_key_keeps_only_ascii_word_characters(self, tmp_path):
+        tar_path = _melotts_tar(tmp_path, name="m\u00e9lo en.tar.gz")
+        key = voice_download.install_voice_from_tar_archive(
+            str(tar_path), str(tmp_path / "voices")
+        )
+        assert key == "melotts-m_lo_en"

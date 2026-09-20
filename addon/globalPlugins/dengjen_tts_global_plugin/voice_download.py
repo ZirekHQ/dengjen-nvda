@@ -3,6 +3,7 @@ import os
 import re
 import shutil
 import tarfile
+import tempfile
 from dataclasses import dataclass
 from enum import Enum, auto
 from fnmatch import fnmatch
@@ -28,7 +29,7 @@ from .download_infra import (
 )
 
 with helpers.import_bundled_library():
-    from pathlib import Path
+    from pathlib import Path, PurePosixPath, PureWindowsPath
 
 
 PIPER_VOICE_LIST_URL = (
@@ -426,59 +427,218 @@ def _voice_key_from_config(config):
     )
 
 
+MELOTTS_MODEL_TYPE = "melotts"
+PINYIN_UNSUPPORTED_MESSAGE = (
+    "This MeloTTS voice needs the pinyin phonemizer (Chinese), which the "
+    "bundled dengjen-tts engine does not include."
+)
+
+
+def _archive_stem(tar_path):
+    name = Path(tar_path).name
+    for suffix in (".tar.gz", ".tgz"):
+        name = name.removesuffix(suffix)
+    return name
+
+
+def _bare_name(name):
+    return name.removeprefix("./")
+
+
+def _resolve_member_name(names, wanted):
+    return next((n for n in names if _bare_name(n) == _bare_name(wanted)), None)
+
+
+def _is_root_manifest_candidate(name):
+    bare = _bare_name(name)
+    return (
+        "/" not in bare
+        and bare.endswith(".json")
+        and bare != voice_metadata.VOICE_METADATA_FILENAME
+    )
+
+
+def _root_manifest_name(members):
+    candidates = [name for name in members if _is_root_manifest_candidate(name)]
+    config = _resolve_member_name(candidates, "config.json")
+    if config is not None:
+        return config
+    return candidates[0] if len(candidates) == 1 else None
+
+
+def _read_json_member(tar, members, name):
+    key = None if name is None else _resolve_member_name(members, name)
+    if key is None or not members[key].isfile():
+        return {}
+    try:
+        data = json.loads(tar.extractfile(members[key]).read().decode("utf-8"))
+    except ValueError:
+        return {}
+    return data if isinstance(data, dict) else {}
+
+
+def _is_nested_melotts_manifest(tar, members, name):
+    bare = _bare_name(name)
+    if "/" not in bare or not bare.endswith(".json"):
+        return False
+    return _read_json_member(tar, members, name).get("model_type") == MELOTTS_MODEL_TYPE
+
+
+def _reject_nested_melotts_archive(tar, members):
+    if any(_is_nested_melotts_manifest(tar, members, name) for name in members):
+        raise ValueError(
+            "MeloTTS archive members must sit at the archive root; "
+            "create the archive from inside the voice folder."
+        )
+
+
+def _melotts_language(manifest, sidecar):
+    if sidecar.get("language"):
+        return sidecar["language"]
+    phonemizer = manifest.get("phonemizer") or {}
+    if phonemizer.get("type") == "espeak" and phonemizer.get("voice"):
+        return normalizeLanguage(phonemizer["voice"])
+    raise ValueError(
+        "Cannot determine this MeloTTS voice's language: add a voice.json "
+        "with a `language` to the archive."
+    )
+
+
+def _is_relative_inside(path_text):
+    posix, windows = PurePosixPath(path_text), PureWindowsPath(path_text)
+    return not (
+        posix.is_absolute()
+        or windows.is_absolute()
+        or windows.drive
+        or ".." in posix.parts
+        or ".." in windows.parts
+    )
+
+
+def _require_model_file(manifest, members):
+    model_path = manifest.get("model_path")
+    if not isinstance(model_path, str) or not model_path.strip():
+        raise ValueError("The MeloTTS manifest needs a `model_path`.")
+    if not _is_relative_inside(model_path):
+        raise ValueError("The MeloTTS `model_path` must stay inside the archive.")
+    member = _resolve_member_name(members, model_path)
+    if member is None or not members[member].isfile():
+        raise ValueError(f"The MeloTTS archive is missing `{model_path}`.")
+
+
+def _extract_regular_files(tar, members, folder):
+    for member in members.values():
+        if member.isfile():
+            tar.extract(member, path=folder, set_attrs=False, filter="data")
+
+
+def _swap_in(staging, target):
+    backup = target.with_name(target.name + ".old")
+    shutil.rmtree(backup, ignore_errors=True)
+    if target.exists():
+        target.rename(backup)
+    try:
+        staging.rename(target)
+    except OSError:
+        if backup.exists():
+            backup.rename(target)
+        raise
+    shutil.rmtree(backup, ignore_errors=True)
+
+
+def _install_melotts_archive(tar, members, manifest, tar_path, voices_dir):
+    if (manifest.get("phonemizer") or {}).get("type") == "pinyin":
+        raise ValueError(PINYIN_UNSUPPORTED_MESSAGE)
+    sidecar = _read_json_member(tar, members, voice_metadata.VOICE_METADATA_FILENAME)
+    stem = _archive_stem(tar_path)
+    language = _melotts_language(manifest, sidecar)
+    _require_model_file(manifest, members)
+    voice_key = f"{MELOTTS_MODEL_TYPE}-{re.sub(r'\W+', '_', stem, flags=re.ASCII)}"
+    voices_root = Path(voices_dir)
+    voices_root.mkdir(parents=True, exist_ok=True)
+    staging = Path(tempfile.mkdtemp(prefix=".melotts_staging_", dir=voices_root))
+    try:
+        _extract_regular_files(tar, members, staging)
+        voice_metadata.write(
+            staging,
+            voice_metadata.VoiceMetadata(
+                model_type=MELOTTS_MODEL_TYPE,
+                name=sidecar.get("name") or stem,
+                language=language,
+                description=sidecar.get("description", ""),
+            ),
+        )
+        _swap_in(staging, voices_root / voice_key)
+    finally:
+        shutil.rmtree(staging, ignore_errors=True)
+    return voice_key
+
+
+def _install_piper_archive(tar, filenames, tar_path, voices_dir):
+    onnx_files = list(filter(lambda pth: fnmatch(pth, "*.onnx"), filenames))
+    config_files = list(filter(lambda pth: fnmatch(pth, "*.json"), filenames))
+    if not (onnx_files and config_files):
+        raise FileNotFoundError("Required files not found in archive")
+    if len(onnx_files) == 1:
+        voice_key = _voice_key_from_filename(Path(onnx_files[0]).stem)
+    else:
+        voice_key = _voice_key_from_filename(Path(tar_path).stem[:-4])
+    if voice_key is None:
+        config = json.loads(
+            tar.extractfile(filenames[config_files[0]]).read().decode("utf-8")
+        )
+        voice_key = _voice_key_from_config(config)
+    voice_folder_name = Path(voices_dir).joinpath(voice_key)
+
+    resolved_voices_dir = Path(voices_dir).resolve()
+    resolved_voice_folder = voice_folder_name.resolve()
+    if (
+        resolved_voice_folder != resolved_voices_dir
+        and resolved_voices_dir not in resolved_voice_folder.parents
+    ):
+        raise ValueError(
+            f"Voice key resolves outside the voices directory: {voice_key!r}"
+        )
+    voice_folder_name.mkdir(parents=True, exist_ok=True)
+    voice_folder_name = os.fspath(voice_folder_name)
+    files_to_extract = [*onnx_files, *config_files]
+    if "MODEL_CARD" in filenames:
+        files_to_extract.append("MODEL_CARD")
+    for file in files_to_extract:
+        tar.extract(
+            filenames[file],
+            path=voice_folder_name,
+            set_attrs=False,
+            filter="data",
+        )
+    # Written after extraction: config_files matches any *.json in the
+    # archive, so a root-level voice.json in the archive would otherwise
+    # overwrite this canonical sidecar instead of the other way around.
+    lang, name, _quality = voice_key.split("-")
+    try:
+        voice_metadata.write(
+            Path(voice_folder_name),
+            voice_metadata.VoiceMetadata(
+                model_type="piper", name=name.replace("+RT", ""), language=lang
+            ),
+        )
+    except OSError:
+        log.exception("Failed to write voice.json sidecar", exc_info=True)
+    return voice_key
+
+
 def install_voice_from_tar_archive(tar_path, voices_dir):
     with tarfile.open(tar_path) as tar:
-        filenames = {f.name: f for f in tar.getmembers()}
-        onnx_files = list(filter(lambda pth: fnmatch(pth, "*.onnx"), filenames))
-        config_files = list(filter(lambda pth: fnmatch(pth, "*.json"), filenames))
-        if not (onnx_files and config_files):
-            raise FileNotFoundError("Required files not found in archive")
-        if len(onnx_files) == 1:
-            voice_key = _voice_key_from_filename(Path(onnx_files[0]).stem)
-        else:
-            voice_key = _voice_key_from_filename(Path(tar_path).stem[:-4])
-        if voice_key is None:
-            config = json.loads(
-                tar.extractfile(filenames[config_files[0]]).read().decode("utf-8")
+        members = {member.name: member for member in tar.getmembers()}
+        root_name = _root_manifest_name(members)
+        if root_name is None:
+            _reject_nested_melotts_archive(tar, members)
+        manifest = _read_json_member(tar, members, root_name)
+        if manifest.get("model_type") == MELOTTS_MODEL_TYPE:
+            return _install_melotts_archive(
+                tar, members, manifest, tar_path, voices_dir
             )
-            voice_key = _voice_key_from_config(config)
-        voice_folder_name = Path(voices_dir).joinpath(voice_key)
-
-        resolved_voices_dir = Path(voices_dir).resolve()
-        resolved_voice_folder = voice_folder_name.resolve()
-        if (
-            resolved_voice_folder != resolved_voices_dir
-            and resolved_voices_dir not in resolved_voice_folder.parents
-        ):
-            raise ValueError(
-                f"Voice key resolves outside the voices directory: {voice_key!r}"
-            )
-        voice_folder_name.mkdir(parents=True, exist_ok=True)
-        voice_folder_name = os.fspath(voice_folder_name)
-        files_to_extract = [*onnx_files, *config_files]
-        if "MODEL_CARD" in filenames:
-            files_to_extract.append("MODEL_CARD")
-        for file in files_to_extract:
-            tar.extract(
-                filenames[file],
-                path=voice_folder_name,
-                set_attrs=False,
-                filter="data",
-            )
-        # Written after extraction: config_files matches any *.json in the
-        # archive, so a root-level voice.json in the archive would otherwise
-        # overwrite this canonical sidecar instead of the other way around.
-        lang, name, _quality = voice_key.split("-")
-        try:
-            voice_metadata.write(
-                Path(voice_folder_name),
-                voice_metadata.VoiceMetadata(
-                    model_type="piper", name=name.replace("+RT", ""), language=lang
-                ),
-            )
-        except OSError:
-            log.exception("Failed to write voice.json sidecar", exc_info=True)
-        return voice_key
+        return _install_piper_archive(tar, members, tar_path, voices_dir)
 
 
 def _select_not_installed_voices(voices):

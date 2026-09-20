@@ -23,7 +23,7 @@ from dengjen_neural_voices.domain.tts_system import (
     SpeechOptions,
     VoiceNotFoundError,
 )
-from dengjen_neural_voices.ports.tts_backend import SynthOptions
+from dengjen_neural_voices.ports.tts_backend import LoadedVoice, SynthOptions
 
 from tests.fake_tts_backend import FakeTTSBackend
 
@@ -510,3 +510,96 @@ class TestLoadAllVoicesFromNvdaConfigDir:
             "en-john-medium",
             "kokoro-multilingual",
         ]
+
+
+class TestModelTypeScales:
+    def _melotts_voice(self, backend):
+        voice = _make_voice(backend)
+        voice.model_type = "melotts"
+        backend._synth_options_by_voice_id[voice.remote_id] = SynthOptions(
+            speaker=None,
+            length_scale=1.0,
+            noise_scale=0.667,
+            noise_w=0.8,
+            parameters={"noise_scale_w": 0.55},
+        )
+        return voice
+
+    def test_melotts_noise_w_reads_the_engine_parameter(self, backend):
+        assert self._melotts_voice(backend).noise_w == 0.55
+
+    def test_melotts_noise_w_writes_the_engine_parameter(self, backend):
+        voice = self._melotts_voice(backend)
+        voice.noise_w = 0.4
+        assert backend.set_synth_options_calls[-1] == (
+            "fake-remote-id",
+            {"parameters": {"noise_scale_w": 0.4}},
+        )
+
+    def test_melotts_load_takes_the_default_noise_w_from_the_parameter(
+        self, backend, tmp_path
+    ):
+        config = tmp_path / "config.json"
+        config.write_text("{}")
+        backend.voices_by_config_path[str(config)] = LoadedVoice(
+            backend_voice_id="melo",
+            supports_streaming_output=False,
+            sample_rate=44100,
+            speakers={},
+            defaults=SynthOptions(
+                speaker=None,
+                length_scale=1.0,
+                noise_scale=0.667,
+                noise_w=0.8,
+                parameters={"noise_scale_w": 0.55},
+            ),
+        )
+        voice = DengjenVoice(
+            key="melotts-x",
+            name="x",
+            language="en",
+            description="",
+            location=tmp_path,
+            backend=backend,
+            model_type="melotts",
+        )
+        voice.load()
+        assert voice.default_scales == Scales(
+            length_scale=1.0, noise_scale=0.667, noise_w=0.55
+        )
+
+    def test_kokoro_load_falls_back_to_engine_defaults(self, backend, tmp_path):
+        config = tmp_path / "config.json"
+        config.write_text("{}")
+        backend.voices_by_config_path[str(config)] = LoadedVoice(
+            backend_voice_id="kokoro",
+            supports_streaming_output=False,
+            sample_rate=44100,
+            speakers={},
+            defaults=SynthOptions(
+                speaker=None,
+                length_scale=1.0,
+                noise_scale=0.667,
+                noise_w=0.8,
+            ),
+        )
+        voice = DengjenVoice(
+            key="kokoro-x",
+            name="x",
+            language="en",
+            description="",
+            location=tmp_path,
+            backend=backend,
+            model_type="kokoro",
+        )
+        voice.load()
+        assert voice.default_scales == Scales(
+            length_scale=1.0, noise_scale=0.667, noise_w=0.8
+        )
+
+    def test_kokoro_has_no_sliders_and_never_calls_the_backend(self, backend):
+        voice = _make_voice(backend)
+        voice.model_type = "kokoro"
+        assert voice.noise_scale is None
+        voice.noise_scale = 0.3
+        assert backend.set_synth_options_calls == []

@@ -1,0 +1,128 @@
+// Licensed under GPL-3.0-or-later; see LICENSE.
+
+syntax = "proto3";
+
+package dengjen_grpc;
+
+service DengjenGrpc {
+
+  rpc GetDengjenVersion(Empty) returns (Version) {}
+
+  
+  rpc LoadVoice(VoiceConfigLocation) returns (VoiceDescriptor) {}
+
+  
+  rpc GetVoiceInfo(VoiceRef) returns (VoiceDescriptor) {}
+
+  
+  rpc GetSynthesisOptions(VoiceRef) returns (SynthesisSettings) {}
+
+  
+  rpc SetSynthesisOptions(VoiceSynthesisSettings) returns (SynthesisSettings) {}
+
+  
+  rpc SynthesizeUtterance(SynthesisRequest) returns (stream SynthesisChunk) {}
+
+  
+  rpc SynthesizeUtteranceRealtime(SynthesisRequest) returns (stream RealtimeAudioChunk) {}
+}
+
+enum SynthesisMode {
+  // Not set by the caller; the server falls back to MODE_LAZY.
+  MODE_UNSPECIFIED = 0;
+  // Synthesizes one sentence per call to the stream, sequentially. Lowest
+  // latency to the first chunk, no parallelism.
+  MODE_LAZY = 1;
+  // Synthesizes every sentence concurrently, then yields them in order once
+  // all of them are done. Higher throughput for long, multi-sentence text,
+  // but nothing is emitted until the whole request finishes.
+  MODE_PARALLEL = 2;
+  // Synthesizes sentences in bounded-size concurrent groups (batch_size),
+  // yielding each group's results before starting the next. A middle
+  // ground between MODE_LAZY and MODE_PARALLEL: partial output streams out
+  // sooner than MODE_PARALLEL, with less per-request thread/memory
+  // pressure than firing every sentence at once.
+  MODE_BATCHED = 3;
+}
+enum VoiceQuality {
+  VOICE_QUALITY_UNSPECIFIED = 0;
+  VOICE_QUALITY_X_LOW = 1;
+  VOICE_QUALITY_LOW = 2;
+  VOICE_QUALITY_MEDIUM = 3;
+  VOICE_QUALITY_HIGH = 4;
+}
+
+message Empty {}
+
+message Version {
+    string version = 1;
+}
+
+message VoiceRef {
+    string voice_key = 1;
+}
+
+message VoiceDescriptor {
+  string voice_key = 1;
+  SynthesisSettings synthesis_options = 2;
+  map<int64, string> speakers = 3;
+  AudioFormat audio = 4;
+  optional string language = 5;
+  optional VoiceQuality quality = 6;
+  optional bool supports_streaming_output = 7;
+}
+
+message VoiceConfigLocation {
+  string path = 1;
+}
+
+
+message SynthesisRequest {
+  string voice_key = 1;
+  string text = 2;
+  ProsodyControls prosody = 3;
+  SynthesisMode synthesis_mode = 4;
+  // Only meaningful when synthesis_mode is MODE_BATCHED. Unset uses the
+  // server's default; an explicit 0 is rejected as invalid_argument.
+  optional uint32 batch_size = 5;
+}
+
+message SynthesisSettings {
+  optional string speaker = 1;
+  optional float length_scale = 2;
+  optional float noise_scale = 3;
+  optional float noise_w = 4;
+  
+  
+  
+  map<string, float> parameters = 5;
+}
+
+message VoiceSynthesisSettings{
+    string voice_key = 1;
+    SynthesisSettings synthesis_options = 2;
+}
+
+
+message AudioFormat {
+  uint32 sample_rate = 1;
+  uint32 num_channels = 2;
+  uint32 sample_width = 3;
+}
+
+
+message SynthesisChunk {
+  bytes audio_bytes = 1;
+  float real_time_factor = 2;
+}
+
+message RealtimeAudioChunk {
+  bytes audio_bytes = 1;
+}
+
+message ProsodyControls {
+    optional uint32 rate =1;
+    optional uint32 volume =2;
+    optional uint32 pitch =3;
+    optional uint32 appended_silence_ms =4;
+}

@@ -37,3 +37,19 @@ def test_loaded_voice_carries_defaults_as_synth_options():
 def test_backend_errors_are_backend_error_subclasses(exc_cls):
     assert issubclass(exc_cls, BackendError)
     assert issubclass(BackendError, Exception)
+
+
+def test_synth_options_parameters_default_to_empty():
+    opts = SynthOptions(speaker=None, length_scale=1.0, noise_scale=0.5, noise_w=0.8)
+    assert opts.parameters == {}
+
+
+def test_synth_options_carries_backend_parameters():
+    opts = SynthOptions(
+        speaker=None,
+        length_scale=1.0,
+        noise_scale=0.5,
+        noise_w=0.8,
+        parameters={"noise_scale_w": 0.8},
+    )
+    assert opts.parameters["noise_scale_w"] == 0.8
