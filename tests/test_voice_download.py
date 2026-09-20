@@ -441,6 +441,101 @@ class TestInstallVoiceFromTarArchive:
             )
 
 
+MELOTTS_MANIFEST = {
+    "model_type": "melotts",
+    "model_path": "model.onnx",
+    "phonemizer": {"type": "espeak", "voice": "en-us"},
+}
+
+
+def _melotts_tar(tmp_path, name="melo-en.tar.gz", manifest=None, extra=None):
+    members = {
+        "config.json": json.dumps(manifest or MELOTTS_MANIFEST).encode(),
+        "model.onnx": b"model-bytes",
+    }
+    members.update(extra or {})
+    return _make_tar(tmp_path, name, members)
+
+
+class TestInstallMeloTTSArchive:
+    def test_installs_files_and_writes_a_melotts_sidecar(self, tmp_path):
+        tar_path = _melotts_tar(tmp_path)
+        voices_dir = tmp_path / "voices"
+        key = voice_download.install_voice_from_tar_archive(
+            str(tar_path), str(voices_dir)
+        )
+        assert key == "melotts-melo_en"
+        installed = voices_dir / key
+        assert (installed / "model.onnx").read_bytes() == b"model-bytes"
+        sidecar = json.loads((installed / "voice.json").read_text())
+        assert sidecar["model_type"] == "melotts"
+        assert sidecar["name"] == "melo-en"
+        assert sidecar["language"] == "en_US"
+
+    def test_key_never_looks_like_a_piper_variant_key(self, tmp_path):
+        tar_path = _melotts_tar(tmp_path, name="melo-en-us.tar.gz")
+        key = voice_download.install_voice_from_tar_archive(
+            str(tar_path), str(tmp_path / "voices")
+        )
+        assert key == "melotts-melo_en_us"
+        variants = tts_system.DengjenTextToSpeechSystem.get_voice_variants(key)
+        assert variants == (key, key)
+
+    def test_archive_voice_json_overrides_name_and_language(self, tmp_path):
+        override = {"model_type": "piper", "name": "Amy", "language": "fr_FR"}
+        tar_path = _melotts_tar(
+            tmp_path, extra={"voice.json": json.dumps(override).encode()}
+        )
+        voices_dir = tmp_path / "voices"
+        key = voice_download.install_voice_from_tar_archive(
+            str(tar_path), str(voices_dir)
+        )
+        sidecar = json.loads((voices_dir / key / "voice.json").read_text())
+        assert sidecar["model_type"] == "melotts"
+        assert sidecar["name"] == "Amy"
+        assert sidecar["language"] == "fr_FR"
+
+    def test_rejects_a_pinyin_voice_without_creating_a_folder(self, tmp_path):
+        manifest = {**MELOTTS_MANIFEST, "phonemizer": {"type": "pinyin"}}
+        tar_path = _melotts_tar(tmp_path, manifest=manifest)
+        voices_dir = tmp_path / "voices"
+        with pytest.raises(ValueError, match="pinyin"):
+            voice_download.install_voice_from_tar_archive(
+                str(tar_path), str(voices_dir)
+            )
+        assert not voices_dir.exists()
+
+    def test_rejects_a_voice_whose_language_cannot_be_determined(self, tmp_path):
+        manifest = {"model_type": "melotts", "phonemizer": {"type": "espeak"}}
+        tar_path = _melotts_tar(tmp_path, manifest=manifest)
+        with pytest.raises(ValueError, match="language"):
+            voice_download.install_voice_from_tar_archive(
+                str(tar_path), str(tmp_path / "voices")
+            )
+
+    def test_rejects_a_member_that_escapes_the_voice_folder(self, tmp_path):
+        tar_path = _melotts_tar(tmp_path, extra={"../evil.txt": b"x"})
+        with pytest.raises(tarfile.FilterError):
+            voice_download.install_voice_from_tar_archive(
+                str(tar_path), str(tmp_path / "voices")
+            )
+        assert not (tmp_path / "evil.txt").exists()
+
+    def test_a_vits_manifest_still_takes_the_piper_path(self, tmp_path):
+        tar_path = _make_tar(
+            tmp_path,
+            "voice.tar.gz",
+            {
+                "en_US-lessac-medium.onnx": b"m",
+                "config.json": json.dumps({"model_type": "vits"}).encode(),
+            },
+        )
+        key = voice_download.install_voice_from_tar_archive(
+            str(tar_path), str(tmp_path / "voices")
+        )
+        assert key == "en_US-lessac-medium"
+
+
 class TestSelectNotInstalledVoices:
     @pytest.fixture
     def installed(self, monkeypatch):
