@@ -94,6 +94,28 @@ Piper's per-voice downloads); once installed, it appears in NVDA's Voice
 list like any other voice, and its 54 presets are selectable via NVDA's
 "Speaker" setting.
 
+# Using a mirror for voice downloads
+
+By default the voice manager downloads voice catalogues and files from Hugging Face. If it is slow, blocked or unavailable where you live, you can point it at a mirror by editing NVDA's `nvda.ini` (close NVDA first). Add a `hosting` section under the add-on's section and set any of the keys below; an empty or missing key keeps the Hugging Face default.
+
+```ini
+[speech]
+    [[dengjen_neural_voices]]
+        [[[hosting]]]
+            piper_list_url = https://mirror.example/piper/voices.json
+            piper_download_prefix = https://mirror.example/piper
+```
+
+| Key | What it replaces | The mirror must serve |
+| --- | --- | --- |
+| `piper_list_url` | Piper voice catalogue URL | `voices.json` |
+| `piper_download_prefix` | Base URL of Piper voice files | each `file_path` from the catalogue under this prefix |
+| `rt_list_url` | Fast variant catalogue URL | `voices.json` |
+| `rt_download_prefix` | Base URL of fast variant archives | `<voice key>.tar.gz` |
+| `kokoro_download_prefix` | Base URL of Kokoro files | `onnx/model.onnx`, `tokenizer.json`, `voices/<preset>.bin` |
+
+Only `https://` URLs are accepted. Any other value is ignored, with a warning in NVDA's log. After saving `nvda.ini`, start NVDA again and click `Refresh voices list` so the catalogue is fetched from the mirror.
+
 # A note on voice quality
 
 The currently available voices are trained using freely available TTS datasets, which are generally of low quality (mostly public domain audio books or research quality recordings).

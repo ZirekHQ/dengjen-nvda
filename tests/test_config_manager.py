@@ -40,6 +40,26 @@ class TestModuleLevelSingleton:
             )
 
 
+class TestHostingSpec:
+    @pytest.mark.parametrize(
+        "setting",
+        [
+            "piper_list_url",
+            "piper_download_prefix",
+            "rt_list_url",
+            "rt_download_prefix",
+            "kokoro_download_prefix",
+        ],
+    )
+    def test_config_spec_declares_each_hosting_override_as_empty_by_default(
+        self, setting
+    ):
+        assert f'{setting} = string(default="")' in _config._configSpec
+
+    def test_config_spec_declares_the_hosting_section(self):
+        assert "[hosting]" in _config._configSpec
+
+
 class TestMappingProtocol:
     def test_missing_key_is_not_contained(self, manager):
         assert "de_DE-thorsten-high" not in manager

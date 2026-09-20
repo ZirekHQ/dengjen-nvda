@@ -141,7 +141,7 @@ class TestPiperVoiceDataclasses:
         assert f.name == "en_US-lessac-medium.onnx"
         assert (
             f.download_url
-            == f"{voice_download.PIPER_VOICE_DOWNLOAD_URL_PREFIX}/en/en_US-lessac-medium.onnx"
+            == f"{voice_download.DEFAULT_PIPER_DOWNLOAD_PREFIX}/en/en_US-lessac-medium.onnx"
         )
 
     @pytest.mark.parametrize(
@@ -250,7 +250,7 @@ class TestPiperVoiceDataclasses:
     def test_get_rt_variant_download_url(self):
         voice = _piper_voice(key="en_US-lessac-medium", has_rt_variant=True)
         assert voice.get_rt_variant_download_url() == (
-            f"{voice_download.RT_VOICE_DOWNLOAD_URL_PREFIX}/en_US-lessac+RT-medium.tar.gz"
+            f"{voice_download.DEFAULT_RT_DOWNLOAD_PREFIX}/en_US-lessac+RT-medium.tar.gz"
         )
 
 
@@ -792,8 +792,8 @@ class TestVoicesCache:
         assert [v.key for v in result] == ["en_US-lessac-medium"]
         assert result[0].has_rt_variant is True
         assert fake_request.get_urls == [
-            voice_download.PIPER_VOICE_LIST_URL,
-            voice_download.RT_VOICE_LIST_URL,
+            voice_download.DEFAULT_PIPER_LIST_URL,
+            voice_download.DEFAULT_RT_LIST_URL,
         ]
         assert (
             json.loads(cache_path.read_text(encoding="utf-8"))["en_US-lessac-medium"][
@@ -1700,3 +1700,49 @@ class TestMeloTTSInstallSafety:
             str(tar_path), str(tmp_path / "voices")
         )
         assert key == "melotts-m_lo_en"
+
+
+class TestHostingOverrides:
+    def test_piper_file_download_url_uses_the_configured_prefix(
+        self, hosting_overrides
+    ):
+        hosting_overrides["piper_download_prefix"] = "https://mirror.example/piper"
+
+        f = PiperVoiceFile(file_path="en/x.onnx", size_in_bytes=1, md5hash="x")
+
+        assert f.download_url == "https://mirror.example/piper/en/x.onnx"
+
+    def test_rt_variant_download_url_uses_the_configured_prefix(
+        self, hosting_overrides
+    ):
+        hosting_overrides["rt_download_prefix"] = "https://mirror.example/rt"
+        voice = _piper_voice(key="en_US-lessac-medium", has_rt_variant=True)
+
+        assert voice.get_rt_variant_download_url() == (
+            "https://mirror.example/rt/en_US-lessac+RT-medium.tar.gz"
+        )
+
+    def test_catalog_refresh_fetches_from_the_configured_list_urls(
+        self, hosting_overrides, tmp_path, monkeypatch
+    ):
+        hosting_overrides["piper_list_url"] = "https://mirror.example/piper.json"
+        hosting_overrides["rt_list_url"] = "https://mirror.example/rt.json"
+        monkeypatch.setattr(
+            voice_download,
+            "PIPER_VOICES_JSON_LOCAL_CACHE",
+            str(tmp_path / "piper-voices.json"),
+        )
+        fake_request = _FakeMureq(
+            get_responses=[
+                _FakeResponse(status=200, json_data={}),
+                _FakeResponse(status=200, json_data={}),
+            ]
+        )
+        monkeypatch.setattr(download_infra, "request", fake_request)
+
+        voice_download._refresh_voices_cache()
+
+        assert fake_request.get_urls == [
+            "https://mirror.example/piper.json",
+            "https://mirror.example/rt.json",
+        ]

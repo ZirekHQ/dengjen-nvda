@@ -29,10 +29,11 @@ from .download_infra import (
     BaseVoiceDownloader,
     VoiceInstallError,
     follow_redirects,
+    hosting_url,
     stream_to_file,
 )
 
-KOKORO_REPO_RESOLVE_URL = (
+DEFAULT_KOKORO_DOWNLOAD_PREFIX = (
     "https://huggingface.co/onnx-community/Kokoro-82M-v1.0-ONNX/resolve/main"
 )
 KOKORO_MODEL_FILE = (
@@ -120,7 +121,8 @@ def _download_to_file(relative_path, target_path):
     """Streams straight to disk (never holds a whole asset in memory) -- the
     full-precision model alone is ~326MB, and 56 files held as bytes
     simultaneously would be material memory pressure inside NVDA."""
-    url = f"{KOKORO_REPO_RESOLVE_URL}/{relative_path}"
+    prefix = hosting_url("kokoro_download_prefix", DEFAULT_KOKORO_DOWNLOAD_PREFIX)
+    url = f"{prefix}/{relative_path}"
     target_path.parent.mkdir(parents=True, exist_ok=True)
     with follow_redirects(url, relative_path) as response:
         total_size = int(response.getheader("Content-Length", 0))

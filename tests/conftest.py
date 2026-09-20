@@ -7,6 +7,8 @@ modules import REPO_ROOT / SYNTH_PKG_DIR / GLOBAL_PLUGIN_PKG_DIR /
 load_module_from_path from here, so those stay re-exported.
 """
 
+import pytest
+
 from tests.nvda_stubs import (  # noqa: F401
     GLOBAL_PLUGIN_PKG_DIR,
     REPO_ROOT,
@@ -16,3 +18,14 @@ from tests.nvda_stubs import (  # noqa: F401
 )
 
 install(stub_wx=True)
+
+
+@pytest.fixture
+def hosting_overrides():
+    """The stub `[hosting]` config section that `hosting_url` reads, cleared before and after each test."""
+    import config
+
+    section = config.conf["speech"]["dengjen_neural_voices"]["hosting"]
+    section.clear()
+    yield section
+    section.clear()
