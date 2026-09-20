@@ -27,8 +27,10 @@ from unittest.mock import MagicMock
 import addonHandler
 import pytest
 from dengjen_neural_voices.domain import tts_system
+from dengjen_neural_voices.ports.tts_backend import LoadedVoice, SynthOptions
 
 from tests.conftest import GLOBAL_PLUGIN_PKG_DIR, load_module_from_path
+from tests.fake_tts_backend import FakeTTSBackend
 
 addonHandler.initTranslation()
 
@@ -611,6 +613,41 @@ class TestInstallMeloTTSArchive:
             str(tar_path), str(tmp_path / "voices")
         )
         assert key == "en_US-lessac-medium"
+
+    def test_an_installed_melotts_voice_loads_and_drives_the_noise_w_slider(
+        self, tmp_path
+    ):
+        voices_dir = tmp_path / "voices"
+        key = voice_download.install_voice_from_tar_archive(
+            str(_melotts_tar(tmp_path)), str(voices_dir)
+        )
+        backend = FakeTTSBackend()
+        voice = tts_system.DengjenVoice.from_path(voices_dir / key, backend)
+        assert voice.model_type == "melotts"
+        assert voice.language == "en_US"
+        variants = tts_system.DengjenTextToSpeechSystem.get_voice_variants(key)
+        assert variants == (key, key)
+        loaded = LoadedVoice(
+            backend_voice_id="melo-remote-id",
+            supports_streaming_output=False,
+            sample_rate=44100,
+            speakers={},
+            defaults=SynthOptions(
+                speaker=None,
+                length_scale=1.0,
+                noise_scale=0.667,
+                noise_w=0.8,
+                parameters={"noise_scale_w": 0.55},
+            ),
+        )
+        backend.voices_by_config_path[str(voices_dir / key / "config.json")] = loaded
+        voice.load()
+        assert voice.default_scales.noise_w == 0.55
+        voice.noise_w = 0.4
+        assert backend.set_synth_options_calls[-1] == (
+            loaded.backend_voice_id,
+            {"parameters": {"noise_scale_w": 0.4}},
+        )
 
 
 class TestSelectNotInstalledVoices:

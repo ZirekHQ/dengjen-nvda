@@ -2,12 +2,14 @@
 
 grpcio-tools 1.62.3 (protobuf 4.25 gencode; vendored runtime is 4.24.4) ships wheels
 only up to Python 3.12, so run this from a Python 3.12 (or older) venv.
+Run it from the repository root with that venv's python (paths are relative to the repo root).
 
 Usage:
     uv venv --python 3.12 && uv pip install --only-binary=:all: grpcio-tools==1.62.3
     python update_grpc_protos.py         # proto version comes from dengjen-tts.lock
 """
 
+import importlib.util
 import re
 import subprocess
 import sys
@@ -48,7 +50,16 @@ def _run_protoc(proto_file):
     )
 
 
+def _require_grpc_tools():
+    if importlib.util.find_spec("grpc_tools") is None:
+        raise SystemExit(
+            "grpc_tools is not installed; run from a Python 3.12 or older venv "
+            "with grpcio-tools==1.62.3 installed."
+        )
+
+
 def main():
+    _require_grpc_tools()
     version, _ = read_lock()
     proto_file = PROTO_DIR / PROTO_NAME
     proto_file.write_bytes(_get(proto_url(version)))

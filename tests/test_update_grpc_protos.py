@@ -1,5 +1,8 @@
+import importlib.util
 import os
 import sys
+
+import pytest
 
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), ".."))
 import update_grpc_protos as protos
@@ -22,3 +25,9 @@ def test_relativize_imports_rewrites_the_generated_absolute_import():
 def test_relativize_imports_leaves_already_relative_imports_alone():
     source = "from . import dengjen_grpc_pb2 as dengjen__grpc__pb2\n"
     assert protos.relativize_imports(source) == source
+
+
+def test_main_exits_with_an_install_hint_when_grpc_tools_is_missing(monkeypatch):
+    monkeypatch.setattr(importlib.util, "find_spec", lambda name: None)
+    with pytest.raises(SystemExit, match="grpc_tools is not installed"):
+        protos.main()
