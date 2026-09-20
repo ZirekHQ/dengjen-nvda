@@ -5,3 +5,10 @@ rules:
       # fail_on_unmatched_files, which is what keeps a release from publishing
       # without the .nvda-addon attached.
       - build_addon.yml
+  self-repository:
+    ignore:
+      # actionlint rejects the `$/` form (rhysd/actionlint#711); drop these
+      # once it supports it.
+      - build_addon.yml
+      - sonar.yml
+      - sonar-fork-coverage.yml
