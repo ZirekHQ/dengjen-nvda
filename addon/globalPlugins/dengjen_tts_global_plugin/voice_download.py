@@ -24,6 +24,7 @@ from .download_infra import (
     archive_total_size,
     follow_redirects,
     get_with_cert_fallback,
+    hosting_url,
     resumable_partial_size,
     stream_to_file,
 )
@@ -32,10 +33,10 @@ with helpers.import_bundled_library():
     from pathlib import Path, PurePosixPath, PureWindowsPath
 
 
-PIPER_VOICE_LIST_URL = (
+DEFAULT_PIPER_LIST_URL = (
     "https://huggingface.co/rhasspy/piper-voices/raw/v1.0.0/voices.json"
 )
-PIPER_VOICE_DOWNLOAD_URL_PREFIX = (
+DEFAULT_PIPER_DOWNLOAD_PREFIX = (
     "https://huggingface.co/rhasspy/piper-voices/resolve/v1.0.0"
 )
 PIPER_SAMPLES_URL_PREFIX = "https://rhasspy.github.io/piper-samples/samples"
@@ -43,10 +44,10 @@ PIPER_VOICES_JSON_LOCAL_CACHE = os.path.join(DENGJEN_VOICES_DIR, "piper-voices.j
 # Snapshot refreshed by update_voice_catalog.py before each release; lets
 # get_available_voices() serve a catalog offline on first run.
 BUNDLED_PIPER_VOICES_JSON = os.path.join(helpers.DATA_DIRECTORY, "piper-voices.json")
-RT_VOICE_LIST_URL = (
+DEFAULT_RT_LIST_URL = (
     "https://huggingface.co/datasets/mush42/piper-rt/raw/main/voices.json"
 )
-RT_VOICE_DOWNLOAD_URL_PREFIX = (
+DEFAULT_RT_DOWNLOAD_PREFIX = (
     "https://huggingface.co/datasets/mush42/piper-rt/resolve/main"
 )
 
@@ -82,7 +83,8 @@ class PiperVoiceFile:
 
     def __post_init__(self):
         self.name = os.path.split(self.file_path)[-1]
-        self.download_url = f"{PIPER_VOICE_DOWNLOAD_URL_PREFIX}/{self.file_path}"
+        prefix = hosting_url("piper_download_prefix", DEFAULT_PIPER_DOWNLOAD_PREFIX)
+        self.download_url = f"{prefix}/{self.file_path}"
 
     @property
     def type(self):
@@ -187,7 +189,8 @@ class PiperVoice:
         if not self.has_rt_variant:
             raise ValueError(f"Voice `{self.key}` has no RT variant")
         ___, rt_voice_key = DengjenTextToSpeechSystem.get_voice_variants(self.key)
-        return f"{RT_VOICE_DOWNLOAD_URL_PREFIX}/{rt_voice_key}.tar.gz"
+        prefix = hosting_url("rt_download_prefix", DEFAULT_RT_DOWNLOAD_PREFIX)
+        return f"{prefix}/{rt_voice_key}.tar.gz"
 
 
 class PiperVoiceDownloader(BaseVoiceDownloader):
@@ -677,10 +680,12 @@ def _get_voices_from_cache(path=None):
 
 
 def _refresh_voices_cache():
-    std_resp = get_with_cert_fallback(PIPER_VOICE_LIST_URL)
+    std_resp = get_with_cert_fallback(
+        hosting_url("piper_list_url", DEFAULT_PIPER_LIST_URL)
+    )
     std_resp.raise_for_status()
     std_voices = std_resp.json()
-    rt_resp = get_with_cert_fallback(RT_VOICE_LIST_URL)
+    rt_resp = get_with_cert_fallback(hosting_url("rt_list_url", DEFAULT_RT_LIST_URL))
     rt_resp.raise_for_status()
     rt_voice_names = {vdata["base"] for vdata in rt_resp.json().values()}
     voice_list = {}

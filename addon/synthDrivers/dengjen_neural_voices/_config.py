@@ -17,6 +17,13 @@ noise_w = integer(default=50, min=0, max=100)
 [lang]
 [[__many__]]
 voice = string(default=None)
+
+[hosting]
+piper_list_url = string(default="")
+piper_download_prefix = string(default="")
+rt_list_url = string(default="")
+rt_download_prefix = string(default="")
+kokoro_download_prefix = string(default="")
 """
 
 

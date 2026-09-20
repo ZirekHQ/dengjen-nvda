@@ -301,3 +301,75 @@ class TestFollowRedirectsRangeSupport:
             "https://example.com/voice.onnx", "voice.onnx"
         ) as response:
             assert response.status == 206
+
+
+class TestNormalizeHostingUrl:
+    DEFAULT = "https://huggingface.co/default"
+
+    @pytest.mark.parametrize("override", [None, "", "   "])
+    def test_returns_the_default_when_no_override_is_set(self, override):
+        assert (
+            download_infra.normalize_hosting_url(override, self.DEFAULT) == self.DEFAULT
+        )
+
+    def test_returns_the_override_when_it_is_https(self):
+        assert (
+            download_infra.normalize_hosting_url(
+                "https://mirror.example/v", self.DEFAULT
+            )
+            == "https://mirror.example/v"
+        )
+
+    def test_strips_surrounding_whitespace_and_trailing_slashes(self):
+        assert (
+            download_infra.normalize_hosting_url(
+                "  https://mirror.example/v//  ", self.DEFAULT
+            )
+            == "https://mirror.example/v"
+        )
+
+    @pytest.mark.parametrize(
+        "override",
+        [
+            "http://mirror.example/v",
+            "ftp://mirror.example/v",
+            "mirror.example",
+            "https:///voices.json",
+            "https://:8080/v",
+            "https://[bad",
+        ],
+    )
+    def test_rejects_a_non_https_override_and_falls_back_with_a_warning(self, override):
+        download_infra.log.warning.reset_mock()
+
+        result = download_infra.normalize_hosting_url(override, self.DEFAULT)
+
+        assert result == self.DEFAULT
+        download_infra.log.warning.assert_called_once()
+
+
+class TestHostingUrl:
+    DEFAULT = "https://huggingface.co/default"
+
+    def test_returns_the_default_when_the_setting_is_unset(self, hosting_overrides):
+        assert (
+            download_infra.hosting_url("piper_list_url", self.DEFAULT) == self.DEFAULT
+        )
+
+    def test_returns_the_configured_override(self, hosting_overrides):
+        hosting_overrides["piper_list_url"] = "https://mirror.example/voices.json"
+
+        assert (
+            download_infra.hosting_url("piper_list_url", self.DEFAULT)
+            == "https://mirror.example/voices.json"
+        )
+
+    def test_picks_up_a_change_made_after_import(self, hosting_overrides):
+        assert download_infra.hosting_url("rt_list_url", self.DEFAULT) == self.DEFAULT
+
+        hosting_overrides["rt_list_url"] = "https://mirror.example/rt.json"
+
+        assert (
+            download_infra.hosting_url("rt_list_url", self.DEFAULT)
+            == "https://mirror.example/rt.json"
+        )

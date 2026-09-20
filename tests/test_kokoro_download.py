@@ -96,6 +96,41 @@ class TestDownloadToFile:
         assert target.read_bytes() == b"exact"
 
 
+class TestDownloadToFileHosting:
+    def _capture_url(self, monkeypatch):
+        seen = []
+
+        @contextmanager
+        def follow_redirects(url, label, headers=None):
+            seen.append(url)
+            response = MagicMock()
+            response.getheader.return_value = "0"
+            yield response
+
+        monkeypatch.setattr(kokoro_download, "follow_redirects", follow_redirects)
+        monkeypatch.setattr(kokoro_download, "stream_to_file", lambda *args: None)
+        return seen
+
+    def test_uses_the_default_prefix_when_unset(
+        self, tmp_path, monkeypatch, hosting_overrides
+    ):
+        seen = self._capture_url(monkeypatch)
+
+        kokoro_download._download_to_file("tokenizer.json", tmp_path / "t.json")
+
+        assert seen == [
+            f"{kokoro_download.DEFAULT_KOKORO_DOWNLOAD_PREFIX}/tokenizer.json"
+        ]
+
+    def test_uses_the_configured_prefix(self, tmp_path, monkeypatch, hosting_overrides):
+        hosting_overrides["kokoro_download_prefix"] = "https://mirror.example/kokoro"
+        seen = self._capture_url(monkeypatch)
+
+        kokoro_download._download_to_file("voices/af_heart.bin", tmp_path / "v.bin")
+
+        assert seen == ["https://mirror.example/kokoro/voices/af_heart.bin"]
+
+
 class TestKokoroVoiceDownloaderInstall:
     def _write_temp(self, tmp_path, name, data):
         path = tmp_path / "downloaded" / name

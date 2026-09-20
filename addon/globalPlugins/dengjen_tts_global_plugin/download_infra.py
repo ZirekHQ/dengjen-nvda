@@ -26,6 +26,8 @@ from logHandler import log
 
 addonHandler.initTranslation()
 
+from dengjen_neural_voices._config import DengjenConfig
+
 from . import DENGJEN_VOICES_DIR, helpers
 
 with helpers.import_bundled_library():
@@ -37,6 +39,31 @@ REDIRECT_STATUSES = (301, 302, 303, 307, 308)
 REDIRECT_LIMIT = 5
 DOWNLOAD_CHUNK_SIZE = 4096
 CACERT_PATH = os.path.join(helpers.LIB_DIRECTORY, "cacert.pem")
+
+
+def _is_https_url_with_host(url):
+    try:
+        parsed = urllib.parse.urlsplit(url)
+    except ValueError:
+        return False
+    return parsed.scheme.lower() == "https" and bool(parsed.hostname)
+
+
+def normalize_hosting_url(override, default):
+    """Return the override trimmed of whitespace and trailing slashes. Return `default` when it is blank, or when it is not an https URL with a host (logging a warning)."""
+    candidate = (override or "").strip().rstrip("/")
+    if not candidate:
+        return default
+    if not _is_https_url_with_host(candidate):
+        log.warning(
+            f"Ignoring hosting override that is not an https URL: {candidate!r}"
+        )
+        return default
+    return candidate
+
+
+def hosting_url(setting, default):
+    return normalize_hosting_url(DengjenConfig["hosting"].get(setting), default)
 
 
 @lru_cache(maxsize=1)
