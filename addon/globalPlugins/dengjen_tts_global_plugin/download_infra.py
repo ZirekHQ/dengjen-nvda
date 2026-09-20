@@ -41,13 +41,23 @@ DOWNLOAD_CHUNK_SIZE = 4096
 CACERT_PATH = os.path.join(helpers.LIB_DIRECTORY, "cacert.pem")
 
 
+def _is_https_url_with_host(url):
+    try:
+        parsed = urllib.parse.urlsplit(url)
+    except ValueError:
+        return False
+    return parsed.scheme.lower() == "https" and bool(parsed.hostname)
+
+
 def normalize_hosting_url(override, default):
-    """Return the override trimmed of whitespace and trailing slashes. Return `default` when it is blank, or when it is not https (logging a warning)."""
+    """Return the override trimmed of whitespace and trailing slashes. Return `default` when it is blank, or when it is not an https URL with a host (logging a warning)."""
     candidate = (override or "").strip().rstrip("/")
     if not candidate:
         return default
-    if not candidate.lower().startswith("https://"):
-        log.warning(f"Ignoring non-https hosting override {candidate!r}")
+    if not _is_https_url_with_host(candidate):
+        log.warning(
+            f"Ignoring hosting override that is not an https URL: {candidate!r}"
+        )
         return default
     return candidate
 

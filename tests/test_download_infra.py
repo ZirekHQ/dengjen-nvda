@@ -330,7 +330,14 @@ class TestNormalizeHostingUrl:
 
     @pytest.mark.parametrize(
         "override",
-        ["http://mirror.example/v", "ftp://mirror.example/v", "mirror.example"],
+        [
+            "http://mirror.example/v",
+            "ftp://mirror.example/v",
+            "mirror.example",
+            "https:///voices.json",
+            "https://:8080/v",
+            "https://[bad",
+        ],
     )
     def test_rejects_a_non_https_override_and_falls_back_with_a_warning(self, override):
         download_infra.log.warning.reset_mock()
