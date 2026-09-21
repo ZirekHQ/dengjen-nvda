@@ -51,12 +51,22 @@ jobs:
             echo "changed=true" >> "$GITHUB_OUTPUT"
           fi
 
+      - name: Create automation app token
+        if: steps.pin.outputs.changed == 'true'
+        id: app-token
+        # A github.token-authored PR never gets its required checks.
+        uses: actions/create-github-app-token@bcd2ba49218906704ab6c1aa796996da409d3eb1 # v3.2.0
+        with:
+          client-id: ${{ vars.AUTOMATION_APP_CLIENT_ID }}
+          private-key: ${{ secrets.AUTOMATION_APP_PRIVATE_KEY }}
+          permission-contents: write
+          permission-pull-requests: write
+
       - name: Open the update PR
         if: steps.pin.outputs.changed == 'true'
         env:
           VERSION: ${{ steps.pin.outputs.version }}
-          # Without PR_SYNC_TOKEN the PR falls back to github.token and never gets its required checks.
-          GH_TOKEN: ${{ secrets.PR_SYNC_TOKEN || github.token }}
+          GH_TOKEN: ${{ steps.app-token.outputs.token }}
         run: |
           set -euo pipefail
           branch="chore/update-dengjen-tts-${VERSION}"

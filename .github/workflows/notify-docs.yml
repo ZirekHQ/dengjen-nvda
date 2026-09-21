@@ -40,10 +40,19 @@ jobs:
           fi
           echo "ref=$ref" >> "$GITHUB_OUTPUT"
 
+      - name: Create automation app token
+        id: app-token
+        uses: actions/create-github-app-token@bcd2ba49218906704ab6c1aa796996da409d3eb1 # v3.2.0
+        with:
+          client-id: ${{ vars.AUTOMATION_APP_CLIENT_ID }}
+          private-key: ${{ secrets.AUTOMATION_APP_PRIVATE_KEY }}
+          repositories: ZirekHQ.github.io
+          permission-contents: write
+
       - name: Dispatch update to docs site
         uses: peter-evans/repository-dispatch@28959ce8df70de7be546dd1250a005dd32156697 # v4
         with:
-          token: ${{ secrets.DOCS_DISPATCH_TOKEN }}
+          token: ${{ steps.app-token.outputs.token }}
           repository: ZirekHQ/ZirekHQ.github.io
           event-type: update-docs
           client-payload: |-
