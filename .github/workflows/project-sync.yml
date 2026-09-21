@@ -12,4 +12,5 @@ jobs:
   sync:
     uses: ZirekHQ/.github/.github/workflows/project-sync.yml@7e29bd4f72bace4ca26745a83d0a33386c678bf5 # main
     secrets:
-      PROJECT_SYNC_TOKEN: ${{ secrets.PROJECT_SYNC_TOKEN }}
+      PROJECT_APP_CLIENT_ID: ${{ secrets.PROJECT_APP_CLIENT_ID }}
+      PROJECT_APP_PRIVATE_KEY: ${{ secrets.PROJECT_APP_PRIVATE_KEY }}
