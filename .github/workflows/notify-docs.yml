@@ -40,12 +40,12 @@ jobs:
           fi
           echo "ref=$ref" >> "$GITHUB_OUTPUT"
 
-      - name: Create automation app token
+      - name: Create docs app token
         id: app-token
         uses: actions/create-github-app-token@bcd2ba49218906704ab6c1aa796996da409d3eb1 # v3.2.0
         with:
-          client-id: ${{ secrets.AUTOMATION_APP_CLIENT_ID }}
-          private-key: ${{ secrets.AUTOMATION_APP_PRIVATE_KEY }}
+          client-id: ${{ secrets.DOCS_APP_CLIENT_ID }}
+          private-key: ${{ secrets.DOCS_APP_PRIVATE_KEY }}
           repositories: ZirekHQ.github.io
           permission-contents: write
 
