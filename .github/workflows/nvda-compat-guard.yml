@@ -24,6 +24,9 @@ jobs:
         with:
           python-version-file: .python-version
 
+      - name: Fetch dengjen-tts engine
+        uses: ./.github/actions/fetch-dengjen-tts
+
       - name: Install dependencies
         run: |
           python -m pip install --upgrade --only-binary :all: -r requirements-bootstrap.txt

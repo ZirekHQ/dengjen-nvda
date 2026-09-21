@@ -230,14 +230,17 @@ if ($headCommit -eq $baseCommit) {
 
     Write-Host "DEBUG: No new commits to publish."
 }
-elseif ([string]::IsNullOrWhiteSpace($env:PR_SYNC_TOKEN)) {
+elseif ([string]::IsNullOrWhiteSpace($env:APP_TOKEN)) {
 
-    Write-Host "WARNING: PR_SYNC_TOKEN is not set; skipping publish. New commits exist only in this run's checkout."
+    Write-Host "WARNING: APP_TOKEN is not set; skipping publish. New commits exist only in this run's checkout."
 }
 else {
 
-    $env:GH_TOKEN = $env:PR_SYNC_TOKEN
+    $env:GH_TOKEN = $env:APP_TOKEN
     $l10nBranch = "l10n/crowdin-sync"
+
+    # Authenticate only now: l10nUtil.exe rejects an origin URL carrying userinfo.
+    git remote set-url origin "https://x-access-token:$($env:APP_TOKEN)@github.com/$repository.git"
 
     git branch -f $l10nBranch HEAD
     git push --force origin "${l10nBranch}:${l10nBranch}"

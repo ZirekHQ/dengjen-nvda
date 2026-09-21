@@ -12,7 +12,6 @@ concurrency:
 
 env:
   crowdinAuthToken: ${{ secrets.CROWDIN_TOKEN }}
-  hasPrSyncToken: ${{ secrets.PR_SYNC_TOKEN != '' }}
   GH_TOKEN: ${{ github.token }}
   CROWDIN_PROJECT_ID: ${{ vars.CROWDIN_PROJECT_ID || 780748 }}
   L10N_UTIL_CONFIG: ${{ vars.L10N_UTIL_CONFIG || 'addon' }}
@@ -38,15 +37,6 @@ jobs:
         with:
           submodules: true
           persist-credentials: false
-      - name: Configure git remote authentication
-        # main requires PRs, so translations are published via PR (see
-        # crowdinSync.ps1) using a PAT: GITHUB_TOKEN-authored pushes/PRs
-        # don't trigger the required status checks needed to merge.
-        if: env.hasPrSyncToken == 'true'
-        shell: pwsh
-        env:
-          PR_SYNC_TOKEN: ${{ secrets.PR_SYNC_TOKEN }}
-        run: git remote set-url origin "https://x-access-token:${env:PR_SYNC_TOKEN}@github.com/${env:GITHUB_REPOSITORY}.git"
       - name: Set up Python
         uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7.0.0
         with:
@@ -68,10 +58,22 @@ jobs:
       - name: Download l10nUtil
         run: |
           gh release download --repo nvaccess/nvdaL10n --pattern "l10nUtil.exe"
+      - name: Create automation app token
+        # main requires PRs, so translations are published via PR (see
+        # crowdinSync.ps1) using an app token: GITHUB_TOKEN-authored pushes/PRs
+        # don't trigger the required status checks needed to merge.
+        if: ${{ env.crowdinAuthToken }}
+        id: app-token
+        uses: actions/create-github-app-token@bcd2ba49218906704ab6c1aa796996da409d3eb1 # v3.2.0
+        with:
+          client-id: ${{ vars.AUTOMATION_APP_CLIENT_ID }}
+          private-key: ${{ secrets.AUTOMATION_APP_PRIVATE_KEY }}
+          permission-contents: write
+          permission-pull-requests: write
       - name: Download translations from Crowdin
         if: ${{ env.crowdinAuthToken }}
         shell: pwsh
         env:
           ADDON_ID: ${{ steps.getAddonInfo.outputs.addonId }}
-          PR_SYNC_TOKEN: ${{ secrets.PR_SYNC_TOKEN }}
+          APP_TOKEN: ${{ steps.app-token.outputs.token }}
         run: ./.github/scripts/crowdinSync.ps1
