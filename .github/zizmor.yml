@@ -12,3 +12,4 @@ rules:
       - build_addon.yml
       - sonar.yml
       - sonar-fork-coverage.yml
+      - nvda-compat-guard.yml
