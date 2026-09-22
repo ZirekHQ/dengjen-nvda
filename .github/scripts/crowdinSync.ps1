@@ -244,14 +244,23 @@ else {
 
     git branch -f $l10nBranch HEAD
     git push --force origin "${l10nBranch}:${l10nBranch}"
+    if ($LASTEXITCODE -ne 0) {
+        throw "git push to $l10nBranch failed with exit code $LASTEXITCODE"
+    }
 
     $existingPr = gh pr list --repo $repository --base $baseBranch --head $l10nBranch --state open --json number --jq ".[0].number"
+    if ($LASTEXITCODE -ne 0) {
+        throw "gh pr list failed with exit code $LASTEXITCODE"
+    }
 
     if ([string]::IsNullOrWhiteSpace($existingPr)) {
 
         gh pr create --repo $repository --base $baseBranch --head $l10nBranch `
             --title "l10n: sync translations from Crowdin" `
             --body "Automated translation sync from Crowdin. Review before merging."
+        if ($LASTEXITCODE -ne 0) {
+            throw "gh pr create failed with exit code $LASTEXITCODE"
+        }
 
         Write-Host "SUCCESS: Opened a new translation sync PR."
     }
