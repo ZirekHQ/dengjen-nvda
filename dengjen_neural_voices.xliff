@@ -1,6 +1,6 @@
 <?xml version="1.0"?>
 <xliff xmlns="urn:oasis:names:tc:xliff:document:2.0" version="2.0" srcLang="en">
-<file id="readme.md" original="https://raw.githubusercontent.com/ZirekHQ/dengjen-nvda/bd8d0b25538bb9db4c575d8c86339bb4c7c95f40/readme.md">
+<file id="readme.md" original="https://raw.githubusercontent.com/ZirekHQ/dengjen-nvda/ee48a2cdf971e648d8962310e251d366a779e2a2/readme.md">
 <skeleton>
 # $(ID:a70e048f-26ec-46c6-a8d9-bfca77844d8a)
 
@@ -160,7 +160,6 @@ $(ID:2c0d28b5-fa5b-49c1-bf0c-55f220db8a1e)
 $(ID:77d1680f-26e1-41f8-a22f-c985a966c7b2)
 $(ID:462a1d16-bfac-4526-9778-1d920bfe28e3)
 $(ID:a55ebd22-dc4b-44e2-a491-ebf216cc3db7)
-
 </skeleton>
 <unit id="a70e048f-26ec-46c6-a8d9-bfca77844d8a">
 <notes>
