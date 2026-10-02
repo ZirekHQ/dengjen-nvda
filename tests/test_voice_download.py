@@ -717,6 +717,10 @@ class TestVoicesCache:
         monkeypatch.setattr(voice_download, "BUNDLED_PIPER_VOICES_JSON", str(path))
         return path
 
+    def test_cache_file_name_embeds_the_pinned_catalog_revision(self):
+        name = os.path.basename(voice_download.PIPER_VOICES_JSON_LOCAL_CACHE)
+        assert voice_download.PIPER_VOICES_REVISION[:12] in name
+
     def test_get_voices_from_cache_returns_none_when_file_is_missing(self, cache_path):
         assert voice_download._get_voices_from_cache() is None
 

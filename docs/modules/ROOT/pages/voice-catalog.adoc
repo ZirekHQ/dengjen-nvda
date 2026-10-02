@@ -47,7 +47,7 @@ is flagged `has_rt_variant` when its base name appears in the RT dataset.
 `update_voice_catalog.py` refreshes the bundled offline snapshot at
 `addon/synthDrivers/dengjen_neural_voices/data/piper-voices.json` before
 each release; at runtime the add-on caches its own copy under
-`DENGJEN_VOICES_DIR/piper-voices.json` and falls back to the bundled
+`DENGJEN_VOICES_DIR/piper-voices-<revision>.json` (named after the pinned `rhasspy/piper-voices` commit, so a new pin invalidates older caches) and falls back to the bundled
 snapshot if a refresh fails, so `get_available_voices()` can serve a
 catalog offline on first run.
 

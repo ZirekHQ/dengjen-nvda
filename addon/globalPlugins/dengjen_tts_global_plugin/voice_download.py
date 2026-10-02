@@ -45,7 +45,9 @@ DEFAULT_PIPER_DOWNLOAD_PREFIX = (
     f"{PIPER_VOICES_REPO_URL}/resolve/{PIPER_VOICES_REVISION}"
 )
 PIPER_SAMPLES_URL_PREFIX = "https://rhasspy.github.io/piper-samples/samples"
-PIPER_VOICES_JSON_LOCAL_CACHE = os.path.join(DENGJEN_VOICES_DIR, "piper-voices.json")
+PIPER_VOICES_JSON_LOCAL_CACHE = os.path.join(
+    DENGJEN_VOICES_DIR, f"piper-voices-{PIPER_VOICES_REVISION[:12]}.json"
+)
 # Snapshot refreshed by update_voice_catalog.py before each release; lets
 # get_available_voices() serve a catalog offline on first run.
 BUNDLED_PIPER_VOICES_JSON = os.path.join(helpers.DATA_DIRECTORY, "piper-voices.json")
