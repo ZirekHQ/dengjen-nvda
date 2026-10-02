@@ -276,8 +276,10 @@ def test_kurdish_voice_is_listed_and_downloads(nvda, downloaded_voice_key):
     current = voice_manager_state(
         nvda, f"{DOWNLOAD_PAGE}.language_choice.GetSelection()"
     )
-    for _ in range(kurdish_index - current):
-        nvda.keys.press("downArrow")
+    delta = kurdish_index - current
+    key = "downArrow" if delta > 0 else "upArrow"
+    for _ in range(abs(delta)):
+        nvda.keys.press(key)
     wait_until(
         lambda: (
             voice_manager_state(
