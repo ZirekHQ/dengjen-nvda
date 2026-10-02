@@ -67,6 +67,24 @@ def test_the_no_voice_modal_appears_and_no_declines_it(nvda, addon_under_test):
     nvda.should_have_no_errors()
 
 
+def _return_to_voice_manager(nvda) -> None:
+    """Declining the restart prompt can leave another window (the CI
+    runner's terminal) in the foreground, so keystrokes meant for the
+    voice manager land elsewhere."""
+    if not voice_manager_state(
+        nvda, "dialog is not None and hasattr(dialog, 'notebookCtrl')"
+    ):
+        press_until(
+            nvda,
+            "alt+tab",
+            lambda: voice_manager_state(
+                nvda, "dialog is not None and hasattr(dialog, 'notebookCtrl')"
+            ),
+            description="focus to return to the voice manager dialog",
+        )
+    nvda.wait_until_idle(timeout=15)
+
+
 @pytest.fixture(scope="session")
 def downloaded_voice_key(nvda_session, addon_under_test):
     """Downloads one real voice via the real dialog, once per session.
@@ -185,19 +203,7 @@ def downloaded_voice_key(nvda_session, addon_under_test):
         description="the voice-downloaded message box to close",
     )
 
-    if not voice_manager_state(
-        nvda, "dialog is not None and hasattr(dialog, 'notebookCtrl')"
-    ):
-        press_until(
-            nvda,
-            "alt+tab",
-            lambda: voice_manager_state(
-                nvda, "dialog is not None and hasattr(dialog, 'notebookCtrl')"
-            ),
-            description="focus to return to the voice manager dialog",
-        )
-
-    nvda.wait_until_idle(timeout=15)
+    _return_to_voice_manager(nvda)
 
     lang, name, quality = online_key.split("-")
     return f"{lang}-{name}+RT-{quality}"
@@ -305,6 +311,7 @@ def test_kurdish_voice_is_listed_and_downloads(nvda, downloaded_voice_key):
         ),
         description="the voice-downloaded message box to close",
     )
+    _return_to_voice_manager(nvda)
 
     press_until(
         nvda,
