@@ -541,3 +541,72 @@ msgstr ""
 #: addon\installTasks.py:83
 msgid "Old add-on still installed"
 msgstr "古いアドオンがインストールされています"
+
+msgid "&Normalize audio volume"
+msgstr "音量を自動ノーマライズする(&N)"
+
+msgid "&Spatial audio (stereo panning)"
+msgstr "空間オーディオ（ステレオパンニング）(&S)"
+
+msgid "Alternate &speaker for brackets and quotes"
+msgstr "括弧や引用符の中身を別の話者で読む(&S)"
+
+msgid "Toggles Dengjen night mode (soft, quiet audio)"
+msgstr "Dengjenのナイトモード（ソフトで静かな音声）を切り替えます"
+
+msgid "Dengjen app &profiles..."
+msgstr "Dengjenアプリプロファイル(&P)..."
+
+msgid "Configure per-application Dengjen voice profiles"
+msgstr "アプリケーションごとのDengjen音声プロファイルを設定します"
+
+msgid "Edit App Profile"
+msgstr "アプリプロファイルを編集"
+
+msgid "Application name (e.g. firefox):"
+msgstr "アプリケーション名（例: firefox）:"
+
+msgid "Voice:"
+msgstr "音声:"
+
+msgid "Rate (0-100, blank=default):"
+msgstr "速度（0〜100、空白=デフォルト）:"
+
+msgid "Volume (0-100, blank=default):"
+msgstr "音量（0〜100、空白=デフォルト）:"
+
+msgid "Pitch (0-100, blank=default):"
+msgstr "ピッチ（0〜100、空白=デフォルト）:"
+
+msgid "Please enter an application name."
+msgstr "アプリケーション名を入力してください。"
+
+msgid "Dengjen App Profiles"
+msgstr "Dengjen アプリプロファイル"
+
+msgid ""
+"Configure per-application voice settings.\n"
+"Dengjen will automatically switch to the saved profile\n"
+"when the specified application gains focus."
+msgstr ""
+"アプリケーションごとの音声設定を行います。\n"
+"指定したアプリケーションにフォーカスが移ると、\n"
+"Dengjenが自動的に保存されたプロファイルに切り替えます。"
+
+msgid "Application"
+msgstr "アプリケーション"
+
+msgid "&Add..."
+msgstr "追加(&A)..."
+
+msgid "&Edit..."
+msgstr "編集(&E)..."
+
+msgid "&Delete"
+msgstr "削除(&D)"
+
+msgid "Delete profile for '{app}'?"
+msgstr "'{app}' のプロファイルを削除しますか？"
+
+msgid "Confirm"
+msgstr "確認"

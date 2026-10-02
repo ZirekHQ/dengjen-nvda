@@ -42,14 +42,24 @@ __all__ = [
     "voice_migration",
 ]
 
+import api
 from . import feedback
 from .voice_manager import DengjenVoiceManagerDialog, install_voice_from_local_file
+from .profile_dialog import DengjenAppProfileDialog
+
+
+def _get_dengjen_synth():
+    synth = synthDriverHandler.getSynth()
+    if synth is not None and "dengjen" in synth.name.lower():
+        return synth
+    return None
 
 
 class GlobalPlugin(globalPluginHandler.GlobalPlugin):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
         self.__voice_manager_shown = False
+        self._last_exe = None
         self._voice_check_timer = None
         self._voice_checker = self._schedule_voice_check
         core.postNvdaStartup.register(self._voice_checker)
@@ -60,6 +70,14 @@ class GlobalPlugin(globalPluginHandler.GlobalPlugin):
         )
         gui.mainFrame.sysTrayIcon.menu.Bind(
             wx.EVT_MENU, self.on_manager, self.itemHandle
+        )
+        self.profileItemHandle = gui.mainFrame.sysTrayIcon.menu.Append(
+            wx.ID_ANY,
+            _("Dengjen app &profiles..."),
+            _("Configure per-application Dengjen voice profiles"),
+        )
+        gui.mainFrame.sysTrayIcon.menu.Bind(
+            wx.EVT_MENU, self.on_app_profiles, self.profileItemHandle
         )
         self.feedbackMenuHandle = self._build_feedback_submenu()
 
@@ -149,6 +167,28 @@ class GlobalPlugin(globalPluginHandler.GlobalPlugin):
             synth.terminate()
             synth.__init__()
 
+    def on_app_profiles(self, event):
+        try:
+            dlg = DengjenAppProfileDialog()
+            gui.runScriptModalDialog(dlg)
+        except Exception:
+            log.exception("Failed to open Dengjen app profiles dialog", exc_info=True)
+
+    def event_gainFocus(self, obj, nextHandler):
+        try:
+            app = getattr(obj, "appModule", None)
+            if app:
+                exe = getattr(app, "appName", "").lower()
+                if exe and exe != self._last_exe:
+                    self._last_exe = exe
+                    synth = _get_dengjen_synth()
+                    if synth is not None:
+                        from dengjen_neural_voices.domain.app_profiles import app_profile_manager
+                        app_profile_manager.apply_for_exe(exe, synth)
+        except Exception:
+            pass
+        nextHandler()
+
     def terminate(self):
         try:
             core.postNvdaStartup.unregister(self._voice_checker)
@@ -162,6 +202,10 @@ class GlobalPlugin(globalPluginHandler.GlobalPlugin):
             gui.mainFrame.sysTrayIcon.menu.DestroyItem(self.itemHandle)
         except Exception:
             log.debug("Failed to remove the Dengjen menu item", exc_info=True)
+        try:
+            gui.mainFrame.sysTrayIcon.menu.DestroyItem(self.profileItemHandle)
+        except Exception:
+            pass
         try:
             gui.mainFrame.sysTrayIcon.menu.DestroyItem(self.feedbackMenuHandle)
         except Exception:
