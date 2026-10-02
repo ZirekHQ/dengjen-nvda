@@ -111,8 +111,20 @@ def downloaded_voice_key(nvda_session, addon_under_test):
         description="the online language list to populate",
     )
 
+    rt_language_index = voice_manager_state(
+        nvda,
+        "next("
+        "  (i for i, lang in enumerate(manager.notebookCtrl.GetPage(1).languages)"
+        "  if any(v.has_rt_variant and v.num_speakers <= 1"
+        "         for v in manager.notebookCtrl.GetPage(1).lang_to_voices[lang])),"
+        "  None"
+        ")",
+    )
+    assert rt_language_index is not None, "no language has a fast (RT) variant voice"
+
     nvda.keys.press("tab")
-    nvda.keys.press("downArrow")
+    for _ in range(rt_language_index + 1):
+        nvda.keys.press("downArrow")
     wait_until(
         lambda: (
             voice_manager_state(
@@ -138,7 +150,7 @@ def downloaded_voice_key(nvda_session, addon_under_test):
         ")",
     )
     assert rt_index is not None, (
-        "no voice for the first language has a fast (RT) variant"
+        "no voice for the selected language has a fast (RT) variant"
     )
 
     nvda.keys.press("tab")
@@ -216,6 +228,103 @@ def test_downloading_the_fast_variant_voice_installs_it(nvda, downloaded_voice_k
         description="the Installed tab to list the just-downloaded voice",
     )
     assert downloaded_voice_key in installed_keys
+    nvda.should_have_no_errors()
+
+
+KURDISH_VOICE_KEY = "ku_TR-berfin_renas-medium"
+DOWNLOAD_PAGE = "manager.notebookCtrl.GetPage(1)"
+
+
+def _download_page_has_focus(nvda, control: str) -> bool:
+    return bool(
+        voice_manager_state(
+            nvda, f"bool(manager and {DOWNLOAD_PAGE}.{control}.HasFocus())"
+        )
+    )
+
+
+def test_kurdish_voice_is_listed_and_downloads(nvda, downloaded_voice_key):
+    """Depends on downloaded_voice_key leaving the voice manager dialog open."""
+    press_until(
+        nvda,
+        "control+tab",
+        lambda: (
+            voice_manager_state(nvda, "manager and manager.notebookCtrl.GetSelection()")
+            == 1
+        ),
+        description="the notebook to switch to the Download tab",
+    )
+    kurdish_index = voice_manager_state(
+        nvda,
+        f"next((i for i, l in enumerate({DOWNLOAD_PAGE}.languages) "
+        "if 'kurd' in l.name_english.lower()), None)",
+    )
+    assert kurdish_index is not None, "Kurdish is missing from the language list"
+
+    press_until(
+        nvda,
+        "shift+tab",
+        lambda: _download_page_has_focus(nvda, "language_choice"),
+        description="focus to reach the language choice",
+    )
+    current = voice_manager_state(
+        nvda, f"{DOWNLOAD_PAGE}.language_choice.GetSelection()"
+    )
+    for _ in range(kurdish_index - current):
+        nvda.keys.press("downArrow")
+    wait_until(
+        lambda: (
+            voice_manager_state(
+                nvda,
+                f"[v.key for v in {DOWNLOAD_PAGE}.voices_list._objects]",
+            )
+            == [KURDISH_VOICE_KEY]
+        ),
+        timeout=10,
+        description="the Kurdish language to list its voice",
+    )
+
+    press_until(
+        nvda,
+        "tab",
+        lambda: _download_page_has_focus(nvda, "download_std_btn"),
+        attempts=6,
+        description="focus to reach the standard download button",
+    )
+    before = nvda.speech.index()
+    nvda.keys.press("space")
+    nvda.speech.wait_for(
+        "voice downloaded|successfully downloaded", timeout=120, since=before
+    )
+    press_until(
+        nvda,
+        "n",
+        lambda: (
+            voice_manager_state(nvda, "dialog.GetTitle() if dialog else ''")
+            != VOICE_DOWNLOADED_TITLE
+        ),
+        description="the voice-downloaded message box to close",
+    )
+
+    press_until(
+        nvda,
+        "control+tab",
+        lambda: (
+            voice_manager_state(nvda, "manager and manager.notebookCtrl.GetSelection()")
+            == 0
+        ),
+        description="the notebook to switch to the Installed tab",
+    )
+    installed_keys = wait_until(
+        lambda: voice_manager_state(
+            nvda,
+            "[v.key for v in (manager.notebookCtrl.GetPage(0)"
+            ".voices_list._objects if manager else [])]",
+        ),
+        timeout=15,
+        description="the Installed tab to list the Kurdish voice",
+    )
+    assert KURDISH_VOICE_KEY in installed_keys
     nvda.should_have_no_errors()
 
 
