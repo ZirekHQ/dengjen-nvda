@@ -33,12 +33,8 @@ with helpers.import_bundled_library():
     from pathlib import Path, PurePosixPath, PureWindowsPath
 
 
-DEFAULT_PIPER_LIST_URL = (
-    "https://huggingface.co/rhasspy/piper-voices/raw/v1.0.0/voices.json"
-)
-DEFAULT_PIPER_DOWNLOAD_PREFIX = (
-    "https://huggingface.co/rhasspy/piper-voices/resolve/v1.0.0"
-)
+DEFAULT_PIPER_LIST_URL = "https://huggingface.co/rhasspy/piper-voices/raw/c10ece1aade47bb51c153c893d14e5bf8e5b7117/voices.json"
+DEFAULT_PIPER_DOWNLOAD_PREFIX = "https://huggingface.co/rhasspy/piper-voices/resolve/c10ece1aade47bb51c153c893d14e5bf8e5b7117"
 PIPER_SAMPLES_URL_PREFIX = "https://rhasspy.github.io/piper-samples/samples"
 PIPER_VOICES_JSON_LOCAL_CACHE = os.path.join(DENGJEN_VOICES_DIR, "piper-voices.json")
 # Snapshot refreshed by update_voice_catalog.py before each release; lets

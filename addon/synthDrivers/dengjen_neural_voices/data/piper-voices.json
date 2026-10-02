@@ -61,6 +61,85 @@
     "aliases": [],
     "has_rt_variant": true
   },
+  "bg_BG-dimitar-medium": {
+    "key": "bg_BG-dimitar-medium",
+    "name": "dimitar",
+    "language": {
+      "code": "bg_BG",
+      "family": "bg",
+      "region": "BG",
+      "name_native": "български",
+      "name_english": "Bulgarian",
+      "country_english": "Bulgaria"
+    },
+    "quality": "medium",
+    "num_speakers": 1,
+    "speaker_id_map": {},
+    "files": {
+      "bg/bg_BG/dimitar/medium/bg_BG-dimitar-medium.onnx": {
+        "size_bytes": 63221984,
+        "md5_digest": "fc1ce62a4f04f089e22b8c3a13bde28a"
+      },
+      "bg/bg_BG/dimitar/medium/bg_BG-dimitar-medium.onnx.json": {
+        "size_bytes": 5123,
+        "md5_digest": "5fb4aa5e5b20d4ed515d40f0b4ce16f0"
+      },
+      "bg/bg_BG/dimitar/medium/MODEL_CARD": {
+        "size_bytes": 282,
+        "md5_digest": "6056805758b0136214309e799209d9c9"
+      }
+    },
+    "aliases": [],
+    "has_rt_variant": false
+  },
+  "bn_BD-google-medium": {
+    "key": "bn_BD-google-medium",
+    "name": "google",
+    "language": {
+      "code": "bn_BD",
+      "family": "bn",
+      "region": "BD",
+      "name_native": "বাংলা",
+      "name_english": "Bengali",
+      "country_english": "Bangladesh"
+    },
+    "quality": "medium",
+    "num_speakers": 16,
+    "speaker_id_map": {
+      "00737": 0,
+      "01232": 1,
+      "02194": 2,
+      "03042": 3,
+      "00779": 4,
+      "01701": 5,
+      "0834": 6,
+      "1010": 7,
+      "3108": 8,
+      "3713": 9,
+      "3958": 10,
+      "4046": 11,
+      "4811": 12,
+      "5958": 13,
+      "9169": 14,
+      "rm": 15
+    },
+    "files": {
+      "bn/bn_BD/google/medium/bn_BD-google-medium.onnx": {
+        "size_bytes": 76782515,
+        "md5_digest": "2a365b2d91bb9cb7ed62c57d9ee0ec48"
+      },
+      "bn/bn_BD/google/medium/bn_BD-google-medium.onnx.json": {
+        "size_bytes": 5494,
+        "md5_digest": "2286795a555ad100657de86646a74f12"
+      },
+      "bn/bn_BD/google/medium/MODEL_CARD": {
+        "size_bytes": 2419,
+        "md5_digest": "1bf6e7d71fa4144b9b571aa4fde29ddc"
+      }
+    },
+    "aliases": [],
+    "has_rt_variant": false
+  },
   "ca_ES-upc_ona-medium": {
     "key": "ca_ES-upc_ona-medium",
     "name": "upc_ona",
@@ -182,8 +261,8 @@
         "md5_digest": "a28c860a87620da2a44ccae38a915aee"
       },
       "cs/cs_CZ/jirka/low/MODEL_CARD": {
-        "size_bytes": 275,
-        "md5_digest": "a37afbc4197ab16ab6e2209e2ecc2ae0"
+        "size_bytes": 273,
+        "md5_digest": "d81fe066eef6bc151728249a2a3109c9"
       }
     },
     "aliases": [],
@@ -213,12 +292,43 @@
         "md5_digest": "2762e45c5b084694093c683a5da7cf94"
       },
       "cs/cs_CZ/jirka/medium/MODEL_CARD": {
-        "size_bytes": 281,
-        "md5_digest": "85a220211eadd9b89f3dc023d82966b4"
+        "size_bytes": 282,
+        "md5_digest": "c147108824aeb762a20cc3e69fc31664"
       }
     },
     "aliases": [],
     "has_rt_variant": true
+  },
+  "cs_CZ-kasandra-medium": {
+    "key": "cs_CZ-kasandra-medium",
+    "name": "kasandra",
+    "language": {
+      "code": "cs_CZ",
+      "family": "cs",
+      "region": "CZ",
+      "name_native": "Čeština",
+      "name_english": "Czech",
+      "country_english": "Czech Republic"
+    },
+    "quality": "medium",
+    "num_speakers": 1,
+    "speaker_id_map": {},
+    "files": {
+      "cs/cs_CZ/kasandra/medium/cs_CZ-kasandra-medium.onnx": {
+        "size_bytes": 63511038,
+        "md5_digest": "4b74926a8e7a25e86e1bdb01a25bae66"
+      },
+      "cs/cs_CZ/kasandra/medium/cs_CZ-kasandra-medium.onnx.json": {
+        "size_bytes": 3232,
+        "md5_digest": "b7c458cdaccfc2709555961b6328087c"
+      },
+      "cs/cs_CZ/kasandra/medium/MODEL_CARD": {
+        "size_bytes": 424,
+        "md5_digest": "74ce16041ba8117a7c0a92ce59db190a"
+      }
+    },
+    "aliases": [],
+    "has_rt_variant": false
   },
   "cy_GB-bu_tts-medium": {
     "key": "cy_GB-bu_tts-medium",
@@ -780,8 +890,8 @@
         "md5_digest": "e81686e00a9d825e2488ead660bec6fd"
       },
       "de/de_DE/thorsten/high/MODEL_CARD": {
-        "size_bytes": 281,
-        "md5_digest": "582a051328d56a564e8a38c9029ae630"
+        "size_bytes": 279,
+        "md5_digest": "19da09a2681bb31bce0f12fc16bd7033"
       }
     },
     "aliases": [],
@@ -891,6 +1001,37 @@
     "aliases": [],
     "has_rt_variant": true
   },
+  "el_GR-joy-medium": {
+    "key": "el_GR-joy-medium",
+    "name": "joy",
+    "language": {
+      "code": "el_GR",
+      "family": "el",
+      "region": "GR",
+      "name_native": "Ελληνικά",
+      "name_english": "Greek",
+      "country_english": "Greece"
+    },
+    "quality": "medium",
+    "num_speakers": 1,
+    "speaker_id_map": {},
+    "files": {
+      "el/el_GR/joy/medium/el_GR-joy-medium.onnx": {
+        "size_bytes": 63516050,
+        "md5_digest": "080895960699531c30e70415a75a604d"
+      },
+      "el/el_GR/joy/medium/el_GR-joy-medium.onnx.json": {
+        "size_bytes": 7367,
+        "md5_digest": "775c0b4ac4c12de0dd11df701ab25466"
+      },
+      "el/el_GR/joy/medium/MODEL_CARD": {
+        "size_bytes": 349,
+        "md5_digest": "0c5d1a8976518c1ddb08fd815f9c9b88"
+      }
+    },
+    "aliases": [],
+    "has_rt_variant": false
+  },
   "el_GR-rapunzelina-low": {
     "key": "el_GR-rapunzelina-low",
     "name": "rapunzelina",
@@ -917,6 +1058,37 @@
       "el/el_GR/rapunzelina/low/MODEL_CARD": {
         "size_bytes": 303,
         "md5_digest": "c75270b41e7bf60dacd351753a483574"
+      }
+    },
+    "aliases": [],
+    "has_rt_variant": false
+  },
+  "el_GR-rapunzelina-medium": {
+    "key": "el_GR-rapunzelina-medium",
+    "name": "rapunzelina",
+    "language": {
+      "code": "el_GR",
+      "family": "el",
+      "region": "GR",
+      "name_native": "Ελληνικά",
+      "name_english": "Greek",
+      "country_english": "Greece"
+    },
+    "quality": "medium",
+    "num_speakers": 1,
+    "speaker_id_map": {},
+    "files": {
+      "el/el_GR/rapunzelina/medium/el_GR-rapunzelina-medium.onnx": {
+        "size_bytes": 62950044,
+        "md5_digest": "265f2f9be00aa5ce81abc1f022145e42"
+      },
+      "el/el_GR/rapunzelina/medium/el_GR-rapunzelina-medium.onnx.json": {
+        "size_bytes": 4973,
+        "md5_digest": "ba83ba13667e14e2f97fbc9d950f9583"
+      },
+      "el/el_GR/rapunzelina/medium/MODEL_CARD": {
+        "size_bytes": 276,
+        "md5_digest": "8a9392d82c8a5631bad7d12fc4aa66a7"
       }
     },
     "aliases": [],
@@ -1452,8 +1624,8 @@
         "md5_digest": "7f37dadb26340c90ebc8088e0b252310"
       },
       "en/en_US/amy/medium/MODEL_CARD": {
-        "size_bytes": 281,
-        "md5_digest": "6fca05ee5bfe8b28211b88b86b47e822"
+        "size_bytes": 284,
+        "md5_digest": "c5f20f730b35aeaa6c18271e3c122451"
       }
     },
     "aliases": [],
@@ -1657,8 +1829,8 @@
         "md5_digest": "811036b9c1451545f9495fdc1baa0754"
       },
       "en/en_US/joe/medium/MODEL_CARD": {
-        "size_bytes": 280,
-        "md5_digest": "7d25cb111aa9699518764a1cb3943af1"
+        "size_bytes": 281,
+        "md5_digest": "7dc55becaf84cb3b713281fac70491a1"
       }
     },
     "aliases": [],
@@ -3841,8 +4013,8 @@
         "md5_digest": "de98fc398ddead60fb82d93bfafb3ad1"
       },
       "en/en_US/ljspeech/high/MODEL_CARD": {
-        "size_bytes": 515,
-        "md5_digest": "59322a9a8d2c0e556f0be1171cd54ea7"
+        "size_bytes": 513,
+        "md5_digest": "bc3fe20b3e3f359ec423b98c1b6ed32e"
       }
     },
     "aliases": [],
@@ -3878,6 +4050,37 @@
     },
     "aliases": [],
     "has_rt_variant": true
+  },
+  "en_US-mike-medium": {
+    "key": "en_US-mike-medium",
+    "name": "mike",
+    "language": {
+      "code": "en_US",
+      "family": "en",
+      "region": "US",
+      "name_native": "English",
+      "name_english": "English",
+      "country_english": "United States"
+    },
+    "quality": "medium",
+    "num_speakers": 1,
+    "speaker_id_map": {},
+    "files": {
+      "en/en_US/mike/medium/en_US-mike-medium.onnx": {
+        "size_bytes": 63221984,
+        "md5_digest": "032952405bbd4eeae409385cde31b8c5"
+      },
+      "en/en_US/mike/medium/en_US-mike-medium.onnx.json": {
+        "size_bytes": 5439,
+        "md5_digest": "b4426eda10444b2bef8b447baeba84b2"
+      },
+      "en/en_US/mike/medium/MODEL_CARD": {
+        "size_bytes": 282,
+        "md5_digest": "7481c1af8de74f9825b5d9b6559dff4c"
+      }
+    },
+    "aliases": [],
+    "has_rt_variant": false
   },
   "en_US-norman-medium": {
     "key": "en_US-norman-medium",
@@ -4096,7 +4299,7 @@
       },
       "es/es_AR/daniela/high/MODEL_CARD": {
         "size_bytes": 353,
-        "md5_digest": "d940f7c6667a11ea165ff83ef7a86669"
+        "md5_digest": "1e357c5feb1d21ab92edad22503244ac"
       }
     },
     "aliases": [],
@@ -4159,8 +4362,8 @@
         "md5_digest": "dd157b5eaf6930bf949cf416d9a9307a"
       },
       "es/es_ES/davefx/medium/MODEL_CARD": {
-        "size_bytes": 275,
-        "md5_digest": "5569c0fb20448308466216428b52f392"
+        "size_bytes": 276,
+        "md5_digest": "980f3ebe5987b10488da3a7f4a462970"
       }
     },
     "aliases": [],
@@ -4286,8 +4489,8 @@
         "md5_digest": "86374058e59b41ac3b7fe4181e1daad6"
       },
       "es/es_MX/ald/medium/es_MX-ald-medium.onnx.json": {
-        "size_bytes": 4889,
-        "md5_digest": "31c5463bf001d6e69bf57fc5916c0908"
+        "size_bytes": 4878,
+        "md5_digest": "aedc07cd37e61360144f04aebb05f7dd"
       },
       "es/es_MX/ald/medium/MODEL_CARD": {
         "size_bytes": 320,
@@ -4296,6 +4499,37 @@
     },
     "aliases": [],
     "has_rt_variant": true
+  },
+  "es_MX-ald-x_low": {
+    "key": "es_MX-ald-x_low",
+    "name": "ald",
+    "language": {
+      "code": "es_MX",
+      "family": "es",
+      "region": "MX",
+      "name_native": "Español",
+      "name_english": "Spanish",
+      "country_english": "Mexico"
+    },
+    "quality": "x_low",
+    "num_speakers": 1,
+    "speaker_id_map": {},
+    "files": {
+      "es/es_MX/ald/x_low/es_MX-ald-x_low.onnx": {
+        "size_bytes": 20986952,
+        "md5_digest": "b463f8c0972f28f89494961137cd2dc1"
+      },
+      "es/es_MX/ald/x_low/es_MX-ald-x_low.onnx.json": {
+        "size_bytes": 4877,
+        "md5_digest": "0e53a2c435987374e7ad3cee27e6f4f2"
+      },
+      "es/es_MX/ald/x_low/MODEL_CARD": {
+        "size_bytes": 589,
+        "md5_digest": "35f4d2959d779232c948c1049ae30c08"
+      }
+    },
+    "aliases": [],
+    "has_rt_variant": false
   },
   "es_MX-claude-high": {
     "key": "es_MX-claude-high",
@@ -4323,6 +4557,104 @@
       "es/es_MX/claude/high/MODEL_CARD": {
         "size_bytes": 247,
         "md5_digest": "bca99dc9b9a6c8f2f8563d73d52c4a3b"
+      }
+    },
+    "aliases": [],
+    "has_rt_variant": false
+  },
+  "et_EE-news-medium": {
+    "key": "et_EE-news-medium",
+    "name": "news",
+    "language": {
+      "code": "et_EE",
+      "family": "et",
+      "region": "EE",
+      "name_native": "eesti",
+      "name_english": "Estonian",
+      "country_english": "Estonia"
+    },
+    "quality": "medium",
+    "num_speakers": 4,
+    "speaker_id_map": {
+      "Albert": 0,
+      "Kalev": 1,
+      "Mari": 2,
+      "Vesta": 3
+    },
+    "files": {
+      "et/et_EE/news/medium/et_EE-news-medium.onnx": {
+        "size_bytes": 76757937,
+        "md5_digest": "6fba6ec8d985e84435ce680ee9d3b0bc"
+      },
+      "et/et_EE/news/medium/et_EE-news-medium.onnx.json": {
+        "size_bytes": 5320,
+        "md5_digest": "28fea16b0e4d26a445906e83d6de7ac6"
+      },
+      "et/et_EE/news/medium/MODEL_CARD": {
+        "size_bytes": 449,
+        "md5_digest": "f6dbea05d3d896ff38202afe22339b82"
+      }
+    },
+    "aliases": [],
+    "has_rt_variant": false
+  },
+  "eu_ES-antton-medium": {
+    "key": "eu_ES-antton-medium",
+    "name": "antton",
+    "language": {
+      "code": "eu_ES",
+      "family": "eu",
+      "region": "ES",
+      "name_native": "Euskara",
+      "name_english": "Basque",
+      "country_english": "Spain"
+    },
+    "quality": "medium",
+    "num_speakers": 1,
+    "speaker_id_map": {},
+    "files": {
+      "eu/eu_ES/antton/medium/eu_ES-antton-medium.onnx": {
+        "size_bytes": 63531379,
+        "md5_digest": "4d924421c8f4f3967e79de798209e593"
+      },
+      "eu/eu_ES/antton/medium/eu_ES-antton-medium.onnx.json": {
+        "size_bytes": 5076,
+        "md5_digest": "5607c94add68c88560466b0db460dac5"
+      },
+      "eu/eu_ES/antton/medium/MODEL_CARD": {
+        "size_bytes": 310,
+        "md5_digest": "4b7f8d482c3c7e749e61a5e649a12a29"
+      }
+    },
+    "aliases": [],
+    "has_rt_variant": false
+  },
+  "eu_ES-maider-medium": {
+    "key": "eu_ES-maider-medium",
+    "name": "maider",
+    "language": {
+      "code": "eu_ES",
+      "family": "eu",
+      "region": "ES",
+      "name_native": "Euskara",
+      "name_english": "Basque",
+      "country_english": "Spain"
+    },
+    "quality": "medium",
+    "num_speakers": 1,
+    "speaker_id_map": {},
+    "files": {
+      "eu/eu_ES/maider/medium/eu_ES-maider-medium.onnx": {
+        "size_bytes": 63531379,
+        "md5_digest": "0e479a47183ccee8b559e3c69c0a4d96"
+      },
+      "eu/eu_ES/maider/medium/eu_ES-maider-medium.onnx.json": {
+        "size_bytes": 5076,
+        "md5_digest": "5489c9b52ebcbac9a2a7e762b1aaa475"
+      },
+      "eu/eu_ES/maider/medium/MODEL_CARD": {
+        "size_bytes": 310,
+        "md5_digest": "09b6891e38e19a3b5de0c2b46aaee02d"
       }
     },
     "aliases": [],
@@ -4901,6 +5233,37 @@
     "aliases": [],
     "has_rt_variant": true
   },
+  "he_IL-saspeech-medium": {
+    "key": "he_IL-saspeech-medium",
+    "name": "saspeech",
+    "language": {
+      "code": "he_IL",
+      "family": "he",
+      "region": "IL",
+      "name_native": "עִבְרִית‎",
+      "name_english": "Hebrew",
+      "country_english": "Israel"
+    },
+    "quality": "medium",
+    "num_speakers": 1,
+    "speaker_id_map": {},
+    "files": {
+      "he/he_IL/saspeech/medium/he_IL-saspeech-medium.onnx": {
+        "size_bytes": 63221984,
+        "md5_digest": "ffa7fbbbbeab5fa8fb7eb00bf9a0e2a5"
+      },
+      "he/he_IL/saspeech/medium/he_IL-saspeech-medium.onnx.json": {
+        "size_bytes": 5269,
+        "md5_digest": "7da2dd72146707adf21b3caaf4adeb46"
+      },
+      "he/he_IL/saspeech/medium/MODEL_CARD": {
+        "size_bytes": 269,
+        "md5_digest": "a38d2074935e7d8b64da99c67606b01a"
+      }
+    },
+    "aliases": [],
+    "has_rt_variant": false
+  },
   "hi_IN-pratham-medium": {
     "key": "hi_IN-pratham-medium",
     "name": "pratham",
@@ -4963,6 +5326,37 @@
     "aliases": [],
     "has_rt_variant": false
   },
+  "hi_IN-rohan-medium": {
+    "key": "hi_IN-rohan-medium",
+    "name": "rohan",
+    "language": {
+      "code": "hi_IN",
+      "family": "hi",
+      "region": "IN",
+      "name_native": "हिन्दी",
+      "name_english": "Hindi",
+      "country_english": "India"
+    },
+    "quality": "medium",
+    "num_speakers": 1,
+    "speaker_id_map": {},
+    "files": {
+      "hi/hi_IN/rohan/medium/hi_IN-rohan-medium.onnx": {
+        "size_bytes": 62950044,
+        "md5_digest": "d63d31559a4ccce62be938ab252a4804"
+      },
+      "hi/hi_IN/rohan/medium/hi_IN-rohan-medium.onnx.json": {
+        "size_bytes": 5041,
+        "md5_digest": "b4aeeef53e2c469def82769aa4ce19eb"
+      },
+      "hi/hi_IN/rohan/medium/MODEL_CARD": {
+        "size_bytes": 359,
+        "md5_digest": "03084fa6c2367cf7d6aaba2a0bd79b71"
+      }
+    },
+    "aliases": [],
+    "has_rt_variant": false
+  },
   "hu_HU-anna-medium": {
     "key": "hu_HU-anna-medium",
     "name": "anna",
@@ -4987,8 +5381,8 @@
         "md5_digest": "ae63867e2c2cb6695555a17bdee8b751"
       },
       "hu/hu_HU/anna/medium/MODEL_CARD": {
-        "size_bytes": 277,
-        "md5_digest": "1a1332b041bc211d4d14fbd93eff03e9"
+        "size_bytes": 278,
+        "md5_digest": "d1d16d30a88812e79980a7543e00f0b5"
       }
     },
     "aliases": [],
@@ -5018,8 +5412,8 @@
         "md5_digest": "1f722cc72f330e3ba0222c6a94a527fa"
       },
       "hu/hu_HU/berta/medium/MODEL_CARD": {
-        "size_bytes": 278,
-        "md5_digest": "009624d3fa8f0f1e73c22a6277798c95"
+        "size_bytes": 279,
+        "md5_digest": "0f9f33fcbe0f46c5f521ab08cb339d6c"
       }
     },
     "aliases": [],
@@ -5049,12 +5443,74 @@
         "md5_digest": "9b6974c685cd8289619660f5e078de06"
       },
       "hu/hu_HU/imre/medium/MODEL_CARD": {
-        "size_bytes": 277,
-        "md5_digest": "3efe4f497211542985d2d52d403eecad"
+        "size_bytes": 278,
+        "md5_digest": "d8e1936fe46bb5f70b54b6750cf37b4c"
       }
     },
     "aliases": [],
     "has_rt_variant": true
+  },
+  "hy_AM-gor-medium": {
+    "key": "hy_AM-gor-medium",
+    "name": "gor",
+    "language": {
+      "code": "hy_AM",
+      "family": "hy",
+      "region": "AM",
+      "name_native": "հայերեն",
+      "name_english": "Armenian",
+      "country_english": "Armenia"
+    },
+    "quality": "medium",
+    "num_speakers": 1,
+    "speaker_id_map": {},
+    "files": {
+      "hy/hy_AM/gor/medium/hy_AM-gor-medium.onnx": {
+        "size_bytes": 63511038,
+        "md5_digest": "fd726714c656f1cad828bcf102059aa1"
+      },
+      "hy/hy_AM/gor/medium/hy_AM-gor-medium.onnx.json": {
+        "size_bytes": 4967,
+        "md5_digest": "fb816fe191dc49a8349b023dd87090f9"
+      },
+      "hy/hy_AM/gor/medium/MODEL_CARD": {
+        "size_bytes": 269,
+        "md5_digest": "fe8d458821e04b26048bd85199f994b1"
+      }
+    },
+    "aliases": [],
+    "has_rt_variant": false
+  },
+  "id_ID-news_tts-medium": {
+    "key": "id_ID-news_tts-medium",
+    "name": "news_tts",
+    "language": {
+      "code": "id_ID",
+      "family": "id",
+      "region": "ID",
+      "name_native": "Bahasa Indonesia",
+      "name_english": "Indonesian",
+      "country_english": "Indonesia"
+    },
+    "quality": "medium",
+    "num_speakers": 1,
+    "speaker_id_map": {},
+    "files": {
+      "id/id_ID/news_tts/medium/id_ID-news_tts-medium.onnx": {
+        "size_bytes": 62950044,
+        "md5_digest": "17de01db7ac654655436b6e509893c72"
+      },
+      "id/id_ID/news_tts/medium/id_ID-news_tts-medium.onnx.json": {
+        "size_bytes": 5050,
+        "md5_digest": "c023cfa031cc9ed4cf5dd8d2ef1e48ed"
+      },
+      "id/id_ID/news_tts/medium/MODEL_CARD": {
+        "size_bytes": 316,
+        "md5_digest": "3479caa1c8372b776fc2f1900186aaba"
+      }
+    },
+    "aliases": [],
+    "has_rt_variant": false
   },
   "is_IS-bui-medium": {
     "key": "is_IS-bui-medium",
@@ -5252,6 +5708,104 @@
     ],
     "has_rt_variant": false
   },
+  "it_IT-serena-high": {
+    "key": "it_IT-serena-high",
+    "name": "serena",
+    "language": {
+      "code": "it_IT",
+      "family": "it",
+      "region": "IT",
+      "name_native": "Italiano",
+      "name_english": "Italian",
+      "country_english": "Italy"
+    },
+    "quality": "high",
+    "num_speakers": 1,
+    "speaker_id_map": {},
+    "files": {
+      "it/it_IT/serena/high/it_IT-serena-high.onnx": {
+        "size_bytes": 114204024,
+        "md5_digest": "0b4d9553883e439fd7bda5475e820bfe"
+      },
+      "it/it_IT/serena/high/it_IT-serena-high.onnx.json": {
+        "size_bytes": 5252,
+        "md5_digest": "15ba3705d51c879d7290cb5bf9826d96"
+      },
+      "it/it_IT/serena/high/MODEL_CARD": {
+        "size_bytes": 262,
+        "md5_digest": "57b7f0e0015fabf9dae95e45cf1511e5"
+      }
+    },
+    "aliases": [],
+    "has_rt_variant": false
+  },
+  "it_IT-serena-medium": {
+    "key": "it_IT-serena-medium",
+    "name": "serena",
+    "language": {
+      "code": "it_IT",
+      "family": "it",
+      "region": "IT",
+      "name_native": "Italiano",
+      "name_english": "Italian",
+      "country_english": "Italy"
+    },
+    "quality": "medium",
+    "num_speakers": 1,
+    "speaker_id_map": {},
+    "files": {
+      "it/it_IT/serena/medium/it_IT-serena-medium.onnx": {
+        "size_bytes": 63516051,
+        "md5_digest": "f8c82f1139dfa382686bd7564a633400"
+      },
+      "it/it_IT/serena/medium/it_IT-serena-medium.onnx.json": {
+        "size_bytes": 5254,
+        "md5_digest": "a0b3d407bc039d501219857e5aa0e34e"
+      },
+      "it/it_IT/serena/medium/MODEL_CARD": {
+        "size_bytes": 266,
+        "md5_digest": "108f8227a5cefedb6223159e94fbbdff"
+      }
+    },
+    "aliases": [],
+    "has_rt_variant": false
+  },
+  "ja_JP-hi_fi_captain-medium": {
+    "key": "ja_JP-hi_fi_captain-medium",
+    "name": "hi_fi_captain",
+    "language": {
+      "code": "ja_JP",
+      "family": "ja",
+      "region": "JP",
+      "name_native": "日本語",
+      "name_english": "Japanese",
+      "country_english": "Japan"
+    },
+    "quality": "medium",
+    "num_speakers": 2,
+    "speaker_id_map": {
+      "female": 0,
+      "male": 1
+    },
+    "files": {
+      "ja/ja_JP/hi_fi_captain/medium/ja_JP-hi_fi_captain-medium.onnx": {
+        "size_bytes": 76753841,
+        "md5_digest": "f9daab8970d06d7e9fc895a879854542"
+      },
+      "ja/ja_JP/hi_fi_captain/medium/ja_JP-hi_fi_captain-medium.onnx.json": {
+        "size_bytes": 5301,
+        "md5_digest": "828a68fa5fc7677f98ea336fa1d66512"
+      },
+      "ja/ja_JP/hi_fi_captain/medium/MODEL_CARD": {
+        "size_bytes": 361,
+        "md5_digest": "f4c4d57dd187c3836381134026d84c45"
+      }
+    },
+    "aliases": [
+      "ja_JA-hi_fi_captain-medium"
+    ],
+    "has_rt_variant": false
+  },
   "ka_GE-natia-medium": {
     "key": "ka_GE-natia-medium",
     "name": "natia",
@@ -5389,6 +5943,71 @@
     ],
     "has_rt_variant": false
   },
+  "ko_KR-kss-medium": {
+    "key": "ko_KR-kss-medium",
+    "name": "kss",
+    "language": {
+      "code": "ko_KR",
+      "family": "ko",
+      "region": "KR",
+      "name_native": "한국어",
+      "name_english": "Korean",
+      "country_english": "South Korea"
+    },
+    "quality": "medium",
+    "num_speakers": 1,
+    "speaker_id_map": {},
+    "files": {
+      "ko/ko_KR/kss/medium/ko_KR-kss-medium.onnx": {
+        "size_bytes": 63221984,
+        "md5_digest": "bebbd298dffe5ee7b88f2ce41bb4e3a9"
+      },
+      "ko/ko_KR/kss/medium/ko_KR-kss-medium.onnx.json": {
+        "size_bytes": 5232,
+        "md5_digest": "427c0b8d93211ba2ffea1f565819058a"
+      },
+      "ko/ko_KR/kss/medium/MODEL_CARD": {
+        "size_bytes": 333,
+        "md5_digest": "90186834a09a6110dff277d342446845"
+      }
+    },
+    "aliases": [],
+    "has_rt_variant": false
+  },
+  "ku_TR-berfin_renas-medium": {
+    "key": "ku_TR-berfin_renas-medium",
+    "name": "berfin_renas",
+    "language": {
+      "code": "ku_TR",
+      "family": "ku",
+      "region": "TR",
+      "name_native": "Kurmancî",
+      "name_english": "Kurmanji Kurdish",
+      "country_english": "Turkey"
+    },
+    "quality": "medium",
+    "num_speakers": 2,
+    "speaker_id_map": {
+      "Berfin": 0,
+      "Renas": 1
+    },
+    "files": {
+      "ku/ku_TR/berfin_renas/medium/ku_TR-berfin_renas-medium.onnx": {
+        "size_bytes": 77060307,
+        "md5_digest": "49f32b10c6f577b3dc3f179cac4947b5"
+      },
+      "ku/ku_TR/berfin_renas/medium/ku_TR-berfin_renas-medium.onnx.json": {
+        "size_bytes": 5131,
+        "md5_digest": "f61ca7f8db00938ac102cd567af41ae1"
+      },
+      "ku/ku_TR/berfin_renas/medium/MODEL_CARD": {
+        "size_bytes": 3756,
+        "md5_digest": "eae988a3ef3f7b85d9552a3407b496be"
+      }
+    },
+    "aliases": [],
+    "has_rt_variant": false
+  },
   "lb_LU-marylux-medium": {
     "key": "lb_LU-marylux-medium",
     "name": "marylux",
@@ -5419,6 +6038,37 @@
     },
     "aliases": [],
     "has_rt_variant": true
+  },
+  "lt_LT-reginute1-medium": {
+    "key": "lt_LT-reginute1-medium",
+    "name": "reginute1",
+    "language": {
+      "code": "lt_LT",
+      "family": "lt",
+      "region": "LT",
+      "name_native": "Lietuvių",
+      "name_english": "Lithuanian",
+      "country_english": "Lithuania"
+    },
+    "quality": "medium",
+    "num_speakers": 1,
+    "speaker_id_map": {},
+    "files": {
+      "lt/lt_LT/reginute1/medium/lt_LT-reginute1-medium.onnx": {
+        "size_bytes": 63516051,
+        "md5_digest": "315dabbe13d83276cb5f921119d87dac"
+      },
+      "lt/lt_LT/reginute1/medium/lt_LT-reginute1-medium.onnx.json": {
+        "size_bytes": 5274,
+        "md5_digest": "d242d34547f8dedd83162481df2a0f31"
+      },
+      "lt/lt_LT/reginute1/medium/MODEL_CARD": {
+        "size_bytes": 6136,
+        "md5_digest": "6eb13bdc8aa1b807af97305a0bf37141"
+      }
+    },
+    "aliases": [],
+    "has_rt_variant": false
   },
   "lv_LV-aivars-medium": {
     "key": "lv_LV-aivars-medium",
@@ -5513,6 +6163,47 @@
     "aliases": [],
     "has_rt_variant": false
   },
+  "mr_IN-google-medium": {
+    "key": "mr_IN-google-medium",
+    "name": "google",
+    "language": {
+      "code": "mr_IN",
+      "family": "mr",
+      "region": "IN",
+      "name_native": "मराठी, 𑘦𑘨𑘰𑘙𑘲",
+      "name_english": "Marathi",
+      "country_english": "India"
+    },
+    "quality": "medium",
+    "num_speakers": 9,
+    "speaker_id_map": {
+      "mrt_01523": 0,
+      "mrt_02436": 1,
+      "mrt_02484": 2,
+      "mrt_02624": 3,
+      "mrt_03349": 4,
+      "mrt_03397": 5,
+      "mrt_03398": 6,
+      "mrt_04310": 7,
+      "mrt_09697": 8
+    },
+    "files": {
+      "mr/mr_IN/google/medium/mr_IN-google-medium.onnx": {
+        "size_bytes": 76768179,
+        "md5_digest": "331957abd31bff58aaa10934cd3ac58f"
+      },
+      "mr/mr_IN/google/medium/mr_IN-google-medium.onnx.json": {
+        "size_bytes": 5467,
+        "md5_digest": "6cba88c1e90cdc81a061d9f6d6d48943"
+      },
+      "mr/mr_IN/google/medium/MODEL_CARD": {
+        "size_bytes": 272,
+        "md5_digest": "db5f8c628d672a4382e5044141c0d977"
+      }
+    },
+    "aliases": [],
+    "has_rt_variant": false
+  },
   "ne_NP-chitwan-medium": {
     "key": "ne_NP-chitwan-medium",
     "name": "chitwan",
@@ -5537,8 +6228,8 @@
         "md5_digest": "7ddc520e24a862016f6d22cde4b70ac1"
       },
       "ne/ne_NP/chitwan/medium/MODEL_CARD": {
-        "size_bytes": 275,
-        "md5_digest": "dcd35df097f84ace498d7afeb5b1a29c"
+        "size_bytes": 276,
+        "md5_digest": "56df04016917049c505ef6e9f9b8c9b7"
       }
     },
     "aliases": [],
@@ -5640,7 +6331,7 @@
       },
       "ne/ne_NP/google/x_low/MODEL_CARD": {
         "size_bytes": 244,
-        "md5_digest": "5ea405c002a69df5961c8d43cadbb844"
+        "md5_digest": "70914e596d5de29edda9e714603887d6"
       }
     },
     "aliases": [
@@ -5776,6 +6467,37 @@
     "aliases": [
       "nl-rdh-x-low"
     ],
+    "has_rt_variant": false
+  },
+  "nl_NL-alex-medium": {
+    "key": "nl_NL-alex-medium",
+    "name": "alex",
+    "language": {
+      "code": "nl_NL",
+      "family": "nl",
+      "region": "NL",
+      "name_native": "Nederlands",
+      "name_english": "Dutch",
+      "country_english": "Netherlands"
+    },
+    "quality": "medium",
+    "num_speakers": 1,
+    "speaker_id_map": {},
+    "files": {
+      "nl/nl_NL/alex/medium/nl_NL-alex-medium.onnx": {
+        "size_bytes": 63531476,
+        "md5_digest": "34c3e80cedc491e5d943091cd1b45192"
+      },
+      "nl/nl_NL/alex/medium/nl_NL-alex-medium.onnx.json": {
+        "size_bytes": 4965,
+        "md5_digest": "ec40f2446d93f305ca20a729f6de6827"
+      },
+      "nl/nl_NL/alex/medium/MODEL_CARD": {
+        "size_bytes": 268,
+        "md5_digest": "bf70f496e459d2007038a479a39692ab"
+      }
+    },
+    "aliases": [],
     "has_rt_variant": false
   },
   "nl_NL-mls-medium": {
@@ -5952,8 +6674,8 @@
         "md5_digest": "c4d22097fefa2afe275b9bb6ff4db865"
       },
       "nl/nl_NL/pim/medium/MODEL_CARD": {
-        "size_bytes": 276,
-        "md5_digest": "2d28b81a9acf714216f8d334581e8439"
+        "size_bytes": 277,
+        "md5_digest": "5ba403aa80f84c1c7cbbb1063ee32db1"
       }
     },
     "aliases": [],
@@ -5983,8 +6705,50 @@
         "md5_digest": "6bd4d32724d8c68926ce7b5012370e61"
       },
       "nl/nl_NL/ronnie/medium/MODEL_CARD": {
-        "size_bytes": 279,
-        "md5_digest": "97acf736be1e3fdd8d9ed576dceffb29"
+        "size_bytes": 280,
+        "md5_digest": "4b43c166abf3abdb99063e9187653ab4"
+      }
+    },
+    "aliases": [],
+    "has_rt_variant": false
+  },
+  "no_NO-nvcc-medium": {
+    "key": "no_NO-nvcc-medium",
+    "name": "nvcc",
+    "language": {
+      "code": "no_NO",
+      "family": "no",
+      "region": "NO",
+      "name_native": "Norsk",
+      "name_english": "Norwegian",
+      "country_english": "Norway"
+    },
+    "quality": "medium",
+    "num_speakers": 10,
+    "speaker_id_map": {
+      "KNN": 0,
+      "KSV": 1,
+      "MMN": 2,
+      "KON": 3,
+      "MNN": 4,
+      "MSV": 5,
+      "MON": 6,
+      "MNV": 7,
+      "KMN": 8,
+      "KNV": 9
+    },
+    "files": {
+      "no/no_NO/nvcc/medium/no_NO-nvcc-medium.onnx": {
+        "size_bytes": 76770227,
+        "md5_digest": "67e04e52b2f195e6db3ae103b58d1710"
+      },
+      "no/no_NO/nvcc/medium/no_NO-nvcc-medium.onnx.json": {
+        "size_bytes": 5397,
+        "md5_digest": "eb78dda3e46b97cb184dc6e9b91f64ea"
+      },
+      "no/no_NO/nvcc/medium/MODEL_CARD": {
+        "size_bytes": 268,
+        "md5_digest": "f362ee42574a623299481ef4f28d0fa5"
       }
     },
     "aliases": [],
@@ -6023,6 +6787,37 @@
     ],
     "has_rt_variant": true
   },
+  "pl_PL-bass-high": {
+    "key": "pl_PL-bass-high",
+    "name": "bass",
+    "language": {
+      "code": "pl_PL",
+      "family": "pl",
+      "region": "PL",
+      "name_native": "Polski",
+      "name_english": "Polish",
+      "country_english": "Poland"
+    },
+    "quality": "high",
+    "num_speakers": 1,
+    "speaker_id_map": {},
+    "files": {
+      "pl/pl_PL/bass/high/pl_PL-bass-high.onnx": {
+        "size_bytes": 114204024,
+        "md5_digest": "427c7c0975ee21cea29db0f58f827883"
+      },
+      "pl/pl_PL/bass/high/pl_PL-bass-high.onnx.json": {
+        "size_bytes": 4954,
+        "md5_digest": "0a121543c2a697ddb48a74bbdd0fbbe9"
+      },
+      "pl/pl_PL/bass/high/MODEL_CARD": {
+        "size_bytes": 289,
+        "md5_digest": "53b729f8209e4fc98d55c299055d79b5"
+      }
+    },
+    "aliases": [],
+    "has_rt_variant": false
+  },
   "pl_PL-darkman-medium": {
     "key": "pl_PL-darkman-medium",
     "name": "darkman",
@@ -6047,8 +6842,8 @@
         "md5_digest": "1c13180312cca98cb75ca39b31972056"
       },
       "pl/pl_PL/darkman/medium/MODEL_CARD": {
-        "size_bytes": 276,
-        "md5_digest": "952772905864f6f6375df54a675895b7"
+        "size_bytes": 277,
+        "md5_digest": "1a570e4294182ab00ca0e62f343f7279"
       }
     },
     "aliases": [],
@@ -6078,8 +6873,8 @@
         "md5_digest": "e57055b9eec14e570617af2b716bd5c3"
       },
       "pl/pl_PL/gosia/medium/MODEL_CARD": {
-        "size_bytes": 274,
-        "md5_digest": "e1355330fe5fab166e6f2e20af7e91e9"
+        "size_bytes": 275,
+        "md5_digest": "ff04633302a79cee848d97bfd4f18791"
       }
     },
     "aliases": [],
@@ -6173,8 +6968,8 @@
         "md5_digest": "3d35f13df6a2f7dc9b7b7924befbe7bb"
       },
       "pt/pt_BR/cadu/medium/MODEL_CARD": {
-        "size_bytes": 277,
-        "md5_digest": "4f69a194136ecb54aee5ae98273debc4"
+        "size_bytes": 278,
+        "md5_digest": "bcaec1511b99a55333e87ec46b338154"
       }
     },
     "aliases": [],
@@ -6237,8 +7032,8 @@
         "md5_digest": "a1258e1e113c47d9a1486a9bef1daab4"
       },
       "pt/pt_BR/faber/medium/MODEL_CARD": {
-        "size_bytes": 278,
-        "md5_digest": "a81a3840b1749cf34b0e31de1577ef47"
+        "size_bytes": 279,
+        "md5_digest": "f636a9f4c8b0e5107a1255ebcd4bc6c5"
       }
     },
     "aliases": [],
@@ -6268,8 +7063,8 @@
         "md5_digest": "e7d673d946db4d9e9d8644babf347ea9"
       },
       "pt/pt_BR/jeff/medium/MODEL_CARD": {
-        "size_bytes": 277,
-        "md5_digest": "e6ec017f5195c56575aab61900e16110"
+        "size_bytes": 278,
+        "md5_digest": "667b7ebeb9143c415c10ec4209fc9fdf"
       }
     },
     "aliases": [],
@@ -6299,8 +7094,8 @@
         "md5_digest": "c4113a1da477aa6db28420454c142ebd"
       },
       "pt/pt_PT/tugão/medium/MODEL_CARD": {
-        "size_bytes": 281,
-        "md5_digest": "fcaafaf8d265f5a5b8e83df547f49bfd"
+        "size_bytes": 282,
+        "md5_digest": "d894d2aedf10b01ff8ee3bd13970a79e"
       }
     },
     "aliases": [],
@@ -6330,8 +7125,8 @@
         "md5_digest": "f820f8ba65a8646c68792be581b85144"
       },
       "ro/ro_RO/mihai/medium/MODEL_CARD": {
-        "size_bytes": 277,
-        "md5_digest": "4075864685b207c9a98bf1af237a1502"
+        "size_bytes": 278,
+        "md5_digest": "5de8035512c26890cbfe1836f26435b8"
       }
     },
     "aliases": [],
@@ -6361,8 +7156,8 @@
         "md5_digest": "e3df5957c07647cab05cf9910ef3ede0"
       },
       "ru/ru_RU/denis/medium/MODEL_CARD": {
-        "size_bytes": 275,
-        "md5_digest": "6fe09e0e097e4538809cc420653974e4"
+        "size_bytes": 276,
+        "md5_digest": "baa1911124846d4474ef1e4536158cee"
       }
     },
     "aliases": [],
@@ -6392,8 +7187,8 @@
         "md5_digest": "4eaf0d090190ecb8d958d40c76fd85e8"
       },
       "ru/ru_RU/dmitri/medium/MODEL_CARD": {
-        "size_bytes": 276,
-        "md5_digest": "c19f9eff768d0c0e1f476a4c6ca1ff1e"
+        "size_bytes": 277,
+        "md5_digest": "203e4e94894ffb31722b456cab6a2259"
       }
     },
     "aliases": [],
@@ -6487,8 +7282,8 @@
         "md5_digest": "e49cbd13cb5ce5b8f7e1c1479ec2cc91"
       },
       "sk/sk_SK/lili/medium/MODEL_CARD": {
-        "size_bytes": 275,
-        "md5_digest": "101dc437bf775a45dd6eedb14d9cfb4e"
+        "size_bytes": 276,
+        "md5_digest": "64d662183857c9355097fbfc370fa74a"
       }
     },
     "aliases": [],
@@ -6520,6 +7315,37 @@
       "sl/sl_SI/artur/medium/MODEL_CARD": {
         "size_bytes": 329,
         "md5_digest": "c7547b0d2c97f38dcbb231c5e77c75c9"
+      }
+    },
+    "aliases": [],
+    "has_rt_variant": false
+  },
+  "sq_AL-edon-medium": {
+    "key": "sq_AL-edon-medium",
+    "name": "edon",
+    "language": {
+      "code": "sq_AL",
+      "family": "sq",
+      "region": "AL",
+      "name_native": "shqip",
+      "name_english": "Albanian",
+      "country_english": "Albania"
+    },
+    "quality": "medium",
+    "num_speakers": 1,
+    "speaker_id_map": {},
+    "files": {
+      "sq/sq_AL/edon/medium/sq_AL-edon-medium.onnx": {
+        "size_bytes": 63511038,
+        "md5_digest": "01888cba8f112271d2cdb6c9de17aae7"
+      },
+      "sq/sq_AL/edon/medium/sq_AL-edon-medium.onnx.json": {
+        "size_bytes": 4961,
+        "md5_digest": "ceae64fc2a4411475ef23ebd307d1c53"
+      },
+      "sq/sq_AL/edon/medium/MODEL_CARD": {
+        "size_bytes": 280,
+        "md5_digest": "16caa2b0f1ec47cbd61b9d6f66b28a29"
       }
     },
     "aliases": [],
@@ -6558,6 +7384,37 @@
     },
     "aliases": [],
     "has_rt_variant": true
+  },
+  "sv_SE-alma-medium": {
+    "key": "sv_SE-alma-medium",
+    "name": "alma",
+    "language": {
+      "code": "sv_SE",
+      "family": "sv",
+      "region": "SE",
+      "name_native": "Svenska",
+      "name_english": "Swedish",
+      "country_english": "Sweden"
+    },
+    "quality": "medium",
+    "num_speakers": 1,
+    "speaker_id_map": {},
+    "files": {
+      "sv/sv_SE/alma/medium/sv_SE-alma-medium.onnx": {
+        "size_bytes": 63434611,
+        "md5_digest": "93c03e7c0e2f21e78d123a3ee82d54c1"
+      },
+      "sv/sv_SE/alma/medium/sv_SE-alma-medium.onnx.json": {
+        "size_bytes": 6059,
+        "md5_digest": "658c543eee20a73194baeeef032eb190"
+      },
+      "sv/sv_SE/alma/medium/MODEL_CARD": {
+        "size_bytes": 462,
+        "md5_digest": "1b75b90a6acee62f25b393fd16d3d101"
+      }
+    },
+    "aliases": [],
+    "has_rt_variant": false
   },
   "sv_SE-lisa-medium": {
     "key": "sv_SE-lisa-medium",
@@ -6652,6 +7509,130 @@
     "aliases": [],
     "has_rt_variant": true
   },
+  "te_IN-maya-medium": {
+    "key": "te_IN-maya-medium",
+    "name": "maya",
+    "language": {
+      "code": "te_IN",
+      "family": "te",
+      "region": "IN",
+      "name_native": "తెలుగు",
+      "name_english": "Telugu",
+      "country_english": "India"
+    },
+    "quality": "medium",
+    "num_speakers": 1,
+    "speaker_id_map": {},
+    "files": {
+      "te/te_IN/maya/medium/te_IN-maya-medium.onnx": {
+        "size_bytes": 62950044,
+        "md5_digest": "604fa4083118495c0fff55826ffccefe"
+      },
+      "te/te_IN/maya/medium/te_IN-maya-medium.onnx.json": {
+        "size_bytes": 5040,
+        "md5_digest": "58a134cd3f762e9da9d6bdf72bf3d93c"
+      },
+      "te/te_IN/maya/medium/MODEL_CARD": {
+        "size_bytes": 318,
+        "md5_digest": "c01b34f46af0b9adc394ec01c1db618a"
+      }
+    },
+    "aliases": [],
+    "has_rt_variant": false
+  },
+  "te_IN-padmavathi-medium": {
+    "key": "te_IN-padmavathi-medium",
+    "name": "padmavathi",
+    "language": {
+      "code": "te_IN",
+      "family": "te",
+      "region": "IN",
+      "name_native": "తెలుగు",
+      "name_english": "Telugu",
+      "country_english": "India"
+    },
+    "quality": "medium",
+    "num_speakers": 1,
+    "speaker_id_map": {},
+    "files": {
+      "te/te_IN/padmavathi/medium/te_IN-padmavathi-medium.onnx": {
+        "size_bytes": 63516050,
+        "md5_digest": "1a7fb140ecc8b5e8b3e80e460b719319"
+      },
+      "te/te_IN/padmavathi/medium/te_IN-padmavathi-medium.onnx.json": {
+        "size_bytes": 4974,
+        "md5_digest": "3f07441340aecc2a8b89987361e8078e"
+      },
+      "te/te_IN/padmavathi/medium/MODEL_CARD": {
+        "size_bytes": 278,
+        "md5_digest": "14ff83b180d87a5fbea40554c99f3b20"
+      }
+    },
+    "aliases": [],
+    "has_rt_variant": false
+  },
+  "te_IN-venkatesh-medium": {
+    "key": "te_IN-venkatesh-medium",
+    "name": "venkatesh",
+    "language": {
+      "code": "te_IN",
+      "family": "te",
+      "region": "IN",
+      "name_native": "తెలుగు",
+      "name_english": "Telugu",
+      "country_english": "India"
+    },
+    "quality": "medium",
+    "num_speakers": 1,
+    "speaker_id_map": {},
+    "files": {
+      "te/te_IN/venkatesh/medium/te_IN-venkatesh-medium.onnx": {
+        "size_bytes": 63516050,
+        "md5_digest": "145092d2d110c4df0fa385dc606fe103"
+      },
+      "te/te_IN/venkatesh/medium/te_IN-venkatesh-medium.onnx.json": {
+        "size_bytes": 4973,
+        "md5_digest": "eaa45c58d43c518c7b2638058f6f1866"
+      },
+      "te/te_IN/venkatesh/medium/MODEL_CARD": {
+        "size_bytes": 277,
+        "md5_digest": "5cf7929a926db4a08d3934ff663f4e92"
+      }
+    },
+    "aliases": [],
+    "has_rt_variant": false
+  },
+  "th_TH-tsync2-medium": {
+    "key": "th_TH-tsync2-medium",
+    "name": "tsync2",
+    "language": {
+      "code": "th_TH",
+      "family": "th",
+      "region": "TH",
+      "name_native": "ไทย",
+      "name_english": "Thai",
+      "country_english": "Thailand"
+    },
+    "quality": "medium",
+    "num_speakers": 1,
+    "speaker_id_map": {},
+    "files": {
+      "th/th_TH/tsync2/medium/th_TH-tsync2-medium.onnx": {
+        "size_bytes": 63221984,
+        "md5_digest": "f3f58fc2cfc4f6c591629cb25b47923d"
+      },
+      "th/th_TH/tsync2/medium/th_TH-tsync2-medium.onnx.json": {
+        "size_bytes": 5255,
+        "md5_digest": "01ddb288347a85c36f55c328ad9fa299"
+      },
+      "th/th_TH/tsync2/medium/MODEL_CARD": {
+        "size_bytes": 467,
+        "md5_digest": "f4f9236ba1c0c2972e8eebfbe39e2904"
+      }
+    },
+    "aliases": [],
+    "has_rt_variant": false
+  },
   "tr_TR-dfki-medium": {
     "key": "tr_TR-dfki-medium",
     "name": "dfki",
@@ -6682,68 +7663,6 @@
     },
     "aliases": [],
     "has_rt_variant": true
-  },
-  "tr_TR-fahrettin-medium": {
-    "key": "tr_TR-fahrettin-medium",
-    "name": "fahrettin",
-    "language": {
-      "code": "tr_TR",
-      "family": "tr",
-      "region": "TR",
-      "name_native": "Türkçe",
-      "name_english": "Turkish",
-      "country_english": "Turkey"
-    },
-    "quality": "medium",
-    "num_speakers": 1,
-    "speaker_id_map": {},
-    "files": {
-      "tr/tr_TR/fahrettin/medium/tr_TR-fahrettin-medium.onnx": {
-        "size_bytes": 63201294,
-        "md5_digest": "3ab8730ec3a132c79c74a45c451372f8"
-      },
-      "tr/tr_TR/fahrettin/medium/tr_TR-fahrettin-medium.onnx.json": {
-        "size_bytes": 5022,
-        "md5_digest": "38b7beb509cb459da3c8f95841a59435"
-      },
-      "tr/tr_TR/fahrettin/medium/MODEL_CARD": {
-        "size_bytes": 279,
-        "md5_digest": "f0fe18e5a6b7615d59a89dfe4873247f"
-      }
-    },
-    "aliases": [],
-    "has_rt_variant": true
-  },
-  "tr_TR-fettah-medium": {
-    "key": "tr_TR-fettah-medium",
-    "name": "fettah",
-    "language": {
-      "code": "tr_TR",
-      "family": "tr",
-      "region": "TR",
-      "name_native": "Türkçe",
-      "name_english": "Turkish",
-      "country_english": "Turkey"
-    },
-    "quality": "medium",
-    "num_speakers": 1,
-    "speaker_id_map": {},
-    "files": {
-      "tr/tr_TR/fettah/medium/tr_TR-fettah-medium.onnx": {
-        "size_bytes": 63201294,
-        "md5_digest": "596984449bd075fc18e6412c66ed99c2"
-      },
-      "tr/tr_TR/fettah/medium/tr_TR-fettah-medium.onnx.json": {
-        "size_bytes": 4877,
-        "md5_digest": "583aa5f4bfac5237afb1cdbdf5bfc992"
-      },
-      "tr/tr_TR/fettah/medium/MODEL_CARD": {
-        "size_bytes": 276,
-        "md5_digest": "9c51c87dc191bd556c0634793c233d5c"
-      }
-    },
-    "aliases": [],
-    "has_rt_variant": false
   },
   "uk_UA-lada-x_low": {
     "key": "uk_UA-lada-x_low",
@@ -6778,6 +7697,99 @@
     ],
     "has_rt_variant": false
   },
+  "uk_UA-mykyta-high": {
+    "key": "uk_UA-mykyta-high",
+    "name": "mykyta",
+    "language": {
+      "code": "uk_UA",
+      "family": "uk",
+      "region": "UA",
+      "name_native": "украї́нська мо́ва",
+      "name_english": "Ukrainian",
+      "country_english": "Ukraine"
+    },
+    "quality": "high",
+    "num_speakers": 1,
+    "speaker_id_map": {},
+    "files": {
+      "uk/uk_UA/mykyta/high/uk_UA-mykyta-high.onnx": {
+        "size_bytes": 114204024,
+        "md5_digest": "a044d3c12c99ed7c4b687900b0545a6a"
+      },
+      "uk/uk_UA/mykyta/high/uk_UA-mykyta-high.onnx.json": {
+        "size_bytes": 4904,
+        "md5_digest": "4de596951b9faee6842ccc69a17b38a0"
+      },
+      "uk/uk_UA/mykyta/high/MODEL_CARD": {
+        "size_bytes": 292,
+        "md5_digest": "a82050c8a7fcbea0ca4dbc0b20de90c9"
+      }
+    },
+    "aliases": [],
+    "has_rt_variant": false
+  },
+  "uk_UA-oleksa-high": {
+    "key": "uk_UA-oleksa-high",
+    "name": "oleksa",
+    "language": {
+      "code": "uk_UA",
+      "family": "uk",
+      "region": "UA",
+      "name_native": "украї́нська мо́ва",
+      "name_english": "Ukrainian",
+      "country_english": "Ukraine"
+    },
+    "quality": "high",
+    "num_speakers": 1,
+    "speaker_id_map": {},
+    "files": {
+      "uk/uk_UA/oleksa/high/uk_UA-oleksa-high.onnx": {
+        "size_bytes": 114204024,
+        "md5_digest": "ceb6d2a5db9834a9da85abb613fa0904"
+      },
+      "uk/uk_UA/oleksa/high/uk_UA-oleksa-high.onnx.json": {
+        "size_bytes": 4904,
+        "md5_digest": "4b00c2134ac78e15def386b16a2a3489"
+      },
+      "uk/uk_UA/oleksa/high/MODEL_CARD": {
+        "size_bytes": 292,
+        "md5_digest": "e61b20c43e0804327d4e1bb79950a014"
+      }
+    },
+    "aliases": [],
+    "has_rt_variant": false
+  },
+  "uk_UA-tetiana-high": {
+    "key": "uk_UA-tetiana-high",
+    "name": "tetiana",
+    "language": {
+      "code": "uk_UA",
+      "family": "uk",
+      "region": "UA",
+      "name_native": "украї́нська мо́ва",
+      "name_english": "Ukrainian",
+      "country_english": "Ukraine"
+    },
+    "quality": "high",
+    "num_speakers": 1,
+    "speaker_id_map": {},
+    "files": {
+      "uk/uk_UA/tetiana/high/uk_UA-tetiana-high.onnx": {
+        "size_bytes": 114204024,
+        "md5_digest": "ca4750154e2d635590a41e781d482f2f"
+      },
+      "uk/uk_UA/tetiana/high/uk_UA-tetiana-high.onnx.json": {
+        "size_bytes": 4905,
+        "md5_digest": "26a7f64b682b9d0e3eedffbe4b23d812"
+      },
+      "uk/uk_UA/tetiana/high/MODEL_CARD": {
+        "size_bytes": 294,
+        "md5_digest": "bfcec9848fd731296b0bbf11905eab12"
+      }
+    },
+    "aliases": [],
+    "has_rt_variant": false
+  },
   "uk_UA-ukrainian_tts-medium": {
     "key": "uk_UA-ukrainian_tts-medium",
     "name": "ukrainian_tts",
@@ -6806,12 +7818,74 @@
         "md5_digest": "3bf9b2b1fcc8e599947cdda4af130498"
       },
       "uk/uk_UA/ukrainian_tts/medium/MODEL_CARD": {
-        "size_bytes": 266,
-        "md5_digest": "d615c1c54d0017f4eb42c95dabc5573b"
+        "size_bytes": 267,
+        "md5_digest": "ec29babff51fdd0e2c640d371800ee3d"
       }
     },
     "aliases": [],
     "has_rt_variant": true
+  },
+  "ur_PK-aegis_female-medium": {
+    "key": "ur_PK-aegis_female-medium",
+    "name": "aegis_female",
+    "language": {
+      "code": "ur_PK",
+      "family": "ur",
+      "region": "PK",
+      "name_native": "اردو",
+      "name_english": "Urdu",
+      "country_english": "Pakistan"
+    },
+    "quality": "medium",
+    "num_speakers": 1,
+    "speaker_id_map": {},
+    "files": {
+      "ur/ur_PK/aegis_female/medium/ur_PK-aegis_female-medium.onnx": {
+        "size_bytes": 63515589,
+        "md5_digest": "81f9f9772025785f548e1aa0de3361b7"
+      },
+      "ur/ur_PK/aegis_female/medium/ur_PK-aegis_female-medium.onnx.json": {
+        "size_bytes": 5236,
+        "md5_digest": "6ee1b0405998a314c51c6744b714becd"
+      },
+      "ur/ur_PK/aegis_female/medium/MODEL_CARD": {
+        "size_bytes": 611,
+        "md5_digest": "bdfc7cbc31734116416a30f3c0a835c6"
+      }
+    },
+    "aliases": [],
+    "has_rt_variant": false
+  },
+  "ur_PK-fasih-medium": {
+    "key": "ur_PK-fasih-medium",
+    "name": "fasih",
+    "language": {
+      "code": "ur_PK",
+      "family": "ur",
+      "region": "PK",
+      "name_native": "اردو",
+      "name_english": "Urdu",
+      "country_english": "Pakistan"
+    },
+    "quality": "medium",
+    "num_speakers": 1,
+    "speaker_id_map": {},
+    "files": {
+      "ur/ur_PK/fasih/medium/ur_PK-fasih-medium.onnx": {
+        "size_bytes": 63532015,
+        "md5_digest": "275113cbb8ffb29e3f8d51d53d266318"
+      },
+      "ur/ur_PK/fasih/medium/ur_PK-fasih-medium.onnx.json": {
+        "size_bytes": 3146,
+        "md5_digest": "e9d386b28cc8da844e6342325e04608b"
+      },
+      "ur/ur_PK/fasih/medium/MODEL_CARD": {
+        "size_bytes": 3017,
+        "md5_digest": "b09bc06b80112279015035852c291a64"
+      }
+    },
+    "aliases": [],
+    "has_rt_variant": false
   },
   "vi_VN-25hours_single-low": {
     "key": "vi_VN-25hours_single-low",
@@ -6976,6 +8050,37 @@
     ],
     "has_rt_variant": false
   },
+  "zh_CN-chaowen-medium": {
+    "key": "zh_CN-chaowen-medium",
+    "name": "chaowen",
+    "language": {
+      "code": "zh_CN",
+      "family": "zh",
+      "region": "CN",
+      "name_native": "简体中文",
+      "name_english": "Chinese",
+      "country_english": "China"
+    },
+    "quality": "medium",
+    "num_speakers": 1,
+    "speaker_id_map": {},
+    "files": {
+      "zh/zh_CN/chaowen/medium/zh_CN-chaowen-medium.onnx": {
+        "size_bytes": 63221984,
+        "md5_digest": "4965c46e983653811bef0253026ff45a"
+      },
+      "zh/zh_CN/chaowen/medium/zh_CN-chaowen-medium.onnx.json": {
+        "size_bytes": 2927,
+        "md5_digest": "f2598f030cbb8b27549a2e9aaa4daeb5"
+      },
+      "zh/zh_CN/chaowen/medium/MODEL_CARD": {
+        "size_bytes": 273,
+        "md5_digest": "5f3c9e126b75994e47198d935a7f45a8"
+      }
+    },
+    "aliases": [],
+    "has_rt_variant": false
+  },
   "zh_CN-huayan-medium": {
     "key": "zh_CN-huayan-medium",
     "name": "huayan",
@@ -7038,6 +8143,37 @@
     "aliases": [
       "zh-cn-huayan-x-low"
     ],
+    "has_rt_variant": false
+  },
+  "zh_CN-xiao_ya-medium": {
+    "key": "zh_CN-xiao_ya-medium",
+    "name": "xiao_ya",
+    "language": {
+      "code": "zh_CN",
+      "family": "zh",
+      "region": "CN",
+      "name_native": "简体中文",
+      "name_english": "Chinese",
+      "country_english": "China"
+    },
+    "quality": "medium",
+    "num_speakers": 1,
+    "speaker_id_map": {},
+    "files": {
+      "zh/zh_CN/xiao_ya/medium/zh_CN-xiao_ya-medium.onnx": {
+        "size_bytes": 63221984,
+        "md5_digest": "b1cece47c5d601a8f6b63b8da82b484a"
+      },
+      "zh/zh_CN/xiao_ya/medium/zh_CN-xiao_ya-medium.onnx.json": {
+        "size_bytes": 2927,
+        "md5_digest": "6018be9c632a62548fea129a42a4610a"
+      },
+      "zh/zh_CN/xiao_ya/medium/MODEL_CARD": {
+        "size_bytes": 434,
+        "md5_digest": "d5fc6eab8567db163e9cff56ed53f387"
+      }
+    },
+    "aliases": [],
     "has_rt_variant": false
   }
 }

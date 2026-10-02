@@ -2,9 +2,7 @@ import json
 import sys
 import urllib.request
 
-PIPER_VOICE_LIST_URL = (
-    "https://huggingface.co/rhasspy/piper-voices/raw/v1.0.0/voices.json"
-)
+PIPER_VOICE_LIST_URL = "https://huggingface.co/rhasspy/piper-voices/raw/c10ece1aade47bb51c153c893d14e5bf8e5b7117/voices.json"
 RT_VOICE_LIST_URL = (
     "https://huggingface.co/datasets/mush42/piper-rt/raw/main/voices.json"
 )
