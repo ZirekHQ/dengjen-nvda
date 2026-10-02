@@ -28,24 +28,29 @@ from .download_infra import (
     resumable_partial_size,
     stream_to_file,
 )
+from .piper_sources import (
+    PIPER_RT_REPO_URL,
+    PIPER_VOICES_REPO_URL,
+    PIPER_VOICES_REVISION,
+)
 
 with helpers.import_bundled_library():
     from pathlib import Path, PurePosixPath, PureWindowsPath
 
 
-DEFAULT_PIPER_LIST_URL = "https://huggingface.co/rhasspy/piper-voices/raw/c10ece1aade47bb51c153c893d14e5bf8e5b7117/voices.json"
-DEFAULT_PIPER_DOWNLOAD_PREFIX = "https://huggingface.co/rhasspy/piper-voices/resolve/c10ece1aade47bb51c153c893d14e5bf8e5b7117"
+DEFAULT_PIPER_LIST_URL = (
+    f"{PIPER_VOICES_REPO_URL}/raw/{PIPER_VOICES_REVISION}/voices.json"
+)
+DEFAULT_PIPER_DOWNLOAD_PREFIX = (
+    f"{PIPER_VOICES_REPO_URL}/resolve/{PIPER_VOICES_REVISION}"
+)
 PIPER_SAMPLES_URL_PREFIX = "https://rhasspy.github.io/piper-samples/samples"
 PIPER_VOICES_JSON_LOCAL_CACHE = os.path.join(DENGJEN_VOICES_DIR, "piper-voices.json")
 # Snapshot refreshed by update_voice_catalog.py before each release; lets
 # get_available_voices() serve a catalog offline on first run.
 BUNDLED_PIPER_VOICES_JSON = os.path.join(helpers.DATA_DIRECTORY, "piper-voices.json")
-DEFAULT_RT_LIST_URL = (
-    "https://huggingface.co/datasets/mush42/piper-rt/raw/main/voices.json"
-)
-DEFAULT_RT_DOWNLOAD_PREFIX = (
-    "https://huggingface.co/datasets/mush42/piper-rt/resolve/main"
-)
+DEFAULT_RT_LIST_URL = f"{PIPER_RT_REPO_URL}/raw/main/voices.json"
+DEFAULT_RT_DOWNLOAD_PREFIX = f"{PIPER_RT_REPO_URL}/resolve/main"
 
 VOICE_INFO_REGEX = re.compile(
     r"(?P<language>[a-z]+(_|-)?([a-z]+)?)(-|_)"

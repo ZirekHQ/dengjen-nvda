@@ -1,11 +1,21 @@
+import importlib.util
 import json
 import sys
 import urllib.request
+from pathlib import Path
 
-PIPER_VOICE_LIST_URL = "https://huggingface.co/rhasspy/piper-voices/raw/c10ece1aade47bb51c153c893d14e5bf8e5b7117/voices.json"
-RT_VOICE_LIST_URL = (
-    "https://huggingface.co/datasets/mush42/piper-rt/raw/main/voices.json"
+PIPER_SOURCES_FILE = (
+    Path(__file__).parent
+    / "addon/globalPlugins/dengjen_tts_global_plugin/piper_sources.py"
 )
+_spec = importlib.util.spec_from_file_location("piper_sources", PIPER_SOURCES_FILE)
+piper_sources = importlib.util.module_from_spec(_spec)
+_spec.loader.exec_module(piper_sources)
+PIPER_VOICE_LIST_URL = (
+    f"{piper_sources.PIPER_VOICES_REPO_URL}/raw/"
+    f"{piper_sources.PIPER_VOICES_REVISION}/voices.json"
+)
+RT_VOICE_LIST_URL = f"{piper_sources.PIPER_RT_REPO_URL}/raw/main/voices.json"
 TARGET_PATH = "addon/synthDrivers/dengjen_neural_voices/data/piper-voices.json"
 
 
