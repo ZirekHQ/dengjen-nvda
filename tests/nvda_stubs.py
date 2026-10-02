@@ -146,7 +146,11 @@ def install(*, stub_wx: bool = True) -> None:
             ld[1] = ld[1].upper()
         return "_".join(ld)
 
-    _stub_module("languageHandler", normalizeLanguage=_normalize_language)
+    _stub_module(
+        "languageHandler",
+        normalizeLanguage=_normalize_language,
+        getLanguage=lambda: "en",
+    )
 
     class _FakeConfSection(dict):
         def __missing__(self, key):

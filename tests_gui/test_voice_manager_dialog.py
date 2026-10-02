@@ -318,7 +318,7 @@ class TestOnlinePanelControls:
     def test_a_requested_family_is_selected_once_voices_arrive(
         self, panel, online_voices
     ):
-        panel.select_language_family("en")
+        panel.select_language_family("de")
         panel.set_voices(online_voices)
         assert panel.language_choice.GetSelection() == 1
         assert panel.voices_list.ItemCount == 1

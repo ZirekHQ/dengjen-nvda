@@ -175,7 +175,6 @@ class InstalledDengjenVoicesPanel(SizedPanel):
             return
         self.update_voices_list()
         self.__already_populated.set()
-        self._apply_wanted_family()
 
     def invalidate_cache(self):
         self.__already_populated.clear()
@@ -497,6 +496,7 @@ class OnlinePiperVoicesPanel(SizedPanel):
         self.languages, self.lang_to_voices = logic.group_voices_by_language(voices)
         self.language_choice.SetItems([lang.description for lang in self.languages])
         self.__already_populated.set()
+        self._apply_wanted_family()
 
 
 class KokoroVoicesPanel(SizedPanel):
