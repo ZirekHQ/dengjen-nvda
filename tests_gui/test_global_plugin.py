@@ -11,6 +11,8 @@ exercised.
 
 import contextlib
 import sys
+from concurrent.futures import Future
+from types import SimpleNamespace
 from unittest.mock import MagicMock
 
 import pytest
@@ -212,6 +214,102 @@ class TestVoiceCheck:
         self._choose(wx.ID_CANCEL)
         assert opened == []
         assert installed == []
+
+
+class TestLanguageOffer:
+    @pytest.fixture
+    def offer(self, plugin, plugin_module, monkeypatch):
+        store = {"language_offer": {}}
+        monkeypatch.setattr(plugin_module, "DengjenConfig", store)
+        monkeypatch.setattr(
+            plugin_module.download_infra, "THREAD_POOL_EXECUTOR", _InlineExecutor()
+        )
+        monkeypatch.setattr(plugin_module.wx, "CallAfter", lambda f, *a: f(*a))
+
+        def arrange(nvda_language, installed="en_US", catalog=("tr",)):
+            voices = [SimpleNamespace(language=installed)]
+            catalog_voices = [
+                SimpleNamespace(language=SimpleNamespace(family=f)) for f in catalog
+            ]
+            monkeypatch.setattr(
+                plugin_module.DengjenTextToSpeechSystem,
+                "load_all_voices_from_nvda_config_dir",
+                classmethod(lambda cls, backend: iter(voices)),
+            )
+            monkeypatch.setattr(
+                plugin_module.voice_download,
+                "get_local_catalog",
+                lambda: catalog_voices,
+            )
+            monkeypatch.setattr(
+                plugin_module.languageHandler, "getLanguage", lambda: nvda_language
+            )
+            plugin._perform_voice_check()
+
+        return arrange, store
+
+    @pytest.fixture(autouse=True)
+    def _destroy_the_dialog(self):
+        yield
+        if gui.runScriptModalDialog.called:
+            gui.runScriptModalDialog.call_args.args[0].Destroy()
+
+    def _choose(self, retval):
+        gui.runScriptModalDialog.call_args.args[1](retval)
+
+    def test_it_offers_a_download_for_a_language_with_no_installed_voice(self, offer):
+        arrange, _ = offer
+        arrange("tr")
+        assert gui.runScriptModalDialog.called
+
+    def test_it_stays_quiet_when_the_language_family_is_installed(self, offer):
+        arrange, _ = offer
+        arrange("tr", installed="tr_TR")
+        assert not gui.runScriptModalDialog.called
+
+    def test_it_stays_quiet_when_the_catalog_has_no_voice_for_the_language(self, offer):
+        arrange, _ = offer
+        arrange("tr", catalog=("de",))
+        assert not gui.runScriptModalDialog.called
+
+    def test_it_stays_quiet_for_a_declined_language(self, offer):
+        arrange, store = offer
+        store["language_offer"]["tr"] = {"declined": True}
+        arrange("tr")
+        assert not gui.runScriptModalDialog.called
+
+    def test_choosing_open_opens_the_manager_on_that_language(
+        self, offer, plugin, monkeypatch
+    ):
+        arrange, _ = offer
+        opened = []
+        monkeypatch.setattr(
+            plugin,
+            "on_manager",
+            lambda evt, initial_language=None: opened.append(initial_language),
+        )
+        arrange("tr")
+        self._choose(wx.ID_YES)
+        assert opened == ["tr"]
+
+    def test_choosing_dont_ask_again_persists_the_language(self, offer):
+        arrange, store = offer
+        arrange("tr")
+        self._choose(wx.ID_NO)
+        assert store["language_offer"] == {"tr": {"declined": True}}
+
+    def test_choosing_not_now_persists_nothing(self, offer):
+        arrange, store = offer
+        arrange("tr")
+        self._choose(wx.ID_CANCEL)
+        assert store["language_offer"] == {}
+
+
+class _InlineExecutor:
+    def submit(self, fn, *args):
+        future = Future()
+        future.set_result(fn(*args))
+        return future
 
 
 class TestOnFirstRunVoiceInstalled:

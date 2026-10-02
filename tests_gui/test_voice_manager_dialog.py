@@ -103,6 +103,20 @@ class TestDialogConstruction:
         assert dialog.FindWindowById(wx.ID_CANCEL) is not None
 
 
+class TestInitialLanguage:
+    def test_it_opens_on_the_download_tab(
+        self, voice_manager, nvda_gui, no_installed_voices, espeak_synth, offline
+    ):
+        dlg = voice_manager.DengjenVoiceManagerDialog(initial_language="tr")
+        try:
+            assert dlg.notebookCtrl.GetSelection() == 1
+        finally:
+            dlg.Destroy()
+
+    def test_it_opens_on_the_installed_tab_by_default(self, dialog):
+        assert dialog.notebookCtrl.GetSelection() == 0
+
+
 class TestInstalledPanelControls:
     @pytest.fixture
     def panel(self, dialog):
@@ -300,6 +314,21 @@ class TestOnlinePanelControls:
         panel.ProcessEvent(event)
         assert panel.voices_list.ItemCount == 1
         assert panel.buttons_panel.IsEnabled() is True
+
+    def test_a_requested_family_is_selected_once_voices_arrive(
+        self, panel, online_voices
+    ):
+        panel.select_language_family("en")
+        panel.set_voices(online_voices)
+        assert panel.language_choice.GetSelection() == 1
+        assert panel.voices_list.ItemCount == 1
+
+    def test_a_requested_family_missing_from_the_catalog_selects_nothing(
+        self, panel, online_voices
+    ):
+        panel.select_language_family("tr")
+        panel.set_voices(online_voices)
+        assert panel.language_choice.GetSelection() == wx.NOT_FOUND
 
     def test_refresh_button_forces_an_online_lookup(
         self, panel, voice_manager, monkeypatch, sync_executor

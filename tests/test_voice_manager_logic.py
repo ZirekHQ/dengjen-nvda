@@ -7,6 +7,7 @@ they subclass real wx types -- and are covered by tests_gui/ on Windows.
 
 import json
 import os
+from types import SimpleNamespace
 
 import addonHandler
 import pytest
@@ -299,3 +300,16 @@ class TestBundledCatalogDrivesTheDownloadButtons:
         state = logic.download_button_state(voice)
         assert state.speaker_enabled is True
         assert len(state.speakers) == voice.num_speakers
+
+
+class TestFirstLanguageIndex:
+    @staticmethod
+    def _languages(*families):
+        return [SimpleNamespace(family=f) for f in families]
+
+    def test_returns_the_first_language_in_the_family(self):
+        languages = self._languages("de", "en", "en", "tr")
+        assert logic.first_language_index(languages, "en") == 1
+
+    def test_returns_none_when_no_language_matches(self):
+        assert logic.first_language_index(self._languages("de"), "tr") is None

@@ -18,6 +18,10 @@ noise_w = integer(default=50, min=0, max=100)
 [[__many__]]
 voice = string(default=None)
 
+[language_offer]
+[[__many__]]
+declined = boolean(default=False)
+
 [hosting]
 piper_list_url = string(default="")
 piper_download_prefix = string(default="")

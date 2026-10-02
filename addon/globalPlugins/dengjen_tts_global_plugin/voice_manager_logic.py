@@ -41,6 +41,13 @@ def group_voices_by_language(voices) -> tuple[list, dict]:
     return languages, lang_to_voices
 
 
+def first_language_index(languages, family: str) -> int | None:
+    return next(
+        (i for i, language in enumerate(languages) if language.family == family),
+        None,
+    )
+
+
 @dataclasses.dataclass(frozen=True)
 class InstalledListState:
     buttons_enabled: bool

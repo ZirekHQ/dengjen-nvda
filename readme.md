@@ -32,6 +32,8 @@ The add-on is just  a driver, it comes with no voices by default. You need to do
 
 Upon installing the add-on and restarting NVDA, the add-on will ask you to download and install at least one voice, and it will give you the option to open the voice manager.
 
+When NVDA's language has no installed voice but the voice catalog has one, the add-on offers to open the voice manager on that language at startup. Choose `Don't ask again` to stop the offer for that language.
+
 You can also open the voice manager from NVDA's main menu.
 
 Note that we recommend choosing the `low` or `medium` quality voices for your target language(s), because they generally provide better responsiveness. For additional responsiveness, you can choose to download the `fast` variant of a voice at a cost of slightly lower speech quality.

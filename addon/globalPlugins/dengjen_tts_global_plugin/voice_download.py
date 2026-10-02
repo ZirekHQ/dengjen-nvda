@@ -699,6 +699,15 @@ def _refresh_voices_cache():
         json.dump(voice_list, file, ensure_ascii=False, indent=2)
 
 
+def get_local_catalog():
+    """Not-installed voices from the user cache, else the bundled snapshot; never goes online."""
+    for path in (PIPER_VOICES_JSON_LOCAL_CACHE, BUNDLED_PIPER_VOICES_JSON):
+        voices = _get_voices_from_cache(path) if os.path.exists(path) else None
+        if voices is not None:
+            return voices
+    return []
+
+
 def get_available_voices(force_online=False):
     if not force_online and os.path.exists(PIPER_VOICES_JSON_LOCAL_CACHE):
         cached_voices = _get_voices_from_cache()

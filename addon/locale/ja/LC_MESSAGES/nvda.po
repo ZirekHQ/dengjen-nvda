@@ -541,3 +541,11 @@ msgstr ""
 #: addon\installTasks.py:83
 msgid "Old add-on still installed"
 msgstr "古いアドオンがインストールされています"
+
+#: addon\globalPlugins\dengjen_tts_global_plugin\__init__.py:113
+msgid "No installed Dengjen voice matches NVDA's language, but one is available to download."
+msgstr ""
+
+#: addon\globalPlugins\dengjen_tts_global_plugin\__init__.py:118
+msgid "&Don't ask again"
+msgstr ""

@@ -8,6 +8,7 @@ import addonHandler
 import core
 import globalPluginHandler
 import gui
+import languageHandler
 import synthDriverHandler
 import wx
 from logHandler import log
@@ -27,6 +28,7 @@ try:
         helpers,
         voice_migration,
     )
+    from dengjen_neural_voices._config import DengjenConfig
     from dengjen_neural_voices.adapters.dengjen_grpc import DengjenGrpcBackend
 finally:
     sys.path.remove(_TTS_MODULE_DIR)
@@ -42,7 +44,7 @@ __all__ = [
     "voice_migration",
 ]
 
-from . import feedback
+from . import download_infra, feedback, language_offer_logic, voice_download
 from .voice_manager import DengjenVoiceManagerDialog, install_voice_from_local_file
 
 
@@ -85,8 +87,8 @@ class GlobalPlugin(globalPluginHandler.GlobalPlugin):
             _("Report a bug or request a feature for this add-on"),
         )
 
-    def on_manager(self, event):
-        manager_dialog = DengjenVoiceManagerDialog()
+    def on_manager(self, event, initial_language=None):
+        manager_dialog = DengjenVoiceManagerDialog(initial_language=initial_language)
         gui.runScriptModalDialog(manager_dialog)
         self.__voice_manager_shown = True
 
@@ -102,13 +104,65 @@ class GlobalPlugin(globalPluginHandler.GlobalPlugin):
     def _perform_voice_check(self):
         if self.__voice_manager_shown:
             return
-        if any(
+        voices = list(
             DengjenTextToSpeechSystem.load_all_voices_from_nvda_config_dir(
                 DengjenGrpcBackend()
             )
-        ):
+        )
+        if voices:
+            self._offer_language_voice(voices)
+        else:
+            self._ask_first_run_voice_action()
+
+    def _offer_language_voice(self, installed):
+        future = download_infra.THREAD_POOL_EXECUTOR.submit(
+            voice_download.get_local_catalog
+        )
+        future.add_done_callback(
+            lambda f: wx.CallAfter(self._on_offer_catalog_read, installed, f)
+        )
+
+    def _on_offer_catalog_read(self, installed, future):
+        try:
+            catalog = future.result()
+        except Exception:
+            log.debug("Could not read the voice catalog for the offer", exc_info=True)
             return
-        self._ask_first_run_voice_action()
+        declined = {
+            family
+            for family, entry in DengjenConfig.setdefault("language_offer", {}).items()
+            if entry["declined"]
+        }
+        family = language_offer_logic.language_to_offer(
+            languageHandler.getLanguage(), installed, catalog, declined
+        )
+        if family:
+            self._ask_language_voice_action(family)
+
+    def _ask_language_voice_action(self, family):
+        """Yes/No/Cancel maps to open-manager/don't-ask-again/not-now, so
+        Escape defers the offer instead of silencing it for good."""
+        dlg = wx.MessageDialog(
+            gui.mainFrame,
+            _(
+                "No installed Dengjen voice matches NVDA's language, but one is "
+                "available to download."
+            ),
+            _("Dengjen Neural Voices"),
+            wx.YES_NO | wx.CANCEL | wx.ICON_QUESTION,
+        )
+        dlg.SetYesNoCancelLabels(
+            _("&Open voice manager"), _("&Don't ask again"), _("Not &now")
+        )
+        gui.runScriptModalDialog(
+            dlg, lambda retval: self._on_language_voice_action_chosen(family, retval)
+        )
+
+    def _on_language_voice_action_chosen(self, family, retval):
+        if retval == wx.ID_YES:
+            self.on_manager(None, initial_language=family)
+        elif retval == wx.ID_NO:
+            DengjenConfig["language_offer"][family] = {"declined": True}
 
     def _ask_first_run_voice_action(self):
         """Yes/No/Cancel maps to open-manager/install-local/not-now. A plain

@@ -175,6 +175,7 @@ class InstalledDengjenVoicesPanel(SizedPanel):
             return
         self.update_voices_list()
         self.__already_populated.set()
+        self._apply_wanted_family()
 
     def invalidate_cache(self):
         self.__already_populated.clear()
@@ -301,6 +302,7 @@ class OnlinePiperVoicesPanel(SizedPanel):
         self.__already_populated = threading.Event()
         self.languages = []
         self.lang_to_voices = {}
+        self._wanted_family = None
 
         self._preview_label = _("&Preview")
 
@@ -383,9 +385,24 @@ class OnlinePiperVoicesPanel(SizedPanel):
     def invalidate_cache(self):
         self.__already_populated.clear()
 
+    def select_language_family(self, family):
+        self._wanted_family = family
+        self._apply_wanted_family()
+
+    def _apply_wanted_family(self):
+        index = logic.first_language_index(self.languages, self._wanted_family)
+        if index is None:
+            return
+        self._wanted_family = None
+        self.language_choice.SetSelection(index)
+        self._show_language_voices(index)
+
     def on_language_selection_change(self, event):
+        self._show_language_voices(event.GetSelection())
+
+    def _show_language_voices(self, index):
         self.voices_list.Enable(True)
-        selected_lang = self.languages[event.GetSelection()]
+        selected_lang = self.languages[index]
         voices = self.lang_to_voices[selected_lang]
         self.voices_list.set_objects(voices, set_focus=False)
         self.voices_list.EnsureVisible(0)
@@ -520,7 +537,8 @@ class KokoroVoicesPanel(SizedPanel):
 
 
 class DengjenVoiceManagerDialog(SimpleDialog):
-    def __init__(self):
+    def __init__(self, initial_language=None):
+        self._initial_language = initial_language
         super().__init__(
             gui.mainFrame,
             title=_("Dengjen voice manager"),
@@ -554,6 +572,10 @@ class DengjenVoiceManagerDialog(SimpleDialog):
         self.notebookCtrl._invalidate_pages_voice_cache = (
             self._invalidate_pages_voice_cache
         )
+        if self._initial_language:
+            download_page = self.notebookCtrl.GetPage(1)
+            download_page.select_language_family(self._initial_language)
+            self.notebookCtrl.SetSelection(1)
         self.notebookCtrl.GetCurrentPage().populate_list()
 
     def getButtons(self, parent):

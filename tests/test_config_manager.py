@@ -33,6 +33,10 @@ class TestModuleLevelSingleton:
         assert "[voices]" in _config._configSpec
         assert "[lang]" in _config._configSpec
 
+    def test_config_spec_declares_the_per_language_offer_opt_out(self):
+        assert "[language_offer]" in _config._configSpec
+        assert "declined = boolean(default=False)" in _config._configSpec
+
     def test_config_spec_bounds_the_scale_settings(self):
         for setting in ("noise_scale", "length_scale", "noise_w"):
             assert f"{setting} = integer(default=50, min=0, max=100)" in (
