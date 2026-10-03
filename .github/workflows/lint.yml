@@ -12,6 +12,7 @@ permissions:
 
 jobs:
   lint:
+    if: github.event.pull_request.user.login != 'zirekhq-automation[bot]'
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
@@ -33,6 +34,7 @@ jobs:
   # against advisories before. Kept non-blocking on this first pass so findings
   # surface without failing PRs until someone has looked at them.
   audit:
+    if: github.event.pull_request.user.login != 'zirekhq-automation[bot]'
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1

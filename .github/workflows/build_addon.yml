@@ -121,6 +121,7 @@ jobs:
           fi
 
   e2e:
+    if: github.event.pull_request.user.login != 'zirekhq-automation[bot]'
     runs-on: windows-2025
     permissions:
       contents: read

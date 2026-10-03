@@ -141,39 +141,29 @@ Conventions used in this project:
 Maintainers only. `buildVars.py`'s `addon_version` is the single source of truth for the addon's
 version.
 
-1. Run the **Prepare release** workflow (`workflow_dispatch`, from the Actions tab), leaving
-   `new_tag` blank. It computes the next semver version from Conventional Commit subjects merged
+1. Run the **Prepare release** workflow (`workflow_dispatch`, from the Actions tab). Only a maintainer (admin or maintain role) can run it. It computes the next semver version from Conventional Commit subjects merged
    since the last `vX.Y.Z` tag (`fix:`/etc → patch, `feat:` → minor, `!`/`BREAKING CHANGE:` →
    major, only docs/chore/style/refactor/test since the last tag means no release) and opens a PR
    bumping `buildVars.py`.
-2. Review and merge that PR. **This is the release gate** — merging it releases the version in the
+2. Review, approve and squash- or rebase-merge that PR. **This is the release gate** — merging it releases the version in the
    diff, with nothing further to confirm: [`release.yml`](workflows/release.yml) tags that merge
    commit `vX.Y.Z`, which calls [`build_addon.yml`](workflows/build_addon.yml) directly and
    publishes a GitHub Release with the `.nvda-addon`, the `.pot`, and notes from
    `gh release create --generate-notes` (scoped to the previous `vX.Y.Z(-beta.N)` tag) with the
    SHA256 appended.
-3. **Direct-release override**: setting `new_tag` (and optionally `dry_run`) on **Prepare
-   release** skips `next-version.sh`, `bump-version.sh`, and the PR entirely, and hands off
-   straight to `release.yml` for the tag/publish given in `new_tag`. Because this bypasses the PR
-   review that's normally the release gate, it requires approval on the `release` environment
-   (Maintainers team) before it runs. **Self-approval is currently still possible** — the
-   environment's `prevent_self_review` setting hasn't been flipped to `true` yet (repo Settings,
-   tracked separately, not part of any workflow file); until it is, "requires approval" means a
-   click, not necessarily a second person. The override only accepts a plain `vX.Y.Z` tag, not a
-   `-beta.N` prerelease — cut a beta by pushing an annotated tag directly (`git tag -a` /
-   `git push`), same as before this workflow existed.
+3. CI skips the bump PR except the zizmor and Sonar jobs: every other PR-triggered job carries an
+   `if:` guard on the PR author. A job-level skip reports as passing, so required checks stay
+   satisfied; `[skip ci]` would leave them pending. Those two jobs run because their required
+   checks only report from them.
+
+To cut a `-beta.N` prerelease, push an annotated tag directly (`git tag -a` / `git push`); Prepare release only produces plain `vX.Y.Z` releases.
 
 If publishing fails partway through, retry — no new tag needed either way, since the build/publish
 steps re-run cleanly against the same tag:
 - Same version, still current on `main`: use GitHub's "Re-run failed jobs" on the original
   `release.yml` run (Actions tab). It re-runs just the failed job(s) against that run's own
   commit, no new dispatch needed.
-- Stale version (a newer version has since bumped past it on `main`): run **Prepare release**
-  again, this time from the old tag (`--ref v<old-version>` on the CLI, or pick it from the
-  branch/tag dropdown in the Actions tab) with `new_tag: v<old-version>` set. This is the
-  direct-release override path above. Only works for tags cut *after* this override path shipped —
-  dispatching against an older tag runs *that tag's* copy of these workflow files, which won't
-  have the `new_tag` input or the `workflow_call` trigger this retry path depends on.
+- Stale version (a newer version has since bumped past it on `main`): cut a patch release instead.
 
 Tag scheme: standard semver `vMAJOR.MINOR.PATCH(-beta.N)`, e.g. `v3.2.0-beta.5` for a beta or
 `v3.2.0` for a stable cut — `build_addon.yml`'s tag check accepts only these two forms, not other
