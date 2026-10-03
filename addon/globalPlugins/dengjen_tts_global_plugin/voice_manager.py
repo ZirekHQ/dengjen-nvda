@@ -575,7 +575,7 @@ class DengjenVoiceManagerDialog(SimpleDialog):
         if self._initial_language:
             download_page = self.notebookCtrl.GetPage(1)
             download_page.select_language_family(self._initial_language)
-            self.notebookCtrl.SetSelection(1)
+            self.notebookCtrl.ChangeSelection(1)
         self.notebookCtrl.GetCurrentPage().populate_list()
 
     def getButtons(self, parent):
