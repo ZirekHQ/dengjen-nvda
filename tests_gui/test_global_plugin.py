@@ -39,7 +39,12 @@ def no_installed_voices(plugin_module, monkeypatch):
 
 
 @pytest.fixture
-def one_installed_voice(plugin_module, monkeypatch):
+def one_installed_voice(plugin_module, sync_executor, monkeypatch):
+    monkeypatch.setattr(plugin_module, "DengjenConfig", {"language_offer": {}})
+    monkeypatch.setattr(
+        plugin_module.download_infra, "THREAD_POOL_EXECUTOR", sync_executor
+    )
+    monkeypatch.setattr(plugin_module.voice_download, "get_local_catalog", list)
     monkeypatch.setattr(
         plugin_module.DengjenTextToSpeechSystem,
         "load_all_voices_from_nvda_config_dir",
