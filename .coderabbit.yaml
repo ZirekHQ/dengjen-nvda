@@ -1,4 +1,16 @@
+language: en-US
+tone_instructions: "Plain text only. No emoji. Short, direct comments naming the file and the fix."
+
 reviews:
+  high_level_summary: false
+  sequence_diagrams: false
+  estimate_code_review_effort: false
+  changed_files_summary: false
+  suggested_labels: false
+  suggested_reviewers: false
+  related_issues: false
+  related_prs: false
+  enable_prompt_for_ai_agents: false
   path_filters:
     - "!**/*.exe"
     - "!**/*.pyd"
