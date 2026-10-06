@@ -1,0 +1,4 @@
+name: dengjen-nvda CodeQL config
+# Vendored third-party code, refreshed by the update_*.py scripts and never edited by hand.
+paths-ignore:
+  - addon/synthDrivers/dengjen_neural_voices/lib
