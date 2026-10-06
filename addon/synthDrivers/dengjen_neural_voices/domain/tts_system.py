@@ -95,7 +95,7 @@ class DengjenVoice:
     location: str
     backend: TTSBackend
     model_type: str = "piper"
-    properties: Mapping[str, int] | None = field(default_factory=dict)
+    properties: Mapping[str, str] | None = field(default_factory=dict)
     remote_id: str | None = None
     supports_streaming_output: bool = False
 
@@ -243,7 +243,6 @@ class SpeechOptions:
     def __init__(
         self,
         voice,
-        speaker=None,
         rate=None,
         volume=None,
         pitch=None,
