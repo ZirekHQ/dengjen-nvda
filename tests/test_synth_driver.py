@@ -22,6 +22,7 @@ stand-ins used here don't interfere with the on-disk fixtures above.
 
 import asyncio
 import os
+from types import SimpleNamespace
 from unittest.mock import MagicMock
 
 import config
@@ -203,6 +204,32 @@ class TestConstruction:
             assert d.tts is None
         finally:
             d.terminate()
+
+
+class TestSpeechTask:
+    def test_feeds_every_chunk_then_waits_for_the_player_to_drain(self, monkeypatch):
+        calls = []
+
+        async def run_inline(fn, *args):
+            return fn(*args)
+
+        class _Player:
+            def feed(self, chunk):
+                calls.append(("feed", chunk))
+
+            def sync(self):
+                calls.append(("sync",))
+
+        async def _audio():
+            yield b"one"
+            yield b"two"
+
+        monkeypatch.setattr(driver_module, "run_in_executor", run_inline)
+        task = SimpleNamespace(text="hi", generate_audio=_audio)
+
+        asyncio.run(SpeechTask(task, _Player())())
+
+        assert calls == [("feed", b"one"), ("feed", b"two"), ("sync",)]
 
 
 class TestBuildSpeechTasks:

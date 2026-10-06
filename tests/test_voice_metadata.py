@@ -40,6 +40,23 @@ class TestReadOrMigrate:
             description="54 presets across multiple languages",
         )
 
+    @pytest.mark.parametrize(
+        "sidecar",
+        ["{not json", "[]", '{"model_type": "piper", "name": 3, "language": "en_US"}'],
+    )
+    def test_unusable_sidecar_falls_back_to_the_legacy_directory_name(
+        self, tmp_path, sidecar
+    ):
+        voice_dir = tmp_path / "en_US-libritts-high"
+        voice_dir.mkdir()
+        (voice_dir / VOICE_METADATA_FILENAME).write_text(sidecar, encoding="utf-8")
+
+        metadata = read_or_migrate(voice_dir)
+
+        assert metadata == VoiceMetadata(
+            model_type="piper", name="libritts", language="en_US", description=""
+        )
+
     def test_migrates_legacy_piper_directory_name(self, tmp_path):
         voice_dir = tmp_path / "en_US-libritts-high"
         voice_dir.mkdir()

@@ -33,11 +33,11 @@
   ],
   "packageRules": [
     {
-      "description": "Vendored protobuf is refreshed by update_protobuf.py and must stay on 4.25.x: grpcio-tools 1.62.3 generates 4.25 gencode that 5.x rejects.",
+      "description": "Vendored protobuf is refreshed by update_protobuf.py and must stay on 4.25.x, the line update_protobuf.py accepts and grpcio-tools 1.62.3 generates gencode for.",
       "matchDepNames": [
         "protobuf"
       ],
-      "allowedVersions": "<5"
+      "allowedVersions": ">=4.25,<4.26"
     },
     {
       "description": "Python version is the NVDA runtime ABI (vendored cp313 wheels); bump only when NVDA changes Python.",
