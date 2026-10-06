@@ -41,6 +41,7 @@ from ...domain.tts_system import (
     DengjenTextToSpeechSystem,
     SpeakerNotFoundError,
     SpeechOptions,
+    VoiceNotFoundError,
 )
 from ...helpers import update_displaied_params_on_voice_change
 from ...ports.tts_backend import BackendError, BackendUnavailableError
@@ -115,7 +116,7 @@ class SpeechTask:
         feed_func = self.player.feed
         async for wave_samples in speech_stream:
             await run_in_executor(feed_func, wave_samples)
-        self.player.sync()
+        await run_in_executor(self.player.sync)
 
 
 class BreakTask:
@@ -321,7 +322,8 @@ class SynthDriver(NvdaSynthDriver):
                 self._player,
             )
         if item_type is LangChangeCommand:
-            self.tts.language = default_lang if item.isDefault else item.lang
+            with suppress(VoiceNotFoundError):
+                self.tts.language = default_lang if item.isDefault else item.lang
             voice = self.tts.speech_options.voice
             self._player = self._get_or_create_player(voice.sample_rate)
         elif item_type is RateCommand:

@@ -597,7 +597,7 @@ class DengjenVoiceManagerDialog(SimpleDialog):
 
 
 def play_remote_mp3(mp3_url):
-    resp = download_infra.request.get(mp3_url)
+    resp = download_infra.get_with_cert_fallback(mp3_url)
     resp.raise_for_status()
     decoded_file = miniaudio.decode(resp.body, nchannels=1, sample_rate=22050)
     with tempfile.TemporaryDirectory() as tempdir:

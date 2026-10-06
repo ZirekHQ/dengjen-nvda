@@ -86,34 +86,41 @@ class TestSanitizeModelCard:
 
 
 class TestVoiceIdFromKey:
-    def test_drops_the_quality_segment(self):
-        assert logic.voice_id_from_key("en_US-amy-medium") == "en_US-amy"
+    def test_keeps_the_quality_segment(self):
+        assert logic.voice_id_from_key("en_US-amy-medium") == "en_US-amy-medium"
 
-    def test_keeps_the_rt_marker(self):
-        assert logic.voice_id_from_key("en_US-amy+RT-medium") == "en_US-amy+RT"
+    def test_drops_the_rt_marker(self):
+        assert logic.voice_id_from_key("en_US-amy+RT-medium") == "en_US-amy-medium"
 
     def test_underscored_language_survives(self):
 
-        assert logic.voice_id_from_key("pt_BR-faber-medium") == "pt_BR-faber"
+        assert logic.voice_id_from_key("pt_BR-faber-medium") == "pt_BR-faber-medium"
 
 
 class TestIsActiveVoice:
     def test_true_when_synth_and_voice_both_match(self):
         assert logic.is_active_voice(
-            "dengjen_neural_voices", "en_US-amy", "en_US-amy-medium"
+            "dengjen_neural_voices", "en_US-amy-medium", "en_US-amy-medium"
+        )
+
+    def test_true_when_selected_key_is_the_rt_variant(self):
+        assert logic.is_active_voice(
+            "dengjen_neural_voices", "en_US-amy-medium", "en_US-amy+RT-medium"
         )
 
     def test_false_for_a_different_voice_on_the_same_synth(self):
         assert not logic.is_active_voice(
-            "dengjen_neural_voices", "en_US-amy", "en_US-ryan-medium"
+            "dengjen_neural_voices", "en_US-amy-medium", "en_US-ryan-medium"
         )
 
     def test_false_when_another_synth_is_active(self):
-        assert not logic.is_active_voice("espeak", "en_US-amy", "en_US-amy-medium")
+        assert not logic.is_active_voice(
+            "espeak", "en_US-amy-medium", "en_US-amy-medium"
+        )
 
-    def test_quality_does_not_affect_the_match(self):
-        assert logic.is_active_voice(
-            "dengjen_neural_voices", "en_US-amy", "en_US-amy-high"
+    def test_a_different_quality_is_a_different_voice(self):
+        assert not logic.is_active_voice(
+            "dengjen_neural_voices", "en_US-amy-medium", "en_US-amy-high"
         )
 
 

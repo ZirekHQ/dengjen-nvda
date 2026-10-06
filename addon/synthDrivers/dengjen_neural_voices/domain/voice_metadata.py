@@ -45,8 +45,8 @@ def read_or_migrate(voice_dir: Path) -> VoiceMetadata:
     if sidecar_path.exists():
         try:
             return VoiceMetadata(**json.loads(sidecar_path.read_text(encoding="utf-8")))
-        except (OSError, TypeError):
-            pass  # unreadable or wrong-shaped sidecar: fall through to the legacy-name migration below
+        except (OSError, TypeError, ValueError):
+            pass  # unreadable, malformed or wrong-shaped sidecar: fall through to the legacy-name migration below
 
     metadata = _migrate_legacy_piper_directory_name(voice_dir)
     try:

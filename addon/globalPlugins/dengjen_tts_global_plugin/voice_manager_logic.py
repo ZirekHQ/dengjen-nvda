@@ -22,7 +22,7 @@ def sanitize_model_card(content: str) -> str:
 
 
 def voice_id_from_key(voice_key: str) -> str:
-    return "-".join(voice_key.split("-")[:-1])
+    return voice_key.replace("+RT", "")
 
 
 def is_active_voice(synth_name: str, synth_voice: str, voice_key: str) -> bool:

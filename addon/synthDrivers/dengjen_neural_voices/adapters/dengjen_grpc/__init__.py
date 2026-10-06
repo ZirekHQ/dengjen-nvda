@@ -279,7 +279,7 @@ def start_grpc_server():
     creationflags = (
         subprocess.DETACHED_PROCESS
         | subprocess.CREATE_NEW_PROCESS_GROUP
-        | subprocess.REALTIME_PRIORITY_CLASS
+        | subprocess.ABOVE_NORMAL_PRIORITY_CLASS
     )
     try:
         server_log_file = os.path.join(
