@@ -4,7 +4,7 @@
 >
 > Nivîskarê resen, Musharraf Omer ([@mush42](https://github.com/mush42)), [di lîsteya pêvekên NVDA de ragihand](https://nvda-addons.groups.io/g/nvda-addons/message/27636) ku nakokiyên peymanên bazirganî nahêlin ku ew lênêrîna vê pêveka çavkaniya vekirî bidomîne. Ev çap projeyê didomîne da ku pêvek li ser guhertoyên heyî yên NVDA-yê bixebite, û nûkirinên lihevhatinê digel serrastkirinên rêveberê dengan û ajokarê sentezkerê dihewîne. Hemû keda xebata resen a Musharraf Omer e.
 >
-> Dibe ku ev werger li paş [benioku ya îngilîzî](https://github.com/austek/dengjen-nvda/blob/main/readme.md) bimîne.
+> Dibe ku ev werger li paş [benioku ya îngilîzî](https://github.com/ZirekHQ/dengjen-nvda/blob/main/readme.md) bimîne.
 >
 > Navê vê pêvekê di guhertoya v4.0.0 de, li gorî daxwaza nivîskarê resen,
 > wekî mercekî ji bo cih girtina di Dikana Pêvekên NVDA-yê de, ji Sonata
@@ -25,7 +25,7 @@ Piper pergaleke bilez û herêmî ya neuronî ya nivîs-bo-axaftinê ye ku deng�
 
 ## Daxistina pêvekê
 
-Tu dikarî pakêta pêvekê di beşa assets a [rûpela berdanê](https://github.com/austek/dengjen-nvda/releases/latest) de bibînî.
+Tu dikarî pakêta pêvekê di beşa assets a [rûpela berdanê](https://github.com/ZirekHQ/dengjen-nvda/releases/latest) de bibînî.
 
 ## Zêdekirina dengan
 
@@ -108,7 +108,7 @@ Bi bextewarî, pêşxistkarê `Piper` û hin pêşxistkarên ji civata kor û k�
 
 Ji bo her tiştê din, tomara NVDA-yê bi gelemperî dibêje çi çewt çûye: `pêşeka NVDA` > `Amûr` > `Tomarê bibîne`.
 
-Ji kerema xwe çewtiyan û daxwazên taybetmendiyan li [şopînerê pirsgirêkan ê vê çapê](https://github.com/austek/dengjen-nvda/issues) ragihîne, û tomarê digel guhertoya NVDA-ya xwe û dengê ku bi kar dianî pê ve bike.
+Ji kerema xwe çewtiyan û daxwazên taybetmendiyan li [şopînerê pirsgirêkan ê vê çapê](https://github.com/ZirekHQ/dengjen-nvda/issues) ragihîne, û tomarê digel guhertoya NVDA-ya xwe û dengê ku bi kar dianî pê ve bike.
 
 # Lîsans
 

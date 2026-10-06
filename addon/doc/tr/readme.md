@@ -4,7 +4,7 @@
 >
 > Özgün yazar Musharraf Omer ([@mush42](https://github.com/mush42)), ticari sözleşme çakışmaları nedeniyle bu açık kaynaklı eklentiyi sürdüremeyeceğini [NVDA Eklentileri listesinde duyurdu](https://nvda-addons.groups.io/g/nvda-addons/message/27636). Bu çatal, eklentiyi güncel NVDA sürümlerinde çalışır durumda tutmak için projeyi sürdürüyor; uyumluluk güncellemelerinin yanı sıra ses yöneticisi ve sentezleyici sürücüsündeki düzeltmeleri de içerir. Özgün çalışmanın tüm hakkı Musharraf Omer'e aittir.
 >
-> Bu çeviri, [İngilizce benioku dosyasının](https://github.com/austek/dengjen-nvda/blob/main/readme.md) gerisinde kalmış olabilir.
+> Bu çeviri, [İngilizce benioku dosyasının](https://github.com/ZirekHQ/dengjen-nvda/blob/main/readme.md) gerisinde kalmış olabilir.
 >
 > Sonata Neural Voices adından v4.0.0 sürümünde, özgün yazarın isteği
 > üzerine ve NVDA Eklenti Mağazası'nda listelenme koşulu olarak yeniden
@@ -24,7 +24,7 @@ Piper, kulağa doğal gelen ve Raspberry Pi gibi düşük donanımlı cihazlar i
 
 ## Eklentiyi indirme
 
-Eklenti paketini [sürüm sayfasındaki](https://github.com/austek/dengjen-nvda/releases/latest) assets bölümünde bulabilirsiniz.
+Eklenti paketini [sürüm sayfasındaki](https://github.com/ZirekHQ/dengjen-nvda/releases/latest) assets bölümünde bulabilirsiniz.
 
 ## Ses ekleme
 
@@ -107,7 +107,7 @@ Neyse ki `Piper` geliştiricisi ile kör ve az gören topluluğundan bazı geli�
 
 Bunların dışındaki durumlarda NVDA'nın günlüğü genellikle neyin ters gittiğini söyler: `NVDA menüsü` > `Araçlar` > `Günlüğü görüntüle`.
 
-Lütfen hataları ve özellik isteklerini [bu çatalın sorun izleyicisinde](https://github.com/austek/dengjen-nvda/issues) bildirin; günlüğü, NVDA sürümünüzü ve kullandığınız sesi de ekleyin.
+Lütfen hataları ve özellik isteklerini [bu çatalın sorun izleyicisinde](https://github.com/ZirekHQ/dengjen-nvda/issues) bildirin; günlüğü, NVDA sürümünüzü ve kullandığınız sesi de ekleyin.
 
 # Lisans
 

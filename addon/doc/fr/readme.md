@@ -4,7 +4,7 @@
 >
 > L'auteur original, Musharraf Omer ([@mush42](https://github.com/mush42)), [a annoncé sur la liste des extensions NVDA](https://nvda-addons.groups.io/g/nvda-addons/message/27636) que des conflits de contrats commerciaux l'empêchent de continuer à maintenir cette extension open source. Ce fork poursuit le projet afin de garder l'extension fonctionnelle sur les versions actuelles de NVDA, et apporte des mises à jour de compatibilité ainsi que des corrections au gestionnaire de voix et au pilote de synthèse. Tout le mérite du travail original revient à Musharraf Omer.
 >
-> Cette traduction peut être en retard sur le [readme en anglais](https://github.com/austek/dengjen-nvda/blob/main/readme.md).
+> Cette traduction peut être en retard sur le [readme en anglais](https://github.com/ZirekHQ/dengjen-nvda/blob/main/readme.md).
 >
 > Renommée depuis Sonata Neural Voices en v4.0.0, à la demande de l'auteur
 > original, comme condition d'inscription au Magasin des extensions NVDA.
@@ -24,7 +24,7 @@ Piper est un système de synthèse de texte à parole rapide, local et neuronal 
 
 ## Téléchargement de l'extension
 
-Vous pouvez trouver le package de l'extension sous la section assets à partir de la [page release](https://github.com/austek/dengjen-nvda/releases/latest)
+Vous pouvez trouver le package de l'extension sous la section assets à partir de la [page release](https://github.com/ZirekHQ/dengjen-nvda/releases/latest)
 
 ## Ajout de voix
 
@@ -107,7 +107,7 @@ Heureusement, le développeur de `Piper` et certains développeurs de la communa
 
 Pour tout le reste, le journal de NVDA indique généralement ce qui a échoué : `menu NVDA` > `Outils` > `Voir le journal`.
 
-Merci de signaler les bogues et les demandes de fonctionnalités sur le [gestionnaire de tickets de ce fork](https://github.com/austek/dengjen-nvda/issues), en y joignant le journal ainsi que votre version de NVDA et la voix que vous utilisiez.
+Merci de signaler les bogues et les demandes de fonctionnalités sur le [gestionnaire de tickets de ce fork](https://github.com/ZirekHQ/dengjen-nvda/issues), en y joignant le journal ainsi que votre version de NVDA et la voix que vous utilisiez.
 
 # Licence
 
