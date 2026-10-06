@@ -41,7 +41,12 @@ pythonSources: list[str] = [
 
 i18nSources: list[str] = pythonSources + ["buildVars.py", "addon/installTasks.py"]
 
-excludedFiles: list[str] = []
+excludedFiles: list[str] = [
+    "_cygrpc/private_key_signing/*.cc",
+    "_cygrpc/private_key_signing/*.h",
+    "protobuf/internal/_parameterized.py",
+    "protobuf/internal/testing_refleaks.py",
+]
 
 baseLanguage: str = "en"
 

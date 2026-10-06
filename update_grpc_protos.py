@@ -1,6 +1,6 @@
 """Regenerates the vendored gRPC stubs from the proto in the pinned dengjen-tts release.
 
-grpcio-tools 1.62.3 (protobuf 4.25 gencode; vendored runtime is 4.24.4) ships wheels
+grpcio-tools 1.62.3 (protobuf 4.25 gencode; vendored runtime stays on the same 4.25 line) ships wheels
 only up to Python 3.12, so run this from a Python 3.12 (or older) venv.
 Run it from the repository root (paths are relative to the repo root).
 

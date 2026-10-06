@@ -3,14 +3,14 @@
 #
 # Audit for known vulnerabilities with:  pip-audit -r VENDORED.txt
 #
-# cffi, grpcio and miniaudio are rewritten by the repo-root update_*.py
+# cffi, grpcio, miniaudio and protobuf are rewritten by the repo-root update_*.py
 # scripts. The rest were vendored by hand and must be bumped by hand.
 
 cffi==2.0.0
 grpcio==1.80.0
 miniaudio==1.71
 
-protobuf==4.24.4
+protobuf==4.25.8
 # _psutil_windows.pyd is an abi3 wheel (one build covers cp37+), tagged
 # psutil-5.9.6-cp37-abi3-win_amd64.whl on PyPI -- easy to mis-vendor the
 # win32 build by hand since the .pyd filename itself carries no arch tag.

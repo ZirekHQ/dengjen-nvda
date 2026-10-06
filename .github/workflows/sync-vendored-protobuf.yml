@@ -1,0 +1,62 @@
+name: Sync vendored protobuf
+
+# A Renovate bump edits only the protobuf pin in lib/VENDORED.txt. This job swaps lib/google to
+# match and pushes it onto the PR branch; tests/test_vendored_versions.py fails until it has.
+on:
+  pull_request:
+    paths:
+      - addon/synthDrivers/dengjen_neural_voices/lib/VENDORED.txt
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.head_ref }}
+  cancel-in-progress: true
+
+jobs:
+  sync:
+    # Fork PRs get no secrets and a read-only token, so they cannot be pushed to.
+    if: github.event.pull_request.head.repo.full_name == github.repository
+    runs-on: ubuntu-latest
+    steps:
+      - name: Create automation app token
+        id: app-token
+        # A github.token push never triggers the PR's required checks.
+        uses: actions/create-github-app-token@bcd2ba49218906704ab6c1aa796996da409d3eb1 # v3.2.0
+        with:
+          client-id: ${{ secrets.AUTOMATION_APP_CLIENT_ID }}
+          private-key: ${{ secrets.AUTOMATION_APP_PRIVATE_KEY }}
+          permission-contents: write
+
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          ref: ${{ github.head_ref }}
+          token: ${{ steps.app-token.outputs.token }}
+          persist-credentials: true
+
+      - name: Set up Python
+        uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7.0.0
+        with:
+          python-version: "3.13"
+
+      - name: Refresh lib/google to the pinned version
+        run: |
+          set -euo pipefail
+          version=$(sed -n 's/^protobuf==\([^[:space:]]*\).*/\1/p' addon/synthDrivers/dengjen_neural_voices/lib/VENDORED.txt)
+          python update_protobuf.py "$version"
+
+      - name: Push the refreshed files
+        env:
+          HEAD_REF: ${{ github.head_ref }}
+        run: |
+          set -euo pipefail
+          git add -A addon/synthDrivers/dengjen_neural_voices/lib
+          if git diff --cached --quiet; then
+            echo "lib/google already matches the pin."
+            exit 0
+          fi
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git commit -m "chore: refresh vendored protobuf to match the pin"
+          git push origin "HEAD:${HEAD_REF}"
