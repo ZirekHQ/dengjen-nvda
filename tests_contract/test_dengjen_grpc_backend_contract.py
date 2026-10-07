@@ -14,12 +14,12 @@ import tempfile
 import types
 import urllib.request
 
-import espeakng_loader
 import pytest
 
 if sys.platform != "win32":
     pytest.skip("dengjen-tts-grpc.exe is a Windows binary", allow_module_level=True)
 
+import espeakng_loader
 
 _APP_DIR = tempfile.mkdtemp()
 _SYNTH_DRIVERS_DIR = os.path.join(_APP_DIR, "synthDrivers")

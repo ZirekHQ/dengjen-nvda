@@ -48,12 +48,18 @@ jobs:
               exit 1
             fi
           else
-            version="$(grep -oE 'addon_version="[0-9]+\.[0-9]+\.[0-9]+"' buildVars.py | grep -oE '[0-9]+\.[0-9]+\.[0-9]+')"
-            if [ -z "$version" ]; then
-              echo "::error::Couldn't find addon_version=\"X.Y.Z\" in buildVars.py" >&2
-              exit 1
-            fi
+            version=""
           fi
+          pinned="$(grep -oE 'addon_version="[0-9]+\.[0-9]+\.[0-9]+"' buildVars.py | grep -oE '[0-9]+\.[0-9]+\.[0-9]+')"
+          if [ -z "$pinned" ]; then
+            echo "::error::Couldn't find addon_version=\"X.Y.Z\" in buildVars.py" >&2
+            exit 1
+          fi
+          if [ -n "$version" ] && [ "$pinned" != "$version" ]; then
+            echo "::error::new_tag ${NEW_TAG} does not match addon_version ${pinned} in buildVars.py" >&2
+            exit 1
+          fi
+          version="$pinned"
           echo "version=${version}" >> "$GITHUB_OUTPUT"
 
   tag:

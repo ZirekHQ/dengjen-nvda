@@ -1,4 +1,5 @@
 import glob
+import hashlib
 import json
 import os
 import shutil
@@ -24,11 +25,13 @@ version = data["info"]["version"]
 releases = data["releases"][version]
 
 wheel_url = None
+wheel_sha256 = None
 for r in releases:
     filename = r["filename"]
 
     if "cp313-cp313-win_amd64.whl" in filename:
         wheel_url = r["url"]
+        wheel_sha256 = r["digests"]["sha256"]
         break
 
 if not wheel_url:
@@ -43,6 +46,13 @@ try:
     urllib.request.urlretrieve(wheel_url, wheel_path)
 except Exception as e:
     print(f"Download failed: {e}")
+    sys.exit(1)
+
+with open(wheel_path, "rb") as f:
+    actual_sha256 = hashlib.sha256(f.read()).hexdigest()
+if actual_sha256 != wheel_sha256:
+    os.remove(wheel_path)
+    print(f"SHA-256 mismatch for {wheel_url}: {actual_sha256} != {wheel_sha256}")
     sys.exit(1)
 
 print("Extracting cffi...")

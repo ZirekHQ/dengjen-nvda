@@ -146,15 +146,18 @@ def create_wave_player(sample_rate):
 
 
 async def _process_speech_sequence(speech_seq):
-    for callable in speech_seq:
+    failed = False
+    for task in speech_seq:
+        if failed and not isinstance(task, (IndexReachedTask, DoneSpeakingTask)):
+            continue
         try:
-            await callable()
+            await task()
         except (AsyncioCancelledError, CancelledError):
-            log.debug(f"Canceled speech task {callable}", exc_info=True)
+            log.debug(f"Canceled speech task {task}", exc_info=True)
             break
         except Exception:
-            log.exception(f"Failed to execute speech task {callable}", exc_info=True)
-            break
+            log.exception(f"Failed to execute speech task {task}", exc_info=True)
+            failed = True
 
 
 @asyncio_coroutine_to_concurrent_future

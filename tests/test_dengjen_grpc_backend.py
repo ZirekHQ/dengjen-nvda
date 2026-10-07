@@ -424,12 +424,13 @@ def test_check_grpc_server_clears_stale_state_when_the_handshake_fails():
         coro = mod.check_grpc_server()
         with pytest.raises(RuntimeError):
             asyncio.run(coro)
+        process_after_cleanup = mod.GRPC_SERVER_PROCESS
     finally:
         mod.get_dengjen_version = orig_get_version
         mod.GRPC_SERVER_PROCESS = orig_process
 
     assert killed.value
-    assert mod.GRPC_SERVER_PROCESS is None
+    assert process_after_cleanup is None
 
 
 class TestWaitForListeningPort:

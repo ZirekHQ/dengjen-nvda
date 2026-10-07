@@ -1,5 +1,6 @@
 import asyncio
 import atexit
+import contextlib
 import ctypes
 import os
 import re
@@ -251,6 +252,17 @@ def _reap_if_needed(grpc_server_exe):
     _reap_stale_grpc_servers(grpc_server_exe)
 
 
+def _release_previous_server():
+    global GRPC_SERVER_PROCESS, SERVER_LOG_HANDLE
+    if SERVER_LOG_HANDLE is not None:
+        SERVER_LOG_HANDLE.close()
+        SERVER_LOG_HANDLE = None
+    if GRPC_SERVER_PROCESS is not None:
+        with contextlib.suppress(subprocess.TimeoutExpired):
+            GRPC_SERVER_PROCESS.wait(timeout=0)
+        GRPC_SERVER_PROCESS = None
+
+
 def start_grpc_server():
     global GRPC_SERVER_PROCESS, DENGJEN_GRPC_SERVER_PORT, SERVER_LOG_HANDLE
     if _saved_server_is_alive():
@@ -258,6 +270,7 @@ def start_grpc_server():
         GRPC_SERVER_PROCESS = globalVars.GRPC_SERVER_PROCESS
         return True
     _clear_saved_server_state()
+    _release_previous_server()
     if _vcruntime_missing():
         log.error(
             "Dengjen GRPC server cannot start: vcruntime140_1.dll not found. "

@@ -12,6 +12,7 @@ Deliberately imports nothing from this package: installTasks.py loads it by
 file path, which only works while it stays a leaf module.
 """
 
+import contextlib
 import os
 import shutil
 
@@ -33,6 +34,7 @@ OLD_ADDON_NAME = "sonata_neural_voices"
 OLD_VOICES_DIR_NAME = "sonata"
 VOICES_DIR_NAME = "dengjen"
 _VOICES_SUBPATH = ("voices", "piper")
+_STAGING_SUFFIX = ".importing"
 
 
 def _config_path(config_path=None):
@@ -47,10 +49,6 @@ def old_voices_dir(config_path=None):
 
 def _voices_subdir(base_dir):
     return os.path.join(base_dir, *_VOICES_SUBPATH)
-
-
-def _holds_any_file(directory):
-    return any(files for _root, _dirs, files in os.walk(directory))
 
 
 def is_old_addon_installed(addons=None):
@@ -90,7 +88,11 @@ def copy_voices_from_old_dir(config_path=None):
     )
     copied = []
     for key in importable_voice_keys(config_path):
-        shutil.copytree(os.path.join(old_voices, key), os.path.join(new_voices, key))
+        final_dir = os.path.join(new_voices, key)
+        staging_dir = f"{final_dir}{_STAGING_SUFFIX}"
+        shutil.rmtree(staging_dir, ignore_errors=True)
+        shutil.copytree(os.path.join(old_voices, key), staging_dir)
+        os.rename(staging_dir, final_dir)
         copied.append(key)
     if copied:
         log.info(f"Copied {len(copied)} voice(s) from {old_voices}")
@@ -104,9 +106,10 @@ def _move_tree(src, dst):
         dst_path = os.path.join(dst, name)
         if os.path.isdir(src_path) and os.path.isdir(dst_path):
             _move_tree(src_path, dst_path)
-        else:
+        elif not os.path.lexists(dst_path):
             os.rename(src_path, dst_path)
-    os.rmdir(src)
+    with contextlib.suppress(OSError):
+        os.rmdir(src)
 
 
 def migrate_voices_directory(config_path=None, addons=None):
@@ -123,13 +126,13 @@ def migrate_voices_directory(config_path=None, addons=None):
         log.debug(f"Skipping voices migration: {OLD_ADDON_NAME} is still installed")
         return False
 
-    if _holds_any_file(new_dir):
-        log.debug(f"Skipping voices migration: {new_dir} already holds voices")
-        return False
     try:
         _move_tree(old_dir, new_dir)
     except OSError:
         log.exception(f"Could not migrate voices from {old_dir} to {new_dir}")
+        return False
+    if os.path.isdir(old_dir):
+        log.debug(f"Voices in {old_dir} already exist in {new_dir}; left in place")
         return False
     log.info(f"Migrated voices from {old_dir} to {new_dir}")
     return True

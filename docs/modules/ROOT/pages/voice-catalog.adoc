@@ -31,11 +31,6 @@ skip the fallback.
 Fields: `model_type`, `name`, `language`, and an optional `description`
 (defaults to an empty string).
 
-Voices installed before this sidecar existed have none.
-`voice_metadata.read_or_migrate()` falls back to parsing the legacy Piper
-directory name (`lang-name-quality`) and writes the sidecar so later reads
-skip that fallback.
-
 == Piper voice catalog (`piper-voices.json`)
 
 The catalog of downloadable Piper voices comes from

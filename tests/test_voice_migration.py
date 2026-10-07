@@ -114,13 +114,14 @@ class TestMigrateVoicesDirectoryRetry:
         migrated = tmp_path / "dengjen" / "voices" / "piper" / "en_US-amy-medium"
         assert (migrated / "en_US-amy-medium.onnx").read_bytes() == b"model"
 
-    def test_a_partly_migrated_tree_is_not_re_migrated_over(self, tmp_path):
+    def test_a_partly_migrated_tree_resumes_with_the_remaining_voices(self, tmp_path):
+        new_voices = tmp_path / "dengjen" / "voices" / "piper"
         _write_voice(tmp_path / "dengjen", key="en_GB-alan-medium")
         _write_voice(tmp_path / "sonata", key="en_US-amy-medium")
-        assert voice_migration.migrate_voices_directory(str(tmp_path)) is False
-        assert not (
-            tmp_path / "dengjen" / "voices" / "piper" / "en_US-amy-medium"
-        ).exists()
+        assert voice_migration.migrate_voices_directory(str(tmp_path)) is True
+        assert (new_voices / "en_US-amy-medium" / "en_US-amy-medium.onnx").exists()
+        assert (new_voices / "en_GB-alan-medium").is_dir()
+        assert not (tmp_path / "sonata").exists()
 
 
 class _FakeAddon:

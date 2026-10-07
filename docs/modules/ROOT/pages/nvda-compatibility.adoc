@@ -3,7 +3,7 @@
 == Declared range
 
 `buildVars.py` declares `addon_minimumNVDAVersion = "2026.1"` and
-`addon_lastTestedNVDAVersion = "2026.1"`. `tests/test_buildvars.py` keeps
+`addon_lastTestedNVDAVersion = "2026.2"`. `tests/test_buildvars.py` keeps
 the two in sync and well-formed:
 
 * Both must be strings with at least a `major.minor` component, each part

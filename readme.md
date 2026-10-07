@@ -24,7 +24,7 @@ Piper is a fast, local neural text to speech system that sounds great and is opt
 
 ## Downloading the add-on
 
-You can find the add-on package under the assets section of the [release page](https://github.com/austek/dengjen-nvda/releases/latest).
+You can find the add-on package under the assets section of the [release page](https://github.com/ZirekHQ/dengjen-nvda/releases/latest).
 
 ## Adding voices
 

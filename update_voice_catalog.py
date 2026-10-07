@@ -16,7 +16,10 @@ PIPER_VOICE_LIST_URL = (
     f"{piper_sources.PIPER_VOICES_REVISION}/voices.json"
 )
 RT_VOICE_LIST_URL = f"{piper_sources.PIPER_RT_REPO_URL}/raw/main/voices.json"
-TARGET_PATH = "addon/synthDrivers/dengjen_neural_voices/data/piper-voices.json"
+TARGET_PATH = (
+    Path(__file__).parent
+    / "addon/synthDrivers/dengjen_neural_voices/data/piper-voices.json"
+)
 
 
 def _fetch_json(url):

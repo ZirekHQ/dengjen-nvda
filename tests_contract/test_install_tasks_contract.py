@@ -19,7 +19,6 @@ import sys
 import time
 import types
 
-import espeakng_loader
 import pytest
 
 if sys.platform != "win32":
@@ -27,6 +26,8 @@ if sys.platform != "win32":
         "dengjen-tts-grpc.exe and the vendored psutil build are Windows-only",
         allow_module_level=True,
     )
+
+import espeakng_loader
 
 sys.modules.setdefault(
     "addonHandler",
