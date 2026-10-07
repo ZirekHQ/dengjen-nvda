@@ -18,7 +18,7 @@
 - **Commits**: Short imperative subject line, blank line, body explaining *why*, and relevant issue references.
 - **PR Titles**: Conventional Commits style (`fix:`, `feat:`, `chore:`, `docs:`).
 - **Trailers**: Never include `Co-Authored-By` trailers or AI attribution.
-- **Scope**: One purpose per PR. For a feature over about 500 lines or one that spans the synth driver, the global plugin and the domain layer, open an issue first and wait for a reply.
+- **Scope**: Keep PRs small, with one purpose each. Before starting a feature over about 500 lines, or one that spans the synth driver, the global plugin and the domain layer, open an issue and wait for a reply. If a change grows past that while you work, stop, split it into separate PRs, and open an issue for the larger plan.
 - **Tests**: A new module needs tests under `tests/` (see `.github/CONTRIBUTING.md`, "Adding tests for a new module"). Run `ruff check .`, `ruff format --check .` and `pytest` before pushing.
 - **CI**: SonarCloud runs on a fork PR only after a maintainer comments `/sonar`; the gate needs 80% coverage on new code and cognitive complexity of at most 15 per function. CodeRabbit comments are advisory.
 - **Process details**: `.github/CONTRIBUTING.md` is the full contributor guide; this file does not repeat it.
