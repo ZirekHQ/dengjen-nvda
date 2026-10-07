@@ -133,7 +133,7 @@ Use the pull request template. Link the issue with `Closes #N` in the PR body â€
 ### What CI runs on your PR
 
 - **Build, unit tests, lint, audit and zizmor** run on every PR. The Windows leg also runs `tests_gui/`, and the e2e job drives a real NVDA.
-- **SonarCloud** doesn't run automatically on fork PRs. A maintainer comments `/sonar` to start the scan. The gate needs at least 80% coverage on new code, and cognitive complexity of at most 15 per function.
+- **SonarCloud** scans fork PRs automatically once the `Sonar fork coverage` run succeeds. A maintainer can comment `/sonar` to re-run the scan. The gate needs at least 80% coverage on new code, and cognitive complexity of at most 15 per function.
 - **CodeRabbit** reviews are advisory. Fix a finding or reply on the thread explaining why it doesn't apply. Maintainers close bot threads that are verifiably fixed, so you don't need to chase them.
 - A thread you opened is closed by its author or a maintainer, never by marking it resolved to clear the count.
 

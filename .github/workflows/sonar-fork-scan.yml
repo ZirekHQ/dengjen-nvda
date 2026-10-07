@@ -1,67 +1,119 @@
 name: Sonar fork scan
 
-# No safe way to auto-scan fork PRs: a job holding SONAR_TOKEN must never
-# execute fork-derived code. So this triggers only on a maintainer's
-# `/sonar` comment and only `tar`-extracts sonar-fork-coverage.yml's artifact.
+# A job holding SONAR_TOKEN must never execute fork-derived code: it only `tar`-extracts
+# sonar-fork-coverage.yml's artifact, and overwrites the scan config from main because
+# the fork controls every extracted file.
 
-on:
+on: # zizmor: ignore[dangerous-triggers] only tar-extracts the secretless coverage artifact; see the header
+  workflow_run:
+    workflows: ["Sonar fork coverage"]
+    types: [completed]
   issue_comment:
     types: [created]
 
 permissions: {}
 
 concurrency:
-  # Every PR comment fires this trigger, not just /sonar ones. Non-/sonar
-  # comments get their own per-comment-id group so an unrelated comment (even
-  # our own bot's result comment) can't cancel a scan mid-flight.
-  group: sonar-fork-scan-${{ github.event.issue.number }}-${{ startsWith(github.event.comment.body, '/sonar') && 'sonar' || github.event.comment.id }}
+  # Non-/sonar comments get a per-comment-id group so an unrelated comment can't cancel a scan.
+  # workflow_run.pull_requests is empty for forks, so those runs group by SHA.
+  group: >-
+    ${{ github.event_name == 'workflow_run'
+    && format('sonar-fork-scan-run-{0}', github.event.workflow_run.head_sha)
+    || format('sonar-fork-scan-{0}-{1}', github.event.issue.number, startsWith(github.event.comment.body, '/sonar') && 'sonar' || github.event.comment.id) }}
   cancel-in-progress: true
 
 jobs:
   acknowledge:
-    # This condition is the only thing standing between a fork PR and
-    # SONAR_TOKEN -- the scan job depends on it via `needs` rather than
-    # repeating the check, so the two can't drift out of sync.
+    # Sole gate on SONAR_TOKEN; scan depends on it via `needs` so the two can't drift.
     if: >-
-      github.event.issue.pull_request != null
-      && startsWith(github.event.comment.body, '/sonar')
-      && contains(fromJSON('["OWNER", "MEMBER", "COLLABORATOR"]'), github.event.comment.author_association)
+      (
+        github.event_name == 'issue_comment'
+        && github.event.issue.pull_request != null
+        && startsWith(github.event.comment.body, '/sonar')
+        && contains(fromJSON('["OWNER", "MEMBER", "COLLABORATOR"]'), github.event.comment.author_association)
+      ) || (
+        github.event_name == 'workflow_run'
+        && github.event.workflow_run.event == 'pull_request'
+        && github.event.workflow_run.conclusion == 'success'
+        && github.event.workflow_run.head_repository.full_name != github.repository
+      )
     name: Acknowledge
     runs-on: ubuntu-latest
     permissions: {}
     steps:
       - name: Log the trusted trigger
         env:
+          TRIGGER: ${{ github.event_name }}
           COMMENT_USER: ${{ github.event.comment.user.login }}
           COMMENT_ASSOCIATION: ${{ github.event.comment.author_association }}
-        run: echo "::notice::/sonar triggered by $COMMENT_USER ($COMMENT_ASSOCIATION)"
+        run: echo "::notice::scan triggered by $TRIGGER ($COMMENT_USER $COMMENT_ASSOCIATION)"
 
   scan:
     name: Sonar fork scan
     needs: acknowledge
     runs-on: ubuntu-latest
     permissions:
-      pull-requests: read # needed by `gh pr view` to resolve the PR's current head
+      contents: read # checks out main's sonar-project.properties
+      pull-requests: read # resolve the PR and its current head
       actions: read # needed to find and download the matching coverage run's artifact
       statuses: write # needed to post the real result to the PR's head commit ourselves (see below)
     env:
       SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
       GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-      PR_NUMBER: ${{ github.event.issue.number }}
     steps:
       - name: Resolve the PR's current head
         id: pr
+        env:
+          EVENT_NAME: ${{ github.event_name }}
+          RUN_HEAD_SHA: ${{ github.event.workflow_run.head_sha }}
+          COMMENT_PR: ${{ github.event.issue.number }}
         run: |
+          if [ "$EVENT_NAME" = "workflow_run" ]; then
+            PR_NUMBER=$(gh api "repos/$GITHUB_REPOSITORY/commits/$RUN_HEAD_SHA/pulls" \
+              --jq '[.[] | select(.state == "open" and .base.ref == "main")][0].number')
+            if [ -z "$PR_NUMBER" ] || [ "$PR_NUMBER" = "null" ]; then
+              echo "::notice::No open PR targets main at $RUN_HEAD_SHA; nothing to scan."
+              exit 0
+            fi
+          else
+            PR_NUMBER=$COMMENT_PR
+          fi
           gh pr view "$PR_NUMBER" --repo "$GITHUB_REPOSITORY" \
             --json headRefOid,headRefName \
             --jq '"head_sha=\(.headRefOid)\nhead_ref=\(.headRefName)"' \
             >> "$GITHUB_OUTPUT"
+          echo "number=$PR_NUMBER" >> "$GITHUB_OUTPUT"
+
+      # The branch name is fork-controlled and lands in the scanner's arguments.
+      - name: Sanitize the branch name
+        id: branch
+        if: steps.pr.outputs.number != ''
+        env:
+          HEAD_REF: ${{ steps.pr.outputs.head_ref }}
+          PR_NUMBER: ${{ steps.pr.outputs.number }}
+        run: |
+          if [[ "$HEAD_REF" =~ ^[A-Za-z0-9._/-]+$ ]]; then
+            echo "name=$HEAD_REF" >> "$GITHUB_OUTPUT"
+          else
+            echo "name=pr-$PR_NUMBER" >> "$GITHUB_OUTPUT"
+          fi
 
       - name: Find the matching coverage run
         id: run
+        if: steps.pr.outputs.number != ''
         env:
           HEAD_SHA: ${{ steps.pr.outputs.head_sha }}
+          RUN_ID: ${{ github.event.workflow_run.id }}
+          RUN_HEAD_SHA: ${{ github.event.workflow_run.head_sha }}
         run: |
+          if [ -n "$RUN_ID" ]; then
+            if [ "$RUN_HEAD_SHA" != "$HEAD_SHA" ]; then
+              echo "::notice::PR head moved past $RUN_HEAD_SHA; the newer push gets its own scan."
+              exit 0
+            fi
+            echo "id=$RUN_ID" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
           RUN_ID=$(gh api "repos/$GITHUB_REPOSITORY/actions/workflows/sonar-fork-coverage.yml/runs?event=pull_request&status=success&per_page=20" \
             --jq "[.workflow_runs[] | select(.head_sha == \"$HEAD_SHA\")][0].id")
           if [ -z "$RUN_ID" ] || [ "$RUN_ID" = "null" ]; then
@@ -71,6 +123,7 @@ jobs:
           echo "id=$RUN_ID" >> "$GITHUB_OUTPUT"
 
       - name: Download coverage workspace
+        if: steps.run.outputs.id != ''
         uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8.0.1
         with:
           name: sonar-fork-workspace
@@ -79,32 +132,52 @@ jobs:
           github-token: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Extract workspace (plain tar, not a git operation)
+        if: steps.run.outputs.id != ''
         env:
           ARCHIVE_DIR: ${{ runner.temp }}/sonar-fork-workspace
         run: |
           mkdir -p workspace
           tar -xzf "$ARCHIVE_DIR/workspace.tar.gz" -C workspace
 
-      # SonarCloud's own GitHub status-posting attaches to whatever commit the
-      # triggering event points to -- main's tip here, since this runs off
-      # issue_comment, not the PR head -- so this posts to the real head SHA itself.
+      # Default ref is main, never the fork.
+      - name: Check out main's scan config
+        if: steps.run.outputs.id != ''
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          path: trusted
+          sparse-checkout: sonar-project.properties
+          sparse-checkout-cone-mode: false
+          persist-credentials: false
+
+      - name: Replace the fork's scan config with main's
+        if: steps.run.outputs.id != ''
+        run: |
+          # rm first: the fork's copy may be a symlink.
+          rm -f workspace/sonar-project.properties
+          cp trusted/sonar-project.properties workspace/sonar-project.properties
+
+      # SonarCloud attaches its status to the triggering event's commit (main's tip for both
+      # triggers), so the result is posted to the PR head SHA ourselves.
       - name: SonarQube scan
         id: sonar
-        if: env.SONAR_TOKEN != ''
+        if: steps.run.outputs.id != '' && env.SONAR_TOKEN != ''
         uses: SonarSource/sonarqube-scan-action@d209202bc7d53ff1cc128f7f907dac145c9d6ae9 # v8.3
         with:
           args: >
             -Dsonar.projectBaseDir=workspace
             -Dsonar.host.url=https://sonarcloud.io
-            -Dsonar.pullrequest.key=${{ env.PR_NUMBER }}
-            -Dsonar.pullrequest.branch=${{ steps.pr.outputs.head_ref }}
+            -Dsonar.projectKey=ZirekHQ_dengjen-nvda
+            -Dsonar.organization=zirekhq
+            -Dsonar.pullrequest.key=${{ steps.pr.outputs.number }}
+            -Dsonar.pullrequest.branch=${{ steps.branch.outputs.name }}
             -Dsonar.pullrequest.base=main
             -Dsonar.qualitygate.wait=true
             -Dsonar.qualitygate.timeout=300
 
       - name: Post the real result to the PR's head commit
-        if: always() && env.SONAR_TOKEN != ''
+        if: always() && steps.run.outputs.id != '' && env.SONAR_TOKEN != ''
         env:
+          PR_NUMBER: ${{ steps.pr.outputs.number }}
           SCAN_OUTCOME: ${{ steps.sonar.outcome }}
           HEAD_SHA: ${{ steps.pr.outputs.head_sha }}
           RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
