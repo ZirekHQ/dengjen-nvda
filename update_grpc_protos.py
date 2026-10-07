@@ -5,7 +5,7 @@ stubs reject a runtime older than the gencode, so all three move together.
 Run it from the repository root (paths are relative to the repo root).
 
 Usage:
-    uv run --group codegen python update_grpc_protos.py    # proto version comes from dengjen-tts.lock
+    uv run --isolated --group codegen python update_grpc_protos.py    # proto version comes from dengjen-tts.lock
 """
 
 import importlib.util
