@@ -1,16 +1,13 @@
 """Regenerates the vendored gRPC stubs from the proto in the pinned dengjen-tts release.
 
-grpcio-tools 1.62.3 (protobuf 4.25 gencode; vendored runtime stays on the same 4.25 line) ships wheels
-only up to Python 3.12, so run this from a Python 3.12 (or older) venv.
+grpcio-tools is pinned in uv.lock beside the vendored protobuf and grpcio runtime: generated
+stubs reject a runtime older than the gencode, so all three move together.
 Run it from the repository root (paths are relative to the repo root).
 
 Usage:
-    uv venv --python 3.12 /tmp/proto-venv
-    uv pip install --python /tmp/proto-venv --only-binary=:all: grpcio-tools==1.62.3
-    /tmp/proto-venv/bin/python update_grpc_protos.py    # proto version comes from dengjen-tts.lock
+    uv run --group codegen python update_grpc_protos.py    # proto version comes from dengjen-tts.lock
 """
 
-import importlib.metadata
 import importlib.util
 import re
 import subprocess
@@ -24,8 +21,7 @@ PROTO_DIR = Path(
 )
 PROTO_NAME = "dengjen_grpc.proto"
 PROTO_PATH_IN_REPO = "crates/frontends/grpc/proto/dengjen_grpc.proto"
-GENCODE_MARKER = "Protobuf Python Version: 4.25"
-GRPCIO_TOOLS_VERSION = "1.62.3"
+GENCODE_MARKER = "Protobuf Python Version: 7."
 ABSOLUTE_IMPORT = re.compile(r"^import (\w+_pb2) as (\w+)$", re.MULTILINE)
 
 
@@ -54,12 +50,10 @@ def _run_protoc(proto_file):
 
 
 def _require_grpc_tools():
-    hint = f"run from a Python 3.12 or older venv with grpcio-tools=={GRPCIO_TOOLS_VERSION} installed."
     if importlib.util.find_spec("grpc_tools") is None:
-        raise SystemExit(f"grpc_tools is not installed; {hint}")
-    installed = importlib.metadata.version("grpcio-tools")
-    if sys.version_info >= (3, 13) or installed != GRPCIO_TOOLS_VERSION:
-        raise SystemExit(f"Unsupported toolchain (grpcio-tools {installed}); {hint}")
+        raise SystemExit(
+            "grpc_tools is not installed; run `uv run --group codegen python update_grpc_protos.py`."
+        )
 
 
 def main():
@@ -71,7 +65,7 @@ def main():
     if GENCODE_MARKER not in (PROTO_DIR / "dengjen_grpc_pb2.py").read_text():
         raise SystemExit(
             f"Generated code is not '{GENCODE_MARKER}'; "
-            "install grpcio-tools==1.62.3 in a Python 3.12 or older venv."
+            "the codegen group's grpcio-tools no longer matches the vendored protobuf line."
         )
     grpc_file = PROTO_DIR / "dengjen_grpc_pb2_grpc.py"
     grpc_file.write_text(relativize_imports(grpc_file.read_text()))

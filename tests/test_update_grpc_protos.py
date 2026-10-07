@@ -1,4 +1,3 @@
-import importlib.metadata
 import importlib.util
 import os
 import sys
@@ -34,24 +33,31 @@ def test_main_exits_with_an_install_hint_when_grpc_tools_is_missing(monkeypatch)
         protos.main()
 
 
-def _toolchain(monkeypatch, *, python, grpcio_tools):
+def _stub_generation(monkeypatch, tmp_path, generated):
+    monkeypatch.setattr(protos, "PROTO_DIR", tmp_path)
     monkeypatch.setattr(protos.importlib.util, "find_spec", lambda name: object())
-    monkeypatch.setattr(protos.importlib.metadata, "version", lambda name: grpcio_tools)
-    monkeypatch.setattr(protos.sys, "version_info", python)
+    monkeypatch.setattr(protos, "read_lock", lambda: ("1.2.3", "digest"))
+    monkeypatch.setattr(protos, "_get", lambda url: b"syntax = 'proto3';")
+    monkeypatch.setattr(
+        protos,
+        "_run_protoc",
+        lambda proto_file: (tmp_path / "dengjen_grpc_pb2.py").write_text(generated),
+    )
 
 
-def test_accepts_the_pinned_toolchain(monkeypatch):
-    _toolchain(monkeypatch, python=(3, 12, 0), grpcio_tools="1.62.3")
-    protos._require_grpc_tools()
+def test_main_rejects_gencode_from_another_protobuf_line(monkeypatch, tmp_path):
+    _stub_generation(monkeypatch, tmp_path, "# Protobuf Python Version: 4.25.1\n")
+    with pytest.raises(SystemExit, match="Protobuf Python Version: 7."):
+        protos.main()
 
 
-def test_rejects_another_grpcio_tools_version(monkeypatch):
-    _toolchain(monkeypatch, python=(3, 12, 0), grpcio_tools="1.63.0")
-    with pytest.raises(SystemExit, match="1.63.0"):
-        protos._require_grpc_tools()
-
-
-def test_rejects_python_3_13(monkeypatch):
-    _toolchain(monkeypatch, python=(3, 13, 0), grpcio_tools="1.62.3")
-    with pytest.raises(SystemExit, match="3.12 or older"):
-        protos._require_grpc_tools()
+def test_main_relativizes_the_generated_grpc_imports(monkeypatch, tmp_path):
+    _stub_generation(monkeypatch, tmp_path, "# Protobuf Python Version: 7.35.1\n")
+    (tmp_path / "dengjen_grpc_pb2_grpc.py").write_text(
+        "import dengjen_grpc_pb2 as dengjen__grpc__pb2\n"
+    )
+    protos.main()
+    assert (
+        "from . import dengjen_grpc_pb2"
+        in (tmp_path / "dengjen_grpc_pb2_grpc.py").read_text()
+    )

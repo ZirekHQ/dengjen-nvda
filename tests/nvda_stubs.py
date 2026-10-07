@@ -119,6 +119,11 @@ def install(*, stub_wx: bool = True) -> None:
         "grpc.aio",
     ]:
         sys.modules.setdefault(_grpc_name, MagicMock())
+    if isinstance(sys.modules["grpc"], MagicMock):
+        # The generated pb2_grpc stubs read grpc.__version__ and compare it through
+        # grpc._utilities at import time.
+        sys.modules["grpc"].__version__ = "stub"
+        _stub_module("grpc._utilities", first_version_is_lower=lambda *_: False)
 
     _stub_module("SCons")
     _stub_module("SCons.Script", Environment=MagicMock(), Builder=MagicMock())

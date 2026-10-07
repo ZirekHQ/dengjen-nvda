@@ -2,7 +2,8 @@ from google.protobuf.internal import containers as _containers
 from google.protobuf.internal import enum_type_wrapper as _enum_type_wrapper
 from google.protobuf import descriptor as _descriptor
 from google.protobuf import message as _message
-from typing import ClassVar as _ClassVar, Mapping as _Mapping, Optional as _Optional, Union as _Union
+from collections.abc import Mapping as _Mapping
+from typing import ClassVar as _ClassVar, Optional as _Optional, Union as _Union
 
 DESCRIPTOR: _descriptor.FileDescriptor
 
@@ -69,7 +70,7 @@ class VoiceDescriptor(_message.Message):
     language: str
     quality: VoiceQuality
     supports_streaming_output: bool
-    def __init__(self, voice_key: _Optional[str] = ..., synthesis_options: _Optional[_Union[SynthesisSettings, _Mapping]] = ..., speakers: _Optional[_Mapping[int, str]] = ..., audio: _Optional[_Union[AudioFormat, _Mapping]] = ..., language: _Optional[str] = ..., quality: _Optional[_Union[VoiceQuality, str]] = ..., supports_streaming_output: bool = ...) -> None: ...
+    def __init__(self, voice_key: _Optional[str] = ..., synthesis_options: _Optional[_Union[SynthesisSettings, _Mapping]] = ..., speakers: _Optional[_Mapping[int, str]] = ..., audio: _Optional[_Union[AudioFormat, _Mapping]] = ..., language: _Optional[str] = ..., quality: _Optional[_Union[VoiceQuality, str]] = ..., supports_streaming_output: _Optional[bool] = ...) -> None: ...
 
 class VoiceConfigLocation(_message.Message):
     __slots__ = ("path",)
