@@ -39,3 +39,24 @@ extend-ignore = [
 
 "tests/**/*.py" = ["TRY002", "S102", "RUF012"]
 "tests_*/**/*.py" = ["TRY002", "S102", "RUF012"]
+
+[project]
+name = "dengjen-nvda"
+version = "0.0.0"
+requires-python = ">=3.13,<3.14"
+
+[dependency-groups]
+vendor = [
+    "cffi==2.0.0",
+    "certifi",
+    "grpcio==1.80.0",
+    "miniaudio==1.71",
+    "mureq==0.2.0",
+    "protobuf==4.25.8",
+    "psutil==5.9.6",
+    "pycparser==2.22",
+]
+
+[tool.uv]
+package = false
+environments = ["sys_platform == 'win32'"]

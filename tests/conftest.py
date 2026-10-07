@@ -9,6 +9,7 @@ load_module_from_path from here, so those stay re-exported.
 
 import pytest
 
+import vendor_libs
 from tests.nvda_stubs import (  # noqa: F401
     GLOBAL_PLUGIN_PKG_DIR,
     REPO_ROOT,
@@ -17,6 +18,7 @@ from tests.nvda_stubs import (  # noqa: F401
     load_module_from_path,
 )
 
+vendor_libs.require_fetched()
 install(stub_wx=True)
 
 

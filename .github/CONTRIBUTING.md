@@ -18,6 +18,8 @@ Use the **Feature request** template. Describe the *problem* you're trying to so
 
 The add-on is built with [SCons](https://scons.org/) targeting Python 3.13 (the version embedded in NVDA 2026.1+). On Windows or any platform with Python 3.13:
 
+Install [`uv`](https://docs.astral.sh/uv/getting-started/installation/) first; `vendor_libs.py fetch` calls it.
+
 ```bash
 python -m pip install --upgrade pip wheel
 pip install scons markdown -r requirements-test.txt
@@ -104,17 +106,14 @@ Each of these cost a CI round or a review finding to nail down — read before w
 
 Coverage note: `tests/`, `tests_contract/` and `tests_gui/` feed one `coverage.xml` — `tests_e2e/` contributes none, since it drives a real installed add-on rather than an in-process coverage-instrumented one. `sonar.yml` runs a `windows_coverage` job that measures those three trees — each into its own `COVERAGE_FILE`, because a bare `pytest --cov` erases the data files it finds — and the scan job `coverage combine`s them with its own ubuntu run. `relative_files` in `.coveragerc` is what lets that work across OSes: combine remaps the Windows data's `addon\...` paths onto `addon/...`. Only `grpc_client/**` stays in `sonar.coverage.exclusions`, because no tree executes it (`tests_contract/` talks to the generated stubs directly).
 
-## Refreshing the bundled binaries
+## Bundled libraries
 
-The add-on bundles three native dependencies built for Python 3.13 / Windows x64:
+The add-on bundles native dependencies built for Python 3.13 / Windows x64. They are not committed: the `vendor` dependency group in `pyproject.toml` and `uv.lock` pin them, and `lib/` is generated.
 
 ```bash
-python update_grpc.py        # gRPC + protobuf
-python update_miniaudio.py   # audio decoding
-python update_cffi.py        # C FFI runtime
+python vendor_libs.py fetch                  # install the locked libraries into lib/; run before scons or pytest
+uv lock --upgrade-package <name>             # bump one (Renovate does this for you)
 ```
-
-Each script fetches the matching `cp313-win_amd64` wheel from PyPI and swaps the contents under `addon/synthDrivers/dengjen_neural_voices/lib/`.
 
 The engine binary `bin/dengjen-tts-grpc.exe` is not committed. It comes from a [dengjen-tts](https://github.com/ZirekHQ/dengjen-tts) release pinned (version and zip sha256) in `dengjen-tts.lock`:
 

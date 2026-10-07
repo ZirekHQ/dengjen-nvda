@@ -27,6 +27,9 @@ jobs:
       - name: Fetch dengjen-tts engine
         uses: ./.github/actions/fetch-dengjen-tts
 
+      - name: Fetch vendored libs
+        uses: ./.github/actions/fetch-vendored-libs
+
       - name: Probe against unreleased NVDA APIs
         # Ephemeral, this checkout only: bypasses the compat gate so the e2e suite
         # actually exercises alpha/beta, without claiming support in buildVars.py.

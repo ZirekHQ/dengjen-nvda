@@ -13,7 +13,7 @@ from typing import Final
 # SCons injects these names into every SConscript at runtime; PyRight doesn't
 # know that and flags them as undefined, so they're imported here explicitly.
 # Add any other SCons builtins used below to this import.
-from SCons.Script import EnsurePythonVersion, Variables, BoolVariable, Environment, Copy
+from SCons.Script import COMMAND_LINE_TARGETS, EnsurePythonVersion, Variables, BoolVariable, Environment, Copy
 
 from SCons.Node import FS
 
@@ -24,6 +24,10 @@ EnsurePythonVersion(3, 10)
 sys.dont_write_bytecode = True
 
 import buildVars  # NOQA: E402
+import vendor_libs  # NOQA: E402
+
+if vendor_libs.builds_addon(COMMAND_LINE_TARGETS):
+	vendor_libs.require_fetched()
 
 
 def validateVersionNumber(key: str, val: str, _):

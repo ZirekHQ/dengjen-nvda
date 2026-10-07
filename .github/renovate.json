@@ -6,18 +6,6 @@
   "customManagers": [
     {
       "customType": "regex",
-      "description": "Vendored protobuf pin in lib/VENDORED.txt. Renovate only flags the bump; run update_protobuf.py on the PR branch to swap lib/google.",
-      "matchStrings": [
-        "(?m)^protobuf==(?<currentValue>\\S+)"
-      ],
-      "depNameTemplate": "protobuf",
-      "datasourceTemplate": "pypi",
-      "managerFilePatterns": [
-        "/lib/VENDORED\\.txt$/"
-      ]
-    },
-    {
-      "customType": "regex",
       "description": "addon_lastTestedNVDAVersion tracks the latest stable NVDA release.",
       "matchStrings": [
         "addon_lastTestedNVDAVersion=\"(?<currentValue>[^\"]+)\""
@@ -33,11 +21,11 @@
   ],
   "packageRules": [
     {
-      "description": "Vendored protobuf is refreshed by update_protobuf.py and must stay on 4.25.x, the line update_protobuf.py accepts and grpcio-tools 1.62.3 generates gencode for.",
+      "description": "protobuf stays on 4.25.x until the stubs are regenerated with a current grpcio-tools. Pinned exactly in pyproject.toml; this rule keeps routine bumps out of the way.",
       "matchDepNames": [
         "protobuf"
       ],
-      "allowedVersions": ">=4.25,<4.26"
+      "enabled": false
     },
     {
       "description": "Python version is the NVDA runtime ABI (vendored cp313 wheels); bump only when NVDA changes Python.",

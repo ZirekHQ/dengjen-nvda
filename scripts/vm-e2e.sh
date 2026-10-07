@@ -24,10 +24,12 @@ cd "$root"
 # scons treats the bundle as up to date after edits inside addon/, so a stale one would be tested.
 rm -f dengjen_neural_voices-*.nvda-addon
 python3 update_dengjen_tts.py fetch >/dev/null
+python3 vendor_libs.py fetch >/dev/null
 uv run --no-project --with-requirements requirements-build.txt scons >/dev/null
 bundle="$(ls -t dengjen_neural_voices-*.nvda-addon | head -n1)"
 
 { git ls-files -co --exclude-standard | while IFS= read -r f; do [ -e "$f" ] && echo "$f"; done
+  find addon/synthDrivers/dengjen_neural_voices/lib addon/synthDrivers/dengjen_neural_voices/bin -type f
   echo "$bundle"; } | zip -q "$work/src.zip" -@
 
 guest_dir="C:\\Users\\${user}"
