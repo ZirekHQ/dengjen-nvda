@@ -53,6 +53,7 @@ class TestHostingSpec:
             "rt_list_url",
             "rt_download_prefix",
             "kokoro_download_prefix",
+            "japanese_dictionary_url",
         ],
     )
     def test_config_spec_declares_each_hosting_override_as_empty_by_default(

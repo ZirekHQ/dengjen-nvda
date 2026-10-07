@@ -24,6 +24,7 @@ from . import (
     aio,
     download_infra,
     helpers,
+    japanese_dictionary_download,
     model_catalog,
     voice_download,
     voice_migration,
@@ -517,6 +518,19 @@ class KokoroVoicesPanel(SizedPanel):
         self.install_btn = wx.Button(self, -1, _("&Install Kokoro voice"))
         self.status_label = wx.StaticText(self, -1, "")
         self.Bind(wx.EVT_BUTTON, self.on_install, self.install_btn)
+        wx.StaticText(
+            self,
+            -1,
+            _(
+                "The Japanese presets (jf_ and jm_) need a dictionary. "
+                "It is a {size_mb} MB download and takes effect after restarting NVDA."
+            ).format(
+                size_mb=round(japanese_dictionary_download.EXPECTED_SIZE / 1_000_000)
+            ),
+        )
+        self.dictionary_btn = wx.Button(self, -1, _("Install &Japanese dictionary"))
+        self.dictionary_status_label = wx.StaticText(self, -1, "")
+        self.Bind(wx.EVT_BUTTON, self.on_install_dictionary, self.dictionary_btn)
 
     def populate_list(self, force_online=False):
         installed = self._catalog.is_installed()
@@ -524,6 +538,15 @@ class KokoroVoicesPanel(SizedPanel):
         self.status_label.SetLabel(
             _("Already installed") if installed else _("Not installed")
         )
+        dictionary_installed = self._dictionary_catalog().is_installed()
+        self.dictionary_btn.Enable(not dictionary_installed)
+        self.dictionary_status_label.SetLabel(
+            _("Already installed") if dictionary_installed else _("Not installed")
+        )
+
+    @staticmethod
+    def _dictionary_catalog():
+        return japanese_dictionary_download.JapaneseDictionaryCatalog()
 
     def invalidate_cache(self):
         pass  # no fetched-list cache to clear -- is_installed() always re-checks disk
@@ -534,6 +557,11 @@ class KokoroVoicesPanel(SizedPanel):
             wx.CallAfter(self.populate_list)
 
         self._catalog.install(success_callback)
+
+    def on_install_dictionary(self, event):
+        self.dictionary_btn.Disable()
+        refresh = lambda: wx.CallAfter(self.populate_list)
+        self._dictionary_catalog().install(refresh, refresh)
 
 
 class DengjenVoiceManagerDialog(SimpleDialog):

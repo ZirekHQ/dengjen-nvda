@@ -468,3 +468,26 @@ msgstr ""
 #: addon\globalPlugins\dengjen_tts_global_plugin\__init__.py:118
 msgid "&Don't ask again"
 msgstr ""
+
+#: addon\globalPlugins\dengjen_tts_global_plugin\japanese_dictionary_download.py
+msgid "Downloading Japanese dictionary"
+msgstr ""
+
+#: addon\globalPlugins\dengjen_tts_global_plugin\japanese_dictionary_download.py
+msgid "Successfully downloaded the Japanese dictionary.\n"
+"To use Japanese Kokoro voices, you need to restart NVDA.\n"
+"Do you want to restart NVDA now?"
+msgstr ""
+
+#: addon\globalPlugins\dengjen_tts_global_plugin\japanese_dictionary_download.py
+msgid "Cannot download the Japanese dictionary.\n"
+"Please check your connection and try again."
+msgstr ""
+
+#: addon\globalPlugins\dengjen_tts_global_plugin\voice_manager.py
+msgid "The Japanese presets (jf_ and jm_) need a dictionary. It is a {size_mb} MB download and takes effect after restarting NVDA."
+msgstr ""
+
+#: addon\globalPlugins\dengjen_tts_global_plugin\voice_manager.py
+msgid "Install &Japanese dictionary"
+msgstr ""

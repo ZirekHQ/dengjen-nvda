@@ -456,6 +456,62 @@ class TestOnlinePanelControls:
         assert downloader_cls.return_value.download.called
 
 
+class TestKokoroJapaneseDictionary:
+    @pytest.fixture
+    def panel(self, dialog):
+        return dialog.notebookCtrl.GetPage(2)
+
+    def test_the_dictionary_button_starts_the_dictionary_download(
+        self, panel, voice_manager, monkeypatch
+    ):
+        downloader = MagicMock()
+        monkeypatch.setattr(
+            voice_manager.japanese_dictionary_download,
+            "JapaneseDictionaryDownloader",
+            downloader,
+        )
+        monkeypatch.setattr(
+            voice_manager.japanese_dictionary_download,
+            "is_installed",
+            lambda _dictionary_dir: False,
+        )
+
+        panel.populate_list()
+        _fire_button(panel, panel.dictionary_btn)
+
+        downloader.assert_called_once()
+        downloader.return_value.download.assert_called_once()
+        assert panel.dictionary_btn.IsThisEnabled() is False
+
+    def test_an_installed_dictionary_disables_its_button(
+        self, panel, voice_manager, monkeypatch
+    ):
+        monkeypatch.setattr(
+            voice_manager.japanese_dictionary_download,
+            "is_installed",
+            lambda _dictionary_dir: True,
+        )
+
+        panel.populate_list()
+
+        assert panel.dictionary_btn.IsThisEnabled() is False
+        assert panel.dictionary_status_label.GetLabel() == "Already installed"
+
+    def test_a_missing_dictionary_enables_its_button(
+        self, panel, voice_manager, monkeypatch
+    ):
+        monkeypatch.setattr(
+            voice_manager.japanese_dictionary_download,
+            "is_installed",
+            lambda _dictionary_dir: False,
+        )
+
+        panel.populate_list()
+
+        assert panel.dictionary_btn.IsThisEnabled() is True
+        assert panel.dictionary_status_label.GetLabel() == "Not installed"
+
+
 class TestKeyboardAccess:
     """Nothing else in this tree touches the keyboard: ProcessEvent dispatches
     straight at the binding, so it fires a handler whether or not a user could

@@ -96,6 +96,11 @@ Piper's per-voice downloads); once installed, it appears in NVDA's Voice
 list like any other voice, and its 54 presets are selectable via NVDA's
 "Speaker" setting.
 
+The Japanese presets (`jf_` and `jm_`) also need a dictionary. Install it from
+the same tab with "Install Japanese dictionary" (a ~29MB download), then restart
+NVDA. Without it, the other presets keep working and the Japanese ones do not
+speak.
+
 # Using a mirror for voice downloads
 
 By default the voice manager downloads voice catalogues and files from Hugging Face. If it is slow, blocked or unavailable where you live, you can point it at a mirror by editing NVDA's `nvda.ini` (close NVDA first). Add a `hosting` section under the add-on's section and set any of the keys below; an empty or missing key keeps the Hugging Face default.
@@ -115,6 +120,7 @@ By default the voice manager downloads voice catalogues and files from Hugging F
 | `rt_list_url` | Fast variant catalogue URL | `voices.json` |
 | `rt_download_prefix` | Base URL of fast variant archives | `<voice key>.tar.gz` |
 | `kokoro_download_prefix` | Base URL of Kokoro files | `onnx/model.onnx`, `tokenizer.json`, `voices/<preset>.bin` |
+| `japanese_dictionary_url` | Full URL of the Japanese dictionary archive | `naist-jdic-jpreprocess.tar.gz` from the jpreprocess v0.15.0 release, byte for byte (its size and SHA-256 are checked) |
 
 Only `https://` URLs are accepted. Any other value is ignored, with a warning in NVDA's log. After saving `nvda.ini`, start NVDA again and click `Refresh voices list` so the catalogue is fetched from the mirror.
 

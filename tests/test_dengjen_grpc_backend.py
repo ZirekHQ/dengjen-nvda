@@ -840,6 +840,59 @@ class TestStartGrpcServerReusesOrClearsSavedState:
         assert not hasattr(globalVars, "GRPC_SERVER_PROCESS")
 
 
+class TestStartGrpcServerPassesTheJapaneseDictionary:
+    """The engine reads DENGJEN_JA_DICT_DIR only at startup, so the spawn
+    environment is where an installed dictionary has to be announced."""
+
+    def _spawned_env(self, monkeypatch, tmp_path, dictionary_dir):
+        import subprocess
+
+        import globalVars
+
+        captured = {}
+
+        def fake_popen(**kwargs):
+            captured.update(kwargs["env"])
+            raise OSError("stop after capturing the environment")
+
+        monkeypatch.setattr(dengjen_grpc, "_saved_server_is_alive", lambda: False)
+        monkeypatch.setattr(dengjen_grpc, "_clear_saved_server_state", lambda: None)
+        monkeypatch.setattr(dengjen_grpc, "_release_previous_server", lambda: None)
+        monkeypatch.setattr(dengjen_grpc, "_vcruntime_missing", lambda: False)
+        monkeypatch.setattr(dengjen_grpc, "DENGJEN_VOICES_BASE_DIR", str(tmp_path))
+        monkeypatch.setattr(
+            dengjen_grpc, "DENGJEN_JAPANESE_DICTIONARY_DIR", str(dictionary_dir)
+        )
+        for flag in (
+            "DETACHED_PROCESS",
+            "CREATE_NEW_PROCESS_GROUP",
+            "ABOVE_NORMAL_PRIORITY_CLASS",
+        ):
+            monkeypatch.setattr(subprocess, flag, 0, raising=False)
+        monkeypatch.setattr(subprocess, "Popen", fake_popen)
+        monkeypatch.setattr(globalVars, "appDir", str(tmp_path), raising=False)
+        monkeypatch.delenv("DENGJEN_JA_DICT_DIR", raising=False)
+
+        dengjen_grpc.start_grpc_server()
+        return captured
+
+    def test_an_installed_dictionary_is_announced_to_the_engine(
+        self, monkeypatch, tmp_path
+    ):
+        dictionary = tmp_path / "naist-jdic"
+        dictionary.mkdir()
+        (dictionary / "metadata.json").write_text("{}", encoding="utf-8")
+
+        env = self._spawned_env(monkeypatch, tmp_path, dictionary)
+
+        assert env["DENGJEN_JA_DICT_DIR"] == str(dictionary)
+
+    def test_no_dictionary_leaves_the_variable_unset(self, monkeypatch, tmp_path):
+        env = self._spawned_env(monkeypatch, tmp_path, tmp_path / "naist-jdic")
+
+        assert "DENGJEN_JA_DICT_DIR" not in env
+
+
 class TestInitializeReapsBeforeStarting:
     """initialize() runs _reap_if_needed() off the aio loop thread via
     aio.run_in_executor(), ahead of start_grpc_server() -- the reap's

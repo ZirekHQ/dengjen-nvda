@@ -28,6 +28,7 @@ piper_download_prefix = string(default="")
 rt_list_url = string(default="")
 rt_download_prefix = string(default="")
 kokoro_download_prefix = string(default="")
+japanese_dictionary_url = string(default="")
 """
 
 

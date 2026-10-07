@@ -62,8 +62,9 @@ def _show_vcruntime_warning():
         )
 
 
-from ...const import DENGJEN_VOICES_BASE_DIR
+from ...const import DENGJEN_JAPANESE_DICTIONARY_DIR, DENGJEN_VOICES_BASE_DIR
 from ...helpers import BIN_DIRECTORY, import_bundled_library
+from ...japanese_dictionary import engine_environment as japanese_dictionary_environment
 from ...ports.tts_backend import (
     BackendUnavailableError,
     LoadedVoice,
@@ -289,6 +290,7 @@ def start_grpc_server():
             "DENGJEN_GRPC": "info",
         }
     )
+    env.update(japanese_dictionary_environment(DENGJEN_JAPANESE_DICTIONARY_DIR, env))
     creationflags = (
         subprocess.DETACHED_PROCESS
         | subprocess.CREATE_NEW_PROCESS_GROUP
