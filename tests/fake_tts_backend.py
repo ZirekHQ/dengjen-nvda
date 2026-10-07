@@ -1,7 +1,7 @@
 """Shared TTSBackend test double.
 
 A plain class, not a MagicMock() spec -- consistent with this project's
-convention of stubbing interfaces as plain classes (see CLAUDE.md's testing
+convention of stubbing interfaces as plain classes (see AGENTS.md's testing
 guardrails). Records every call so tests can assert on call shape, and lets
 a test configure a specific exception to be raised from any method.
 """

@@ -29,7 +29,7 @@ users on older NVDA releases to hit that failure at load time.
 == Bumping the floor
 
 Change `addon_minimumNVDAVersion` and/or `addon_lastTestedNVDAVersion` in
-`buildVars.py` -- `CLAUDE.md`'s guardrails call for configuring through
+`buildVars.py` -- `AGENTS.md`'s guardrails call for configuring through
 `buildVars.py` before modifying `sconstruct` directly. Bump
 `lastTestedNVDAVersion` whenever a new NVDA release has been verified,
 even when the minimum doesn't move; `test_buildvars.py` fails the build
