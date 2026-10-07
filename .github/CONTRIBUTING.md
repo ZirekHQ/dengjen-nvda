@@ -138,6 +138,8 @@ Use the pull request template. Link the issue with `Closes #N` in the PR body â€
 - **CodeRabbit** reviews are advisory. Fix a finding or reply on the thread explaining why it doesn't apply. Maintainers close bot threads that are verifiably fixed, so you don't need to chase them.
 - A thread you opened is closed by its author or a maintainer, never by marking it resolved to clear the count.
 
+A maintainer may ask a large PR that arrives without an issue to get one, or to split into smaller PRs. Splitting is usually the more useful request, because the work already exists.
+
 ### Long-running PRs
 
 The add-on's structure changes over time, and a branch that falls behind `main` for more than about a week can become hard to rebase. A maintainer may push a rebase to your branch, or reimplement the change on current `main` and credit you in the PR. If the code has moved too far to carry forward, the PR is closed as superseded, with a note on what carries over.
