@@ -53,8 +53,8 @@ vendor = [
     "miniaudio==1.71",
     "mureq==0.3.0",
     "protobuf>=7.35.1,<8",
-    "psutil==5.9.8",
-    "pycparser==2.23",
+    "psutil==7.2.2",
+    "pycparser==3.0",
 ]
 codegen = ["grpcio-tools==1.84.*"]
 
