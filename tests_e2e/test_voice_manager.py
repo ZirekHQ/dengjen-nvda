@@ -435,24 +435,22 @@ def kokoro_installed(nvda_session, downloaded_voice_key):
         description="the notebook to switch to the Kokoro tab",
     )
 
-    # A single blind tab press here landed on the dialog's own Close button
-    # (not KokoroVoicesPanel's install_btn) on real CI, closing the whole
-    # dialog instead of installing anything -- wx's tab order after a
-    # control+tab page switch isn't reliably "one tab into the new page's
-    # first control" once other interactions already happened earlier in
-    # this file. Verify focus actually lands on install_btn before pressing
-    # space, retrying tab presses rather than assuming a fixed count.
-    press_until(
+    # control+tab can already leave focus on install_btn; a further tab would
+    # then move on to the Japanese dictionary button (or Close) and the space
+    # below would install the wrong thing, so only tab when focus is elsewhere.
+    kokoro_install_focused = lambda: voice_manager_state(
         nvda,
-        "tab",
-        lambda: voice_manager_state(
-            nvda,
-            "manager is not None and wx.Window.FindFocus() is "
-            f"manager.notebookCtrl.GetPage({KOKORO_TAB_INDEX}).install_btn",
-        ),
-        attempts=5,
-        description="focus to reach the Install Kokoro voice button",
+        "manager is not None and wx.Window.FindFocus() is "
+        f"manager.notebookCtrl.GetPage({KOKORO_TAB_INDEX}).install_btn",
     )
+    if not kokoro_install_focused():
+        press_until(
+            nvda,
+            "tab",
+            kokoro_install_focused,
+            attempts=5,
+            description="focus to reach the Install Kokoro voice button",
+        )
     nvda.keys.press("space")
 
     # Ground truth is the real config.json on disk (via the Kokoro page's
