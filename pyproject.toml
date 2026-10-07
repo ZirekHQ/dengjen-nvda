@@ -53,7 +53,7 @@ vendor = [
     "miniaudio==1.71",
     "mureq==0.2.0",
     "protobuf==4.25.8",
-    "psutil==5.9.6",
+    "psutil==5.9.8",
     "pycparser==2.22",
 ]
 

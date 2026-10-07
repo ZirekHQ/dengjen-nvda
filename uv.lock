@@ -1,5 +1,5 @@
 version = 1
-revision = 3
+revision = 5
 requires-python = "==3.13.*"
 resolution-markers = [
     "sys_platform == 'win32'",
@@ -58,7 +58,7 @@ vendor = [
     { name = "miniaudio", specifier = "==1.71" },
     { name = "mureq", specifier = "==0.2.0" },
     { name = "protobuf", specifier = "==4.25.8" },
-    { name = "psutil", specifier = "==5.9.6" },
+    { name = "psutil", specifier = "==5.9.8" },
     { name = "pycparser", specifier = "==2.22" },
 ]
 
@@ -110,12 +110,12 @@ wheels = [
 
 [[package]]
 name = "psutil"
-version = "5.9.6"
+version = "5.9.8"
 source = { registry = "https://pypi.org/simple" }
-sdist = { url = "https://files.pythonhosted.org/packages/2d/01/beb7331fc6c8d1c49dd051e3611379bfe379e915c808e1301506027fce9d/psutil-5.9.6.tar.gz", hash = "sha256:e4b92ddcd7dd4cdd3f900180ea1e104932c7bce234fb88976e2a3b296441225a", size = 496866, upload-time = "2023-10-15T09:08:46.623Z" }
+sdist = { url = "https://files.pythonhosted.org/packages/90/c7/6dc0a455d111f68ee43f27793971cf03fe29b6ef972042549db29eec39a2/psutil-5.9.8.tar.gz", hash = "sha256:6be126e3225486dff286a8fb9a06246a5253f4c7c53b475ea5f5ac934e64194c", size = 503247, upload-time = "2024-01-19T20:47:09.517Z" }
 wheels = [
-    { url = "https://files.pythonhosted.org/packages/06/ac/f31a0faf98267e63fc6ed046ad2aca68bd79521380026e92fd4921c869aa/psutil-5.9.6-cp37-abi3-win32.whl", hash = "sha256:a6f01f03bf1843280f4ad16f4bde26b817847b4c1a0db59bf6419807bc5ce05c", size = 248489, upload-time = "2023-10-15T09:09:19.912Z" },
-    { url = "https://files.pythonhosted.org/packages/c5/b2/699c50fe0b0402a1ccb64ad71313bcb740e735008dd3ab9abeddbe148e45/psutil-5.9.6-cp37-abi3-win_amd64.whl", hash = "sha256:6e5fb8dc711a514da83098bc5234264e551ad980cec5f85dabf4d38ed6f15e9a", size = 252327, upload-time = "2023-10-15T09:09:32.052Z" },
+    { url = "https://files.pythonhosted.org/packages/6e/f5/2aa3a4acdc1e5940b59d421742356f133185667dd190b166dbcfcf5d7b43/psutil-5.9.8-cp37-abi3-win32.whl", hash = "sha256:bc56c2a1b0d15aa3eaa5a60c9f3f8e3e565303b465dbf57a1b730e7a2b9844e0", size = 251252, upload-time = "2024-01-19T20:47:52.88Z" },
+    { url = "https://files.pythonhosted.org/packages/93/52/3e39d26feae7df0aa0fd510b14012c3678b36ed068f7d78b8d8784d61f0e/psutil-5.9.8-cp37-abi3-win_amd64.whl", hash = "sha256:8db4c1b57507eef143a15a6884ca10f7c73876cdf5d51e713151c1236a0e68cf", size = 255090, upload-time = "2024-01-19T20:47:56.019Z" },
 ]
 
 [[package]]
