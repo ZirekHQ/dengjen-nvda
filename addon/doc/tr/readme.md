@@ -4,7 +4,7 @@
 >
 > Özgün yazar Musharraf Omer ([@mush42](https://github.com/mush42)), ticari sözleşme çakışmaları nedeniyle bu açık kaynaklı eklentiyi sürdüremeyeceğini [NVDA Eklentileri listesinde duyurdu](https://nvda-addons.groups.io/g/nvda-addons/message/27636). Bu çatal, eklentiyi güncel NVDA sürümlerinde çalışır durumda tutmak için projeyi sürdürüyor; uyumluluk güncellemelerinin yanı sıra ses yöneticisi ve sentezleyici sürücüsündeki düzeltmeleri de içerir. Özgün çalışmanın tüm hakkı Musharraf Omer'e aittir.
 >
-> Bu çeviri, [İngilizce benioku dosyasının](https://github.com/ZirekHQ/dengjen-nvda/blob/main/readme.md) gerisinde kalmış olabilir.
+> Bu çeviri, [İngilizce benioku dosyasının](https://github.com/ZirekHQ/dengjen-nvda/blob/main/README.md) gerisinde kalmış olabilir.
 >
 > Sonata Neural Voices adından v4.0.0 sürümünde, özgün yazarın isteği
 > üzerine ve NVDA Eklenti Mağazası'nda listelenme koşulu olarak yeniden

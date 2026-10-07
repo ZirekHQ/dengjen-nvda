@@ -35,14 +35,14 @@ if (-not [double]::TryParse($rawMinPercentageTranslated, [ref]$minPercentageTran
 # --- STEP 1: PREPARATION AND SOURCE UPDATE ---
 
 $xliffFile = "./$addonId.xliff"
-$mdFile = "./readme.md"
+$mdFile = "./README.md"
 
 if (Test-Path $mdFile) {
     if (Test-Path $xliffFile) {
         $tempXliff = [System.IO.Path]::GetTempFileName()
         try {
             Copy-Item "$addonId.xliff" $tempXliff -Force
-            Write-Host "DEBUG: Updating XLIFF source based on readme.md..."
+            Write-Host "DEBUG: Updating XLIFF source based on README.md..."
             Invoke-L10nUtil md2xliff $mdFile $xliffFile -o $tempXliff
         }
         finally {
@@ -52,7 +52,7 @@ if (Test-Path $mdFile) {
         }
     }
     else {
-        Write-Host "DEBUG: XLIFF template not found. Creating new one from readme.md..."
+        Write-Host "DEBUG: XLIFF template not found. Creating new one from README.md..."
         Invoke-L10nUtil md2xliff $mdFile $xliffFile
     }
 }

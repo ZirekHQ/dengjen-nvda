@@ -4,7 +4,7 @@
 >
 > El autor original, Musharraf Omer ([@mush42](https://github.com/mush42)), [anunció en la lista de complementos de NVDA](https://nvda-addons.groups.io/g/nvda-addons/message/27636) que conflictos con contratos comerciales le impiden seguir manteniendo este complemento de código abierto. Este fork continúa el proyecto para mantener el complemento funcionando en las versiones actuales de NVDA, e incluye actualizaciones de compatibilidad junto con correcciones en el administrador de voces y en el controlador del sintetizador. Todo el crédito del trabajo original corresponde a Musharraf Omer.
 >
-> Esta traducción puede estar desactualizada respecto al [readme en inglés](https://github.com/ZirekHQ/dengjen-nvda/blob/main/readme.md).
+> Esta traducción puede estar desactualizada respecto al [readme en inglés](https://github.com/ZirekHQ/dengjen-nvda/blob/main/README.md).
 >
 > Renombrado de Sonata Neural Voices en la v4.0.0, a petición del autor
 > original, como condición para figurar en la Tienda de complementos de NVDA.

@@ -4,7 +4,7 @@
 >
 > Nivîskarê resen, Musharraf Omer ([@mush42](https://github.com/mush42)), [di lîsteya pêvekên NVDA de ragihand](https://nvda-addons.groups.io/g/nvda-addons/message/27636) ku nakokiyên peymanên bazirganî nahêlin ku ew lênêrîna vê pêveka çavkaniya vekirî bidomîne. Ev çap projeyê didomîne da ku pêvek li ser guhertoyên heyî yên NVDA-yê bixebite, û nûkirinên lihevhatinê digel serrastkirinên rêveberê dengan û ajokarê sentezkerê dihewîne. Hemû keda xebata resen a Musharraf Omer e.
 >
-> Dibe ku ev werger li paş [benioku ya îngilîzî](https://github.com/ZirekHQ/dengjen-nvda/blob/main/readme.md) bimîne.
+> Dibe ku ev werger li paş [benioku ya îngilîzî](https://github.com/ZirekHQ/dengjen-nvda/blob/main/README.md) bimîne.
 >
 > Navê vê pêvekê di guhertoya v4.0.0 de, li gorî daxwaza nivîskarê resen,
 > wekî mercekî ji bo cih girtina di Dikana Pêvekên NVDA-yê de, ji Sonata

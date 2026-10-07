@@ -4,7 +4,7 @@
 >
 > L'auteur original, Musharraf Omer ([@mush42](https://github.com/mush42)), [a annoncé sur la liste des extensions NVDA](https://nvda-addons.groups.io/g/nvda-addons/message/27636) que des conflits de contrats commerciaux l'empêchent de continuer à maintenir cette extension open source. Ce fork poursuit le projet afin de garder l'extension fonctionnelle sur les versions actuelles de NVDA, et apporte des mises à jour de compatibilité ainsi que des corrections au gestionnaire de voix et au pilote de synthèse. Tout le mérite du travail original revient à Musharraf Omer.
 >
-> Cette traduction peut être en retard sur le [readme en anglais](https://github.com/ZirekHQ/dengjen-nvda/blob/main/readme.md).
+> Cette traduction peut être en retard sur le [readme en anglais](https://github.com/ZirekHQ/dengjen-nvda/blob/main/README.md).
 >
 > Renommée depuis Sonata Neural Voices en v4.0.0, à la demande de l'auteur
 > original, comme condition d'inscription au Magasin des extensions NVDA.

@@ -109,8 +109,8 @@ if (cssFile := Path("style.css")).is_file():
 	cssTarget = env.Command(str(cssPath), str(cssFile), Copy("$TARGET", "$SOURCE"))
 	env.Depends(addon, cssTarget)
 
-if (readmeFile := Path("readme.md")).is_file():
-	readmePath = docsDir / buildVars.baseLanguage / readmeFile
+if (readmeFile := Path("README.md")).is_file():
+	readmePath = docsDir / buildVars.baseLanguage / "readme.md"
 	readmeTarget = env.Command(str(readmePath), str(readmeFile), Copy("$TARGET", "$SOURCE"))
 	env.Depends(addon, readmeTarget)
 
