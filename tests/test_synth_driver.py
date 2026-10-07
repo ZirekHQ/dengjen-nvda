@@ -565,22 +565,21 @@ class TestProcessSpeechSequence:
         async def blows_up():
             raise ValueError("boom")
 
-        class _Notify:
-            def __init__(self, name):
-                self.name = name
-
+        class _Index:
             async def __call__(self):
-                ran.append(self.name)
+                ran.append("index")
 
-        monkeypatch.setattr(driver_module, "IndexReachedTask", _Notify)
-        monkeypatch.setattr(driver_module, "DoneSpeakingTask", _Notify)
+        class _Done:
+            async def __call__(self):
+                ran.append("done")
+
+        monkeypatch.setattr(driver_module, "IndexReachedTask", _Index)
+        monkeypatch.setattr(driver_module, "DoneSpeakingTask", _Done)
         monkeypatch.setattr(driver_module.log, "exception", MagicMock())
         monkeypatch.setattr(driver_module, "CancelledError", asyncio.CancelledError)
 
         asyncio.run(
-            driver_module._process_speech_sequence(
-                [blows_up, _Notify("index"), _Notify("done")]
-            )
+            driver_module._process_speech_sequence([blows_up, _Index(), _Done()])
         )
 
         assert ran == ["index", "done"]

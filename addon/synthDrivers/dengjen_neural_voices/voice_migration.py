@@ -35,6 +35,7 @@ OLD_VOICES_DIR_NAME = "sonata"
 VOICES_DIR_NAME = "dengjen"
 _VOICES_SUBPATH = ("voices", "piper")
 _STAGING_SUFFIX = ".importing"
+_VOICE_DIR_DEPTH = len(_VOICES_SUBPATH) + 1
 
 
 def _config_path(config_path=None):
@@ -99,13 +100,14 @@ def copy_voices_from_old_dir(config_path=None):
     return copied
 
 
-def _move_tree(src, dst):
+def _move_tree(src, dst, depth=0):
     os.makedirs(dst, exist_ok=True)
     for name in os.listdir(src):
         src_path = os.path.join(src, name)
         dst_path = os.path.join(dst, name)
         if os.path.isdir(src_path) and os.path.isdir(dst_path):
-            _move_tree(src_path, dst_path)
+            if depth + 1 < _VOICE_DIR_DEPTH:
+                _move_tree(src_path, dst_path, depth + 1)
         elif not os.path.lexists(dst_path):
             os.rename(src_path, dst_path)
     with contextlib.suppress(OSError):

@@ -68,7 +68,8 @@ def _po_entries(path):
         for lineno, raw in enumerate(handle, 1):
             line = raw.strip()
             if line.startswith(("msgid_plural", "msgstr[", "#~")) or (
-                line.startswith("#,") and "fuzzy" in line
+                line.startswith("#,")
+                and "fuzzy" in (flag.strip() for flag in line[2:].split(","))
             ):
                 raise AssertionError(
                     f"{path}:{lineno}: unhandled po construct {line!r}"
