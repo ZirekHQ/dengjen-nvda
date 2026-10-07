@@ -11,5 +11,7 @@ Closes #<!-- issue number, or remove this line if no issue -->.
 ## Test plan
 
 - [ ] Syntax check passes.
+- [ ] A new module has tests under `tests/` (see `CONTRIBUTING.md`).
+- [ ] `ruff check .`, `ruff format --check .` and `pytest` pass locally.
 - [ ] CI build + test green.
 - [ ] <!-- Add any manual verification steps relevant to the change. -->

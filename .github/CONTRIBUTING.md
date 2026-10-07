@@ -127,7 +127,20 @@ python update_dengjen_tts.py bump [VERSION] # re-pin (default: latest stable grp
 
 ## Submitting a PR
 
-Use the pull request template. Link the issue with `Closes #N` in the PR body — GitHub will auto-close the issue when the PR merges.
+Use the pull request template. Link the issue with `Closes #N` in the PR body — GitHub will auto-close the issue when the PR merges. A PR with no issue is fine for a small fix or a translation.
+
+**Keep a PR to one purpose.** Small PRs merge fast; large ones take weeks. Open an issue first, and wait for a reply, before a feature that is over about 500 lines or touches several subsystems (the synth driver, the global plugin and the domain layer, say).
+
+### What CI runs on your PR
+
+- **Build, unit tests, lint, audit and zizmor** run on every PR. The Windows leg also runs `tests_gui/`, and the e2e job drives a real NVDA.
+- **SonarCloud** doesn't run automatically on fork PRs. A maintainer comments `/sonar` to start the scan. The gate needs at least 80% coverage on new code, and cognitive complexity of at most 15 per function.
+- **CodeRabbit** reviews are advisory. Fix a finding or reply on the thread explaining why it doesn't apply. Maintainers close bot threads that are verifiably fixed, so you don't need to chase them.
+- A thread you opened is closed by its author or a maintainer, never by marking it resolved to clear the count.
+
+### Long-running PRs
+
+The add-on's structure changes over time, and a branch that falls behind `main` for more than about a week can become hard to rebase. A maintainer may push a rebase to your branch, or reimplement the change on current `main` and credit you in the PR. If the code has moved too far to carry forward, the PR is closed as superseded, with a note on what carries over.
 
 Conventions used in this project:
 
