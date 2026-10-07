@@ -66,11 +66,13 @@ jobs:
         env:
           EVENT_NAME: ${{ github.event_name }}
           RUN_HEAD_SHA: ${{ github.event.workflow_run.head_sha }}
+          RUN_HEAD_OWNER: ${{ github.event.workflow_run.head_repository.owner.login }}
+          RUN_HEAD_BRANCH: ${{ github.event.workflow_run.head_branch }}
           COMMENT_PR: ${{ github.event.issue.number }}
         run: |
           if [ "$EVENT_NAME" = "workflow_run" ]; then
-            PR_NUMBER=$(gh api "repos/$GITHUB_REPOSITORY/commits/$RUN_HEAD_SHA/pulls" \
-              --jq '[.[] | select(.state == "open" and .base.ref == "main")][0].number')
+            PR_NUMBER=$(gh api "repos/$GITHUB_REPOSITORY/pulls?state=open&head=$RUN_HEAD_OWNER:$RUN_HEAD_BRANCH" \
+              --jq '[.[] | select(.base.ref == "main" and .head.sha == env.RUN_HEAD_SHA)][0].number')
             if [ -z "$PR_NUMBER" ] || [ "$PR_NUMBER" = "null" ]; then
               echo "::notice::No open PR targets main at $RUN_HEAD_SHA; nothing to scan."
               exit 0
