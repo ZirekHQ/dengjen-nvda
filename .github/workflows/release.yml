@@ -16,6 +16,15 @@ on:
         required: false
         type: boolean
         default: false
+    secrets:
+      MASTODON_INSTANCE_URL:
+        required: false
+      MASTODON_ACCESS_TOKEN:
+        required: false
+      BLUESKY_HANDLE:
+        required: false
+      BLUESKY_APP_PASSWORD:
+        required: false
 
 permissions: {}
 
@@ -105,3 +114,17 @@ jobs:
     uses: ./.github/workflows/build_addon.yml # zizmor: ignore[self-repository] CI is pinned to zizmor v1.28.0, which predates $/ syntax support
     with:
       ref: refs/tags/v${{ needs.resolve.outputs.version }}
+
+  announce:
+    name: Announce the release
+    needs: [resolve, build-and-release]
+    if: ${{ !cancelled() && inputs.dry_run != true && needs.build-and-release.result == 'success' }}
+    permissions: {}
+    uses: ZirekHQ/.github/.github/workflows/announce-release.yml@402ea18a978f5dbe0f34683b7dd49ab579862d41 # main
+    with:
+      tag: v${{ needs.resolve.outputs.version }}
+    secrets:
+      MASTODON_INSTANCE_URL: ${{ secrets.MASTODON_INSTANCE_URL }}
+      MASTODON_ACCESS_TOKEN: ${{ secrets.MASTODON_ACCESS_TOKEN }}
+      BLUESKY_HANDLE: ${{ secrets.BLUESKY_HANDLE }}
+      BLUESKY_APP_PASSWORD: ${{ secrets.BLUESKY_APP_PASSWORD }}
