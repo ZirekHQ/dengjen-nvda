@@ -172,10 +172,12 @@ class TestVoiceCheck:
         assert gui.runScriptModalDialog.called
 
     def test_it_stays_quiet_when_a_voice_is_installed(
-        self, plugin, one_installed_voice
+        self, plugin, one_installed_voice, monkeypatch
     ):
+        monkeypatch.setattr(plugin, "_offer_language_voice", MagicMock())
         plugin._perform_voice_check()
         assert not gui.runScriptModalDialog.called
+        plugin._offer_language_voice.assert_called_once()
 
     def test_it_stays_quiet_once_the_manager_has_been_opened(
         self, plugin, no_installed_voices
@@ -341,3 +343,93 @@ class TestOnFirstRunVoiceInstalled:
         monkeypatch.setattr(plugin_module.synthDriverHandler, "getSynth", lambda: synth)
         plugin._on_first_run_voice_installed("en_US-amy-low")
         assert not synth.terminate.called
+
+
+class TestAppFocusProfileHandling:
+    def test_handle_app_focus_skips_next_profile_when_restore_fails(
+        self, plugin, plugin_module, monkeypatch
+    ):
+        from dengjen_neural_voices.domain.app_profiles import app_profile_manager
+
+        plugin._active_profile_overrides = {"rate": 50}
+        synth = MagicMock()
+        synth.rate = 70
+
+        monkeypatch.setattr(
+            app_profile_manager, "get_profile", lambda exe: {"rate": 80}
+        )
+        monkeypatch.setattr(
+            app_profile_manager,
+            "apply_profile_dict",
+            lambda profile, s: profile != {"rate": 50},
+        )
+
+        plugin._handle_app_focus("app.exe", synth)
+
+        assert plugin._active_profile_overrides == {"rate": 50}
+
+    def test_handle_app_focus_retains_overrides_when_unprofiled_restore_fails(
+        self, plugin, plugin_module, monkeypatch
+    ):
+        from dengjen_neural_voices.domain.app_profiles import app_profile_manager
+
+        plugin._active_profile_overrides = {"rate": 50}
+        synth = MagicMock()
+
+        monkeypatch.setattr(app_profile_manager, "get_profile", lambda exe: {})
+        monkeypatch.setattr(
+            app_profile_manager, "apply_profile_dict", lambda profile, s: False
+        )
+
+        plugin._handle_app_focus("unprofiled.exe", synth)
+
+        assert plugin._active_profile_overrides == {"rate": 50}
+
+    def test_handle_app_focus_clears_overrides_when_unprofiled_restore_succeeds(
+        self, plugin, plugin_module, monkeypatch
+    ):
+        from dengjen_neural_voices.domain.app_profiles import app_profile_manager
+
+        plugin._active_profile_overrides = {"rate": 50}
+        synth = MagicMock()
+
+        monkeypatch.setattr(app_profile_manager, "get_profile", lambda exe: {})
+        monkeypatch.setattr(
+            app_profile_manager, "apply_profile_dict", lambda profile, s: True
+        )
+
+        plugin._handle_app_focus("unprofiled.exe", synth)
+
+        assert plugin._active_profile_overrides is None
+
+    def test_handle_app_focus_reports_failure_when_new_profile_fails_to_apply(
+        self, plugin, plugin_module, monkeypatch
+    ):
+        from dengjen_neural_voices.domain.app_profiles import app_profile_manager
+
+        monkeypatch.setattr(
+            app_profile_manager, "get_profile", lambda exe: {"rate": 80}
+        )
+        monkeypatch.setattr(
+            app_profile_manager, "apply_profile_dict", lambda profile, s: False
+        )
+
+        assert plugin._handle_app_focus("app.exe", MagicMock()) is False
+
+    def test_gain_focus_retries_the_same_app_after_a_failed_update(
+        self, plugin, plugin_module, monkeypatch
+    ):
+        outcomes = iter([False, True])
+        monkeypatch.setattr(plugin_module, "_get_dengjen_synth", lambda: MagicMock())
+        monkeypatch.setattr(
+            plugin, "_handle_app_focus", lambda exe, synth: next(outcomes)
+        )
+        plugin._last_exe = "previous.exe"
+        obj = MagicMock()
+        obj.appModule.appName = "App.exe"
+
+        plugin.event_gainFocus(obj, lambda: None)
+        assert plugin._last_exe is None
+
+        plugin.event_gainFocus(obj, lambda: None)
+        assert plugin._last_exe == "app.exe"

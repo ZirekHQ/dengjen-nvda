@@ -236,6 +236,7 @@ def install(*, stub_wx: bool = True) -> None:
     _stub_module("autoSettingsUtils")
     _stub_module(
         "autoSettingsUtils.driverSetting",
+        BooleanDriverSetting=MagicMock(return_value=MagicMock()),
         DriverSetting=MagicMock(return_value=MagicMock()),
         NumericDriverSetting=MagicMock(return_value=MagicMock()),
     )
@@ -339,6 +340,7 @@ def install(*, stub_wx: bool = True) -> None:
             pass
 
     _stub_module("globalPluginHandler", GlobalPlugin=_FakeGlobalPlugin)
+    _stub_module("tones", beep=MagicMock())
     _stub_module("ui", message=MagicMock())
 
     # -----------------------------------------------------------------------

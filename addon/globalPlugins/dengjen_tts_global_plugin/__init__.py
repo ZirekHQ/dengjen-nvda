@@ -10,6 +10,7 @@ import globalPluginHandler
 import gui
 import languageHandler
 import synthDriverHandler
+import ui
 import wx
 from logHandler import log
 
@@ -45,13 +46,27 @@ __all__ = [
 ]
 
 from . import download_infra, feedback, language_offer_logic, voice_download
+from .profile_dialog import DengjenAppProfileDialog
 from .voice_manager import DengjenVoiceManagerDialog, install_voice_from_local_file
+
+ADDON_LABEL = _("Dengjen Neural Voices")
+
+
+def _get_dengjen_synth():
+    synth = synthDriverHandler.getSynth()
+    if synth is not None and "dengjen" in synth.name.lower():
+        return synth
+    return None
 
 
 class GlobalPlugin(globalPluginHandler.GlobalPlugin):
+    scriptCategory = ADDON_LABEL
+
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
         self.__voice_manager_shown = False
+        self._last_exe = None
+        self._active_profile_overrides = None
         self._voice_check_timer = None
         self._voice_checker = self._schedule_voice_check
         core.postNvdaStartup.register(self._voice_checker)
@@ -63,6 +78,16 @@ class GlobalPlugin(globalPluginHandler.GlobalPlugin):
         gui.mainFrame.sysTrayIcon.menu.Bind(
             wx.EVT_MENU, self.on_manager, self.itemHandle
         )
+        self.profileItemHandle = None
+        if hasattr(gui.mainFrame.sysTrayIcon, "preferencesMenu"):
+            self.profileItemHandle = gui.mainFrame.sysTrayIcon.preferencesMenu.Append(
+                wx.ID_ANY,
+                _("Dengjen app &profiles..."),
+                _("Configure per-application Dengjen voice profiles"),
+            )
+            gui.mainFrame.sysTrayIcon.preferencesMenu.Bind(
+                wx.EVT_MENU, self.on_app_profiles, self.profileItemHandle
+            )
         self.feedbackMenuHandle = self._build_feedback_submenu()
 
     def _build_feedback_submenu(self):
@@ -148,7 +173,7 @@ class GlobalPlugin(globalPluginHandler.GlobalPlugin):
                 "No installed Dengjen voice matches NVDA's language, but one is "
                 "available to download."
             ),
-            _("Dengjen Neural Voices"),
+            ADDON_LABEL,
             wx.YES_NO | wx.CANCEL | wx.ICON_QUESTION,
         )
         dlg.SetYesNoCancelLabels(
@@ -178,7 +203,7 @@ class GlobalPlugin(globalPluginHandler.GlobalPlugin):
                 "You can download a voice online, or install one from a "
                 "local archive if you already have one."
             ),
-            _("Dengjen Neural Voices"),
+            ADDON_LABEL,
             wx.YES_NO | wx.CANCEL | wx.ICON_WARNING,
         )
         dlg.SetYesNoCancelLabels(
@@ -203,6 +228,71 @@ class GlobalPlugin(globalPluginHandler.GlobalPlugin):
             synth.terminate()
             synth.__init__()
 
+    def on_app_profiles(self, event):
+        try:
+            dlg = DengjenAppProfileDialog()
+            gui.runScriptModalDialog(dlg)
+        except Exception:
+            log.exception("Failed to open Dengjen app profiles dialog", exc_info=True)
+
+    def script_toggleNightMode(self, gesture):
+        synth = _get_dengjen_synth()
+        if synth is not None:
+            import tones
+
+            current = getattr(synth, "night_mode", False)
+            synth.night_mode = not current
+            if synth.night_mode:
+                tones.beep(300, 80)
+                ui.message(_("Night mode enabled"))
+            else:
+                tones.beep(600, 80)
+                ui.message(_("Night mode disabled"))
+        else:
+            ui.message(_("Dengjen is not active"))
+
+    script_toggleNightMode.__doc__ = _("Toggles Dengjen night mode (soft, quiet audio)")
+
+    def _restore_baseline(self, synth) -> bool:
+        from dengjen_neural_voices.domain.app_profiles import app_profile_manager
+
+        if self._active_profile_overrides is None:
+            return True
+        if not app_profile_manager.apply_profile_dict(
+            self._active_profile_overrides, synth
+        ):
+            return False
+        self._active_profile_overrides = None
+        return True
+
+    def _handle_app_focus(self, exe: str, synth) -> bool:
+        from dengjen_neural_voices.domain.app_profiles import app_profile_manager
+
+        profile = app_profile_manager.get_profile(exe)
+        if not self._restore_baseline(synth):
+            return False
+        if not profile:
+            return True
+        self._active_profile_overrides = {
+            k: getattr(synth, k, None)
+            for k in profile
+            if hasattr(synth, k) and getattr(synth, k, None) is not None
+        }
+        return app_profile_manager.apply_profile_dict(profile, synth)
+
+    def event_gainFocus(self, obj, next_handler):
+        try:
+            app = getattr(obj, "appModule", None)
+            exe = getattr(app, "appName", "").lower() if app else ""
+            if exe and exe != self._last_exe:
+                synth = _get_dengjen_synth()
+                if synth is not None:
+                    ok = self._handle_app_focus(exe, synth)
+                    self._last_exe = exe if ok else None
+        except Exception:
+            log.debug("Failed handling focus change for app profile", exc_info=True)
+        next_handler()
+
     def terminate(self):
         try:
             core.postNvdaStartup.unregister(self._voice_checker)
@@ -216,6 +306,18 @@ class GlobalPlugin(globalPluginHandler.GlobalPlugin):
             gui.mainFrame.sysTrayIcon.menu.DestroyItem(self.itemHandle)
         except Exception:
             log.debug("Failed to remove the Dengjen menu item", exc_info=True)
+        if (
+            hasattr(gui.mainFrame.sysTrayIcon, "preferencesMenu")
+            and self.profileItemHandle is not None
+        ):
+            try:
+                gui.mainFrame.sysTrayIcon.preferencesMenu.DestroyItem(
+                    self.profileItemHandle
+                )
+            except Exception:
+                log.debug(
+                    "Failed to remove the Dengjen profile menu item", exc_info=True
+                )
         try:
             gui.mainFrame.sysTrayIcon.menu.DestroyItem(self.feedbackMenuHandle)
         except Exception:

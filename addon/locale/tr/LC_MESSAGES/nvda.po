@@ -469,6 +469,89 @@ msgstr ""
 msgid "&Don't ask again"
 msgstr ""
 
+msgid "&Add..."
+msgstr ""
+
+msgid "&Delete"
+msgstr ""
+
+msgid "&Edit..."
+msgstr ""
+
+msgid "&Night mode"
+msgstr ""
+
+msgid "&Normalize audio volume"
+msgstr ""
+
+msgid "&Spatial audio (stereo panning)"
+msgstr ""
+
+msgid "Alternate &speaker for brackets and quotes"
+msgstr ""
+
+msgid "Application"
+msgstr ""
+
+msgid "Application name (e.g. firefox):"
+msgstr ""
+
+msgid "Configure per-application Dengjen voice profiles"
+msgstr ""
+
+msgid "Configure per-application voice settings.\n"
+"Dengjen will automatically switch to the saved profile\n"
+"when the specified application gains focus."
+msgstr ""
+
+msgid "Confirm"
+msgstr ""
+
+msgid "Delete profile for '{app}'?"
+msgstr ""
+
+msgid "Dengjen App Profiles"
+msgstr ""
+
+msgid "Dengjen app &profiles..."
+msgstr ""
+
+msgid "Dengjen is not active"
+msgstr ""
+
+msgid "Edit App Profile"
+msgstr ""
+
+msgid "Night mode disabled"
+msgstr ""
+
+msgid "Night mode enabled"
+msgstr ""
+
+msgid "Pitch (0-100, blank=default):"
+msgstr ""
+
+msgid "Please enter an application name."
+msgstr ""
+
+msgid "Rate"
+msgstr ""
+
+msgid "Rate (0-100, blank=default):"
+msgstr ""
+
+msgid "Toggles Dengjen night mode (soft, quiet audio)"
+msgstr ""
+
+msgid "Voice"
+msgstr ""
+
+msgid "Voice:"
+msgstr ""
+
+msgid "Volume (0-100, blank=default):"
+msgstr ""
+
 #: addon\globalPlugins\dengjen_tts_global_plugin\japanese_dictionary_download.py
 msgid "Downloading Japanese dictionary"
 msgstr ""

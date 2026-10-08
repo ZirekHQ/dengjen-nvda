@@ -183,6 +183,7 @@ class TestConstruction:
         try:
             assert d.tts is not None
             d.variant = d.variant
+            d.spatial_audio = True
         finally:
             d.terminate()
 
@@ -205,6 +206,39 @@ class TestConstruction:
         finally:
             d.terminate()
 
+    def test_loads_saved_settings_without_crash(
+        self, monkeypatch, configured_voice, fake_backend
+    ):
+        """Simulate NVDA loadSettings calling setters when loading saved settings."""
+        import synthDriverHandler
+
+        orig_init = synthDriverHandler.SynthDriver.__init__
+
+        def _init_with_load_settings(synth_self):
+            orig_init(synth_self)
+            # In NVDA, AutoPropertyObject.__init__ calls loadSettings(), which sets
+            # supported settings from config before Dengjen's own __init__ body runs.
+            synth_self._set_spatial_audio(True)
+            synth_self._set_night_mode(True)
+
+        monkeypatch.setattr(
+            synthDriverHandler.SynthDriver, "__init__", _init_with_load_settings
+        )
+
+        d = SynthDriver()
+        try:
+            assert d.spatial_audio is True
+            assert d.night_mode is True
+            assert d.tts is not None
+        finally:
+            d.terminate()
+
+    def test_set_spatial_audio_before_init_does_not_raise(self):
+        """Calling _set_spatial_audio on an uninitialized instance must not raise."""
+        d = SynthDriver.__new__(SynthDriver)
+        d._set_spatial_audio(True)
+        assert d.spatial_audio is True
+
 
 class TestSpeechTask:
     def test_feeds_every_chunk_then_waits_for_the_player_to_drain(self, monkeypatch):
@@ -225,7 +259,14 @@ class TestSpeechTask:
             yield b"two"
 
         monkeypatch.setattr(driver_module, "run_in_executor", run_inline)
-        task = SimpleNamespace(text="hi", generate_audio=_audio)
+        options = SimpleNamespace(
+            voice=SimpleNamespace(key="voice", speaker=None),
+            rate=50,
+            volume=100,
+            pitch=50,
+        )
+        task = SimpleNamespace(text="hi", speech_options=options, generate_audio=_audio)
+        driver_module.phrase_cache.clear()
 
         asyncio.run(SpeechTask(task, _Player())())
 
@@ -365,6 +406,128 @@ class TestBuildSpeechTasks:
             assert speech_task.player is first_player
         finally:
             driver.terminate()
+
+    def test_a_voice_switch_drops_the_previous_voices_cached_speaker(
+        self, configured_voice, fake_backend
+    ):
+        second_voice_dir = _write_voice(configured_voice, key="fr_FR-test-medium")
+        second_config_path = str(next(second_voice_dir.glob("*.json")))
+        fake_backend.voices_by_config_path[second_config_path] = LoadedVoice(
+            backend_voice_id="fake-remote-id-fr",
+            supports_streaming_output=False,
+            sample_rate=24000,
+            speakers={},
+            defaults=SynthOptions(
+                speaker=None, length_scale=1.0, noise_scale=0.667, noise_w=0.8
+            ),
+        )
+        driver = SynthDriver()
+        try:
+            driver._current_speaker = "english-speaker"
+
+            with driver.tts.create_synthesis_context():
+                tasks = driver._build_speech_tasks(
+                    ["hello", _lang_change_command("fr_FR"), "bonjour"]
+                )
+
+            speakers = [t.speaker for t in tasks if isinstance(t, SpeechTask)]
+            assert speakers[0] == "english-speaker"
+            assert speakers[1] != "english-speaker"
+            assert driver._current_speaker is None
+        finally:
+            driver.terminate()
+
+    def test_structural_reading_uses_cached_speaker(self, driver):
+        driver.structural_reading = True
+        voice = driver.tts.speech_options.voice
+        voice.is_multi_speaker = True
+        voice.speaker_names = ["spk1", "spk2"]
+        driver.speaker = "spk1"
+
+        # Even if remote voice.speaker would raise, task building uses cached speaker
+        # Set voice as having the property on its type or instance
+        voice.__class__ = type(
+            "MultiSpeakerVoice",
+            (voice.__class__,),
+            {
+                "speaker": property(
+                    lambda self: (_ for _ in ()).throw(RuntimeError("timeout"))
+                )
+            },
+        )
+
+        tasks = driver._build_speech_tasks(["hello (aside) world"])
+        speech_tasks = [t for t in tasks if isinstance(t, SpeechTask)]
+        assert len(speech_tasks) == 3
+        assert speech_tasks[1].speaker == "spk2"
+
+    def test_non_structural_reading_uses_cached_speaker(self, driver):
+        driver.structural_reading = False
+        voice = driver.tts.speech_options.voice
+        driver.speaker = "spk1"
+
+        voice.__class__ = type(
+            "ExplodingVoice",
+            (voice.__class__,),
+            {
+                "speaker": property(
+                    lambda self: (_ for _ in ()).throw(RuntimeError("timeout"))
+                )
+            },
+        )
+
+        tasks = driver._build_speech_tasks(["hello world"])
+        speech_tasks = [t for t in tasks if isinstance(t, SpeechTask)]
+        assert len(speech_tasks) == 1
+        assert speech_tasks[0].speaker == "spk1"
+
+
+class TestPlayerCreation:
+    @pytest.fixture
+    def stereo_failing(self, monkeypatch):
+        real = driver_module.create_wave_player
+
+        def install(error):
+            def create(sample_rate, channels=1):
+                if channels != 1:
+                    raise error
+                return real(sample_rate)
+
+            monkeypatch.setattr(driver_module, "create_wave_player", create)
+
+        return install
+
+    @pytest.mark.parametrize("error", [TypeError("no channels"), OSError("bad format")])
+    def test_a_stereo_failure_falls_back_to_a_mono_player(
+        self, driver, stereo_failing, error
+    ):
+        stereo_failing(error)
+        driver.spatial_audio = True
+
+        player = driver._get_or_create_player(22050)
+
+        assert driver.spatial_audio is False
+        assert driver._players[22050] is player
+
+    def test_a_stereo_failure_reuses_the_existing_mono_player(
+        self, driver, stereo_failing
+    ):
+        driver.spatial_audio = False
+        mono = driver._get_or_create_player(22050)
+        stereo_failing(OSError("bad format"))
+        driver.spatial_audio = True
+
+        assert driver._get_or_create_player(22050) is mono
+        assert list(driver._players.values()) == [mono]
+
+    def test_a_mono_failure_is_not_swallowed(self, driver, monkeypatch):
+        def create(sample_rate, channels=1):
+            raise OSError("no device")
+
+        monkeypatch.setattr(driver_module, "create_wave_player", create)
+
+        with pytest.raises(OSError):
+            driver._get_or_create_player(22050)
 
 
 class TestLifecycle:
@@ -901,3 +1064,178 @@ class TestConstructionWithAKokoroVoicePresent:
             )
         finally:
             d.terminate()
+
+
+class TestSpeechTaskExecution:
+    @pytest.fixture(autouse=True)
+    def clean_cache(self, monkeypatch):
+        phrase_cache = driver_module.phrase_cache
+        phrase_cache.clear()
+
+        async def _fake_run_in_executor(func, *args, **kwargs):
+            return func(*args, **kwargs)
+
+        monkeypatch.setattr(driver_module, "run_in_executor", _fake_run_in_executor)
+
+        yield
+        phrase_cache.clear()
+
+    def _make_mock_task(self, text="hello world", chunks=None):
+        if chunks is None:
+            # 2 chunks of 16-bit PCM (e.g. 4 samples each, 8 bytes each)
+            chunks = [
+                b"\x00\x10\x00\x20\x00\x10\x00\x20",
+                b"\x00\x05\x00\x15\x00\x05\x00\x15",
+            ]
+
+        async def _gen():
+            for c in chunks:
+                yield c
+
+        mock_task = MagicMock()
+        mock_task.text = text
+        mock_task.generate_audio = _gen
+
+        options = MagicMock()
+        options.rate = 50
+        options.volume = 100
+        options.pitch = 50
+        options.sentence_silence_ms = 0
+
+        voice = MagicMock()
+        voice.key = "en_US-test-voice"
+        voice.speaker = "default_spk"
+        options.voice = voice
+
+        mock_task.speech_options = options
+        return mock_task
+
+    def test_plain_stream_plays_chunks_and_caches(self):
+        phrase_cache = driver_module.phrase_cache
+        mock_task = self._make_mock_task()
+        mock_player = MagicMock()
+
+        task = SpeechTask(mock_task, mock_player)
+        asyncio.run(task())
+
+        assert mock_player.feed.call_count == 2
+        assert mock_player.sync.call_count == 1
+
+        cached = phrase_cache.get(
+            "hello world", "en_US-test-voice", 50, 100, 50, speaker="default_spk"
+        )
+        assert cached is not None
+        assert len(cached) == 2
+
+    def test_cache_hit_plays_cached_chunks_directly(self):
+        phrase_cache = driver_module.phrase_cache
+        mock_task = self._make_mock_task()
+        mock_player = MagicMock()
+
+        phrase_cache.put(
+            "hello world",
+            "en_US-test-voice",
+            50,
+            100,
+            50,
+            False,
+            False,
+            [b"cached_chunk_1", b"cached_chunk_2"],
+            speaker="default_spk",
+        )
+
+        task = SpeechTask(mock_task, mock_player)
+        asyncio.run(task())
+
+        mock_player.feed.assert_any_call(b"cached_chunk_1")
+        mock_player.feed.assert_any_call(b"cached_chunk_2")
+        assert mock_player.sync.call_count == 1
+
+    def test_audio_processing_options_applied(self):
+        phrase_cache = driver_module.phrase_cache
+        mock_task = self._make_mock_task()
+        mock_player = MagicMock()
+
+        task = SpeechTask(
+            mock_task,
+            mock_player,
+            normalize=True,
+            night_mode=True,
+            spatial_audio=True,
+            pan=0.5,
+        )
+        asyncio.run(task())
+
+        assert mock_player.feed.called
+        assert mock_player.sync.called
+
+        # Spatial audio is not cached
+        cached = phrase_cache.get("hello world", "en_US-test-voice", 50, 100, 50)
+        assert cached is None
+
+    def test_say_all_normalizes_newlines_and_sentence_silence(self, monkeypatch):
+        from speech import sayAll
+
+        monkeypatch.setattr(sayAll.SayAllHandler, "isRunning", lambda: True)
+
+        mock_task = self._make_mock_task(text="line 1\nline 2\nline 3")
+        mock_player = MagicMock()
+
+        task = SpeechTask(mock_task, mock_player)
+        asyncio.run(task())
+
+        assert mock_task.text == "line 1 line 2 line 3"
+        assert mock_task.speech_options.sentence_silence_ms == 50
+
+    def test_speaker_switching_and_restoration(self):
+        mock_task = self._make_mock_task()
+        voice = mock_task.speech_options.voice
+        voice.speaker = "speaker_a"
+        mock_player = MagicMock()
+
+        speakers_during_stream = []
+
+        async def _gen():
+            speakers_during_stream.append(voice.speaker)
+            yield b"\x00\x10\x00\x20"
+
+        mock_task.generate_audio = _gen
+
+        task = SpeechTask(mock_task, mock_player, speaker="speaker_b")
+        asyncio.run(task())
+
+        assert speakers_during_stream == ["speaker_b"]
+        assert voice.speaker == "speaker_a"
+
+    def test_speaker_switching_handles_exception(self, monkeypatch):
+        mock_task = self._make_mock_task()
+
+        class BadVoice:
+            key = "en_US-test-voice"
+
+            @property
+            def speaker(self):
+                return "orig"
+
+            @speaker.setter
+            def speaker(self, val):
+                raise ValueError("cannot change speaker")
+
+        mock_task.speech_options.voice = BadVoice()
+        mock_player = MagicMock()
+
+        debug_mock = MagicMock()
+        monkeypatch.setattr(driver_module.log, "debug", debug_mock)
+
+        task = SpeechTask(mock_task, mock_player, speaker="new_speaker")
+        asyncio.run(task())
+
+        assert debug_mock.called
+        assert mock_player.feed.called
+        phrase_cache = driver_module.phrase_cache
+        assert (
+            phrase_cache.get(
+                "hello world", "en_US-test-voice", 50, 100, 50, speaker="new_speaker"
+            )
+            is None
+        )

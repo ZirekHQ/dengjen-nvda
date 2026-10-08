@@ -7,7 +7,11 @@ import addonHandler
 import config
 import languageHandler
 import ui
-from autoSettingsUtils.driverSetting import DriverSetting, NumericDriverSetting
+from autoSettingsUtils.driverSetting import (
+    BooleanDriverSetting,
+    DriverSetting,
+    NumericDriverSetting,
+)
 from logHandler import log
 from nvwave import WavePlayer
 from speech import sayAll
@@ -37,6 +41,10 @@ from ...aio import (
     asyncio_coroutine_to_concurrent_future,
     run_in_executor,
 )
+from ...const import FALLBACK_SPEAKER_NAME
+from ...domain.audio_processing import AudioStreamProcessor
+from ...domain.phrase_cache import phrase_cache
+from ...domain.structural_reading import split_into_segments
 from ...domain.tts_system import (
     DengjenTextToSpeechSystem,
     SpeakerNotFoundError,
@@ -101,22 +109,155 @@ class IndexReachedTask:
             await run_in_executor(self.callback, index)
 
 
-class SpeechTask:
-    __slots__ = ["player", "task"]
+def _get_focus_pan() -> float:
+    try:
+        import api
+        import wx
 
-    def __init__(self, task, player):
+        obj = api.getFocusObject()
+        if obj is None or obj.location is None:
+            return 0.0
+        loc = obj.location
+        screen_width = wx.SystemSettings.GetMetric(wx.SYS_SCREEN_X)
+        if screen_width <= 0:
+            return 0.0
+        centre_x = loc.left + loc.width / 2.0
+        pan = (centre_x / screen_width) * 2.0 - 1.0
+        return max(-1.0, min(1.0, pan))
+    except Exception:
+        return 0.0
+
+
+class SpeechTask:
+    __slots__ = [
+        "night_mode",
+        "normalize",
+        "pan",
+        "player",
+        "spatial_audio",
+        "speaker",
+        "task",
+    ]
+
+    def __init__(
+        self,
+        task,
+        player,
+        normalize=False,
+        spatial_audio=False,
+        night_mode=False,
+        pan=0.0,
+        speaker=None,
+    ):
         self.task = task
         self.player = player
+        self.normalize = normalize
+        self.spatial_audio = spatial_audio
+        self.night_mode = night_mode
+        self.pan = pan
+        self.speaker = speaker
+
+    def _check_cache(self, voice_key, rate, volume, pitch, speaker):
+        if self.spatial_audio:
+            return None
+        return phrase_cache.get(
+            self.task.text,
+            voice_key,
+            rate,
+            volume,
+            pitch,
+            normalize=self.normalize,
+            night_mode=self.night_mode,
+            speaker=speaker,
+        )
+
+    async def _play_chunks(self, chunks):
+        feed_func = self.player.feed
+        for chunk in chunks:
+            await run_in_executor(feed_func, chunk)
+        await run_in_executor(self.player.sync)
+
+    def _create_processor(self):
+        if not (self.night_mode or self.normalize or self.spatial_audio):
+            return None
+        pan = self.pan if self.spatial_audio else 0.0
+        return AudioStreamProcessor(
+            normalize=self.normalize,
+            night_mode=self.night_mode,
+            spatial_audio=self.spatial_audio,
+            pan=pan,
+        )
+
+    async def _synthesize_and_stream(self, processor):
+        collected = []
+        feed_func = self.player.feed
+        async for wave_samples in self.task.generate_audio():
+            chunk = wave_samples
+            if processor is not None:
+                chunk = await run_in_executor(processor.process_chunk, chunk)
+            if chunk:
+                collected.append(chunk)
+                await run_in_executor(feed_func, chunk)
+        if processor is not None:
+            final_chunk = await run_in_executor(processor.flush)
+            if final_chunk:
+                collected.append(final_chunk)
+                await run_in_executor(feed_func, final_chunk)
+        await run_in_executor(self.player.sync)
+        return collected
 
     async def __call__(self):
         if sayAll.SayAllHandler.isRunning():
             self.task.text = self.task.text.replace("\n", " ")
             self.task.speech_options.sentence_silence_ms = 50
-        speech_stream = self.task.generate_audio()
-        feed_func = self.player.feed
-        async for wave_samples in speech_stream:
-            await run_in_executor(feed_func, wave_samples)
-        await run_in_executor(self.player.sync)
+
+        voice = self.task.speech_options.voice
+        voice_key = voice.key
+        orig_speaker = await run_in_executor(getattr, voice, "speaker", None)
+        speaker = self.speaker if self.speaker is not None else orig_speaker
+
+        def _apply_speaker(spk):
+            try:
+                voice.speaker = spk
+                return True
+            except Exception:
+                log.debug("Failed setting task speaker", exc_info=True)
+                return False
+
+        applied_custom_speaker = False
+        speaker_applied = True
+        if self.speaker is not None and self.speaker != orig_speaker:
+            applied_custom_speaker = await run_in_executor(_apply_speaker, self.speaker)
+            speaker_applied = applied_custom_speaker
+
+        try:
+            rate = self.task.speech_options.rate
+            volume = self.task.speech_options.volume
+            pitch = self.task.speech_options.pitch
+
+            cached = self._check_cache(voice_key, rate, volume, pitch, speaker)
+            if cached is not None:
+                await self._play_chunks(cached)
+                return
+
+            processor = self._create_processor()
+            collected_chunks = await self._synthesize_and_stream(processor)
+
+            if not self.spatial_audio and collected_chunks and speaker_applied:
+                phrase_cache.put(
+                    self.task.text,
+                    voice_key,
+                    rate,
+                    volume,
+                    pitch,
+                    self.normalize,
+                    self.night_mode,
+                    collected_chunks,
+                    speaker=speaker,
+                )
+        finally:
+            if applied_custom_speaker:
+                await run_in_executor(_apply_speaker, orig_speaker)
 
 
 class BreakTask:
@@ -141,8 +282,8 @@ def speaker_setting():
     )
 
 
-def create_wave_player(sample_rate):
-    return WavePlayer(channels=1, samplesPerSec=sample_rate, bitsPerSample=16)
+def create_wave_player(sample_rate, channels=1):
+    return WavePlayer(channels=channels, samplesPerSec=sample_rate, bitsPerSample=16)
 
 
 async def _process_speech_sequence(speech_seq):
@@ -178,6 +319,18 @@ class SynthDriver(NvdaSynthDriver):
         NumericDriverSetting("noise_scale", _("&Noise scale"), False),
         NumericDriverSetting("length_scale", _("&Length scale"), True),
         NumericDriverSetting("noise_w", _("Noise &w"), False),
+        BooleanDriverSetting("night_mode", _("&Night mode"), defaultVal=False),
+        BooleanDriverSetting(
+            "normalize_audio", _("&Normalize audio volume"), defaultVal=False
+        ),
+        BooleanDriverSetting(
+            "spatial_audio", _("&Spatial audio (stereo panning)"), defaultVal=False
+        ),
+        BooleanDriverSetting(
+            "structural_reading",
+            _("Alternate &speaker for brackets and quotes"),
+            defaultVal=False,
+        ),
     )
     supportedCommands: typing.ClassVar = {
         IndexCommand,
@@ -206,6 +359,7 @@ class SynthDriver(NvdaSynthDriver):
         self._player = None
         self._players = {}
         self._active_players = set()
+        self._current_speaker = None
         self._noise_scale_factor = None
         self._length_scale_factor = None
         self._noise_w_factor = None
@@ -291,31 +445,93 @@ class SynthDriver(NvdaSynthDriver):
                 continue
 
             if text_list:
-                speech_seq.append(self._create_speech_task(text_list))
+                speech_seq.extend(self._create_speech_tasks(text_list))
                 text_list.clear()
             break_task = self._apply_speech_command(item, default_lang)
             if break_task is not None:
                 speech_seq.append(break_task)
             players_used.add(self._player)
         if text_list:
-            speech_seq.append(self._create_speech_task(text_list))
+            speech_seq.extend(self._create_speech_tasks(text_list))
         if index_command_list:
             speech_seq.append(
                 IndexReachedTask(self._on_index_reached, index_command_list)
             )
         speech_seq.append(DoneSpeakingTask(players_used, self._on_index_reached))
-        # cancel()/pause() can fire at any point while this sequence plays,
-        # potentially before a later task's mid-sequence voice switch has
-        # actually started playing -- they need every player this sequence
-        # might touch, not just whichever self._player ends up as.
         self._active_players = players_used
         return speech_seq
 
-    def _create_speech_task(self, text_list):
-        return SpeechTask(
-            self.tts.create_speech_provider("\n".join(text_list)),
-            self._player,
-        )
+    def _create_speech_tasks(self, text_list):
+        joined_text = "\n".join(text_list)
+        do_norm = self._get_normalize_audio()
+        do_spatial = self._get_spatial_audio()
+        do_night = self._get_night_mode()
+        do_struct = self._get_structural_reading()
+        pan = _get_focus_pan() if do_spatial else 0.0
+
+        voice = self.tts.speech_options.voice
+        if (
+            do_struct
+            and getattr(voice, "is_multi_speaker", False)
+            and len(getattr(voice, "speaker_names", [])) >= 2
+        ):
+            default_spk = self._active_speaker(voice)
+            spk_names = voice.speaker_names
+            alt_spk = spk_names[1] if spk_names[0] == default_spk else spk_names[0]
+            segments = split_into_segments(
+                joined_text, default_speaker=default_spk, alt_speaker=alt_spk
+            )
+            tasks = []
+            for seg in segments:
+                tasks.append(
+                    SpeechTask(
+                        self.tts.create_speech_provider(seg.text),
+                        self._player,
+                        normalize=do_norm,
+                        spatial_audio=do_spatial,
+                        night_mode=do_night,
+                        pan=pan,
+                        speaker=seg.speaker_name,
+                    )
+                )
+            return tasks
+
+        return [
+            SpeechTask(
+                self.tts.create_speech_provider(joined_text),
+                self._player,
+                normalize=do_norm,
+                spatial_audio=do_spatial,
+                night_mode=do_night,
+                pan=pan,
+                speaker=self._active_speaker(voice),
+            )
+        ]
+
+    def _current_voice_key(self):
+        options = getattr(self.tts, "speech_options", None)
+        return getattr(getattr(options, "voice", None), "key", None)
+
+    @property
+    def _current_speaker(self):
+        key, speaker = getattr(self, "_speaker_cache", (None, None))
+        return speaker if key == self._current_voice_key() else None
+
+    @_current_speaker.setter
+    def _current_speaker(self, speaker):
+        self._speaker_cache = (self._current_voice_key(), speaker)
+
+    def _active_speaker(self, voice):
+        spk = getattr(self, "_current_speaker", None)
+        if spk is None:
+            spk = getattr(voice, "default_speaker", None)
+        if spk is None:
+            with suppress(Exception):
+                spk = voice.speaker
+        if spk is None:
+            spk = FALLBACK_SPEAKER_NAME
+        self._current_speaker = spk
+        return spk
 
     def _apply_speech_command(self, item, default_lang):
         item_type = type(item)
@@ -353,12 +569,57 @@ class SynthDriver(NvdaSynthDriver):
         else:
             synthDoneSpeaking.notify(synth=self)
 
+    def _get_night_mode(self):
+        return getattr(self, "_night_mode_enabled", False)
+
+    def _set_night_mode(self, value):
+        self._night_mode_enabled = bool(value)
+        phrase_cache.clear()
+
+    def _get_normalize_audio(self):
+        return getattr(self, "_normalize_audio_enabled", False)
+
+    def _set_normalize_audio(self, value):
+        self._normalize_audio_enabled = bool(value)
+        phrase_cache.clear()
+
+    def _get_spatial_audio(self):
+        return getattr(self, "_spatial_audio_enabled", False)
+
+    def _set_spatial_audio(self, value):
+        self._spatial_audio_enabled = bool(value)
+        phrase_cache.clear()
+        self._player = None
+
+    def _get_structural_reading(self):
+        return getattr(self, "_structural_reading_enabled", False)
+
+    def _set_structural_reading(self, value):
+        self._structural_reading_enabled = bool(value)
+
     def _get_or_create_player(self, sample_rate):
-        if sample_rate not in self._players:
-            player = create_wave_player(sample_rate)
+        channels = 2 if self._get_spatial_audio() else 1
+        key = sample_rate if channels == 1 else (sample_rate, channels)
+        if key not in self._players:
+            player, key = self._open_player(sample_rate, channels)
             player.setVolume(all=self.tts.volume / 100)
-            self._players[sample_rate] = player
-        return self._players[sample_rate]
+            self._players[key] = player
+        return self._players[key]
+
+    def _open_player(self, sample_rate, channels):
+        if channels == 1:
+            return create_wave_player(sample_rate), sample_rate
+        try:
+            player = create_wave_player(sample_rate, channels=channels)
+            return player, (sample_rate, channels)
+        except (TypeError, OSError):
+            log.warning(
+                "Stereo playback is unavailable; turning spatial audio off",
+                exc_info=True,
+            )
+            self._spatial_audio_enabled = False
+            existing = self._players.get(sample_rate)
+            return existing or create_wave_player(sample_rate), sample_rate
 
     def _get_rateBoost(self):
         return self._rateBoost
@@ -442,6 +703,7 @@ class SynthDriver(NvdaSynthDriver):
         except BackendError:
             log.exception(f"Could not apply {name}: the speech engine is unreachable")
         setattr(self, factor_attr, value)
+        phrase_cache.clear()
 
     def _push_scale(self, voice, name, value, spec):
         default = getattr(voice.default_scales, name)
@@ -497,6 +759,7 @@ class SynthDriver(NvdaSynthDriver):
             )
             return
         self.__voice = value
+        phrase_cache.clear()
         with suppress(AttributeError):
             del self._availableVariants
         with suppress(AttributeError):
@@ -511,6 +774,11 @@ class SynthDriver(NvdaSynthDriver):
 
         if speaker is not None:
             self._set_speaker(speaker)
+        else:
+            voice_obj = getattr(
+                getattr(self.tts, "speech_options", None), "voice", None
+            )
+            self._current_speaker = getattr(voice_obj, "default_speaker", None)
         try:
             update_displaied_params_on_voice_change(self)
         except Exception:
@@ -536,9 +804,15 @@ class SynthDriver(NvdaSynthDriver):
             return
         if voice_key not in self._voice_map:
             return
-        prev_speaker = self.tts.speech_options.voice.speaker
+        prev_speaker = getattr(self, "_current_speaker", None)
+        if prev_speaker is None:
+            with suppress(Exception):
+                prev_speaker = self.tts.speech_options.voice.speaker
         self.tts.voice = voice_key
-        self.tts.speech_options.voice.speaker = prev_speaker
+        if prev_speaker is not None:
+            with suppress(Exception):
+                self.tts.speech_options.voice.speaker = prev_speaker
+        self._current_speaker = prev_speaker
         DengjenConfig.setdefault(self.voice, {})["variant"] = value
 
         self._reapply_scale_settings()
@@ -570,19 +844,27 @@ class SynthDriver(NvdaSynthDriver):
         return all_voices
 
     def _get_speaker(self):
-        return self.tts.speaker
+        if self._current_speaker is not None:
+            return self._current_speaker
+        spk = self.tts.speaker
+        self._current_speaker = spk
+        return spk
 
     def _set_speaker(self, value):
         try:
             self.tts.speaker = value
+            self._current_speaker = value
             DengjenConfig.setdefault(self.voice, {})["speaker"] = value
         except SpeakerNotFoundError:
-            DengjenConfig.setdefault(self.voice, {})["speaker"] = self.tts.speaker
+            self._current_speaker = self.tts.speaker
+            DengjenConfig.setdefault(self.voice, {})["speaker"] = self._current_speaker
         except BackendError:
             log.exception(
                 "Could not apply the speaker: the speech engine is unreachable"
             )
+            self._current_speaker = value
             DengjenConfig.setdefault(self.voice, {})["speaker"] = value
+        phrase_cache.clear()
 
     def _get_availableSpeakers(self):
         return {spk: VoiceInfo(spk, spk, None) for spk in self.tts.get_speakers()}

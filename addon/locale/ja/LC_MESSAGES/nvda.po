@@ -544,11 +544,99 @@ msgstr "古いアドオンがインストールされています"
 
 #: addon\globalPlugins\dengjen_tts_global_plugin\__init__.py:113
 msgid "No installed Dengjen voice matches NVDA's language, but one is available to download."
-msgstr ""
+msgstr "インストールされているDengjen音声にNVDAの言語と一致するものはありませんが、ダウンロード可能な音声があります。"
 
 #: addon\globalPlugins\dengjen_tts_global_plugin\__init__.py:118
 msgid "&Don't ask again"
+msgstr "今後このメッセージを表示しない(&D)"
+
+msgid "&Normalize audio volume"
+msgstr "音量を自動ノーマライズする(&N)"
+
+msgid "&Spatial audio (stereo panning)"
+msgstr "空間オーディオ（ステレオパンニング）(&S)"
+
+msgid "Alternate &speaker for brackets and quotes"
+msgstr "括弧や引用符の中身を別の話者で読む(&S)"
+
+msgid "Toggles Dengjen night mode (soft, quiet audio)"
+msgstr "Dengjenのナイトモード（ソフトで静かな音声）を切り替えます"
+
+msgid "Dengjen app &profiles..."
+msgstr "Dengjenアプリプロファイル(&P)..."
+
+msgid "Configure per-application Dengjen voice profiles"
+msgstr "アプリケーションごとのDengjen音声プロファイルを設定します"
+
+msgid "Edit App Profile"
+msgstr "アプリプロファイルを編集"
+
+msgid "Application name (e.g. firefox):"
+msgstr "アプリケーション名（例: firefox）:"
+
+msgid "Voice:"
+msgstr "音声:"
+
+msgid "Rate (0-100, blank=default):"
+msgstr "速度（0〜100、空白=デフォルト）:"
+
+msgid "Volume (0-100, blank=default):"
+msgstr "音量（0〜100、空白=デフォルト）:"
+
+msgid "Pitch (0-100, blank=default):"
+msgstr "ピッチ（0〜100、空白=デフォルト）:"
+
+msgid "Please enter an application name."
+msgstr "アプリケーション名を入力してください。"
+
+msgid "Dengjen App Profiles"
+msgstr "Dengjen アプリプロファイル"
+
+msgid ""
+"Configure per-application voice settings.\n"
+"Dengjen will automatically switch to the saved profile\n"
+"when the specified application gains focus."
 msgstr ""
+"アプリケーションごとの音声設定を行います。\n"
+"指定したアプリケーションにフォーカスが移ると、\n"
+"Dengjenが自動的に保存されたプロファイルに切り替えます。"
+
+msgid "Application"
+msgstr "アプリケーション"
+
+msgid "&Add..."
+msgstr "追加(&A)..."
+
+msgid "&Edit..."
+msgstr "編集(&E)..."
+
+msgid "&Delete"
+msgstr "削除(&D)"
+
+msgid "Delete profile for '{app}'?"
+msgstr "'{app}' のプロファイルを削除しますか？"
+
+msgid "Confirm"
+msgstr "確認"
+
+msgid "&Night mode"
+msgstr "ナイトモード(&N)"
+
+msgid "Dengjen is not active"
+msgstr "Dengjenはアクティブではありません"
+
+msgid "Night mode disabled"
+msgstr "ナイトモード無効"
+
+msgid "Night mode enabled"
+msgstr "ナイトモード有効"
+
+msgid "Rate"
+msgstr "速度"
+
+msgid "Voice"
+msgstr "音声"
+
 
 #: addon\globalPlugins\dengjen_tts_global_plugin\japanese_dictionary_download.py
 msgid "Downloading Japanese dictionary"
