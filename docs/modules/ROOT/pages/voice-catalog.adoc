@@ -67,7 +67,7 @@ doesn't match that convention, from the voice's own bundled `config.json`
 (`language.code`, `dataset`, `audio.quality`). The archive must contain at
 least one `.onnx` and one `.json` file; an optional `MODEL_CARD` file is
 extracted too and is what `Voice model card...`
-(xref:usage.adoc[Using the voice manager]) displays.
+(https://github.com/ZirekHQ/dengjen-nvda#using-the-voice-manager[Using the voice manager]) displays.
 
 == Kokoro voice format
 
