@@ -4,7 +4,9 @@ This page shows dengjen-nvda's own structure as a https://c4model.com/[C4]
 Container, Component, and Code diagram. For how it fits into the wider
 ZirekHQ speech stack, see the
 https://zirekhq.github.io/en/home/architecture.html[org-wide System Context
-diagram].
+diagram]. The speech flow is described in xref:speech-pipeline.adoc[Speech pipeline], the engine
+process in xref:speech-engine-process.adoc[Speech engine process], and the modules behind the
+`TTSBackend` seam in xref:domain-layer.adoc[Domain layer].
 
 == Container
 

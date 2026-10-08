@@ -1,0 +1,18 @@
+= Contributing
+
+The contributor guide and the repository guardrails live in the repository itself, so they stay next
+to the code they describe.
+
+https://github.com/ZirekHQ/dengjen-nvda/blob/main/.github/CONTRIBUTING.md[`.github/CONTRIBUTING.md`]::
+Reporting bugs and suggesting features, development setup, building the add-on, running the
+test suites, the bundled libraries, submitting a PR and what CI runs on it, long-running PRs, and
+cutting a release.
+
+https://github.com/ZirekHQ/dengjen-nvda/blob/main/AGENTS.md[`AGENTS.md`]::
+Architecture notes and guardrails: how vendored libraries and the engine binary are fetched, build
+and release conventions, branch and commit naming, and the rules for stubbing NVDA in tests and for
+GUI tests.
+
+These pages cover how the code works: xref:architecture.adoc[Architecture],
+xref:speech-pipeline.adoc[Speech pipeline], xref:speech-engine-process.adoc[Speech engine process]
+and xref:domain-layer.adoc[Domain layer].

@@ -1,0 +1,138 @@
+= Speech pipeline
+
+How a `speak()` call from NVDA becomes audio. The code lives in
+`addon/synthDrivers/dengjen_neural_voices/adapters/nvda/synth_driver.py` unless noted.
+
+== Three execution contexts
+
+Speech touches three kinds of thread, and each blocking call has to run in the right one.
+
+[cols="1,3"]
+|===
+|Context |What runs there
+
+|NVDA main thread
+|`SynthDriver.speak()`, `cancel()`, `pause()`, and every setter (voice, rate, variant, speaker).
+The setters are synchronous, so the `TTSBackend` calls they make are blocking.
+
+|`dengjen_asyncio` (event-loop thread)
+|The speech tasks, and the `grpc.aio` calls they make. It is a daemon thread owned by `AsyncEngine`
+in `aio.py`.
+
+|`dengjen_executor` (thread pool)
+|Blocking audio calls: `WavePlayer.feed`, `sync`, `idle`, plus the index callbacks. Tasks reach it
+through `run_in_executor`. The pool has `max(1, cpu_count // 2)` workers.
+|===
+
+`AsyncEngine` is a singleton (`ENGINE`). The module-level helpers (`ensure_running`,
+`asyncio_create_task`, `run_in_executor`, ...) delegate to it, and tests build their own
+`AsyncEngine` to exercise its lifecycle without sharing process-wide state. `ensure_running()`
+restarts the loop thread if it has died. Starting it waits up to `LOOP_STARTUP_TIMEOUT` (5 s);
+stopping it waits up to `LOOP_SHUTDOWN_TIMEOUT` (2 s).
+
+== From speech sequence to tasks
+
+`speak(speechSequence)` drops the speech with a log error when no backend is available
+(`self.tts is None`). Otherwise it:
+
+. Opens `tts.create_synthesis_context()`, which snapshots `speech_options` and restores them
+afterwards. Rate, volume, pitch and language commands inside one sequence therefore never leak into
+the next.
+. Calls `cancel()` to stop any speech still playing.
+. Builds the task list on the NVDA thread (`_build_speech_tasks`) and hands it to
+`process_speech()`, which schedules it on the event loop. The returned handle is kept as
+`_current_task` so `cancel()` can cancel it.
+
+`_build_speech_tasks` walks the sequence once:
+
+* Strings accumulate. Before any non-string command, and at the end, the accumulated strings are
+joined with newlines and become `SpeechTask` objects.
+* `IndexCommand` values are collected and reported together in a single `IndexReachedTask`, placed
+after all the speech tasks. NVDA therefore sees every index after the audio has played, not as
+each position is reached.
+* `BreakCommand` becomes a `BreakTask` that plays silence of the requested length.
+* `LangChangeCommand` switches `tts.language` (a missing voice is ignored) and selects the
+`WavePlayer` for the new voice's sample rate.
+* `RateCommand`, `VolumeCommand` and `PitchCommand` set the matching option on `tts`.
+* The sequence always ends with a `DoneSpeakingTask`.
+
+When Structural reading is on, the voice is multi-speaker with at least two speakers, the joined
+text is split into segments and each becomes its own `SpeechTask` with its own speaker (see
+xref:domain-layer.adoc[Domain layer]).
+
+== Running the tasks
+
+`_process_speech_sequence` awaits the tasks in order.
+
+* A cancelled task ends the sequence.
+* Any other exception is logged and marks the sequence failed. The remaining tasks are skipped
+except `IndexReachedTask` and `DoneSpeakingTask`, so NVDA still receives its completion
+notification.
+* `DoneSpeakingTask` waits for every player the sequence used to go idle, then calls the index
+callback with `None`, which fires `synthDoneSpeaking`. A sequence can use several players, because a
+language change can switch to a voice with a different sample rate.
+
+A `SpeechTask` does the following:
+
+. While say-all is running, newlines become spaces and sentence silence is set to 50 ms.
+. If it carries a speaker, that speaker is set on the voice for the duration of the task and the
+original is restored in a `finally` block.
+. It looks up the xref:#phrase-cache[phrase cache] (skipped with spatial audio). On a hit it plays
+the cached chunks.
+. On a miss it streams chunks from the voice's `generate_audio()`. If night mode, normalisation or
+spatial audio is on, each chunk passes through an `AudioStreamProcessor` first, and the processor is
+flushed at the end. Each chunk is fed to the player, then the task waits for `player.sync`.
+. It stores the collected chunks in the cache, unless spatial audio is on or the speaker could not
+be applied.
+
+== Players
+
+`WavePlayer` instances (16-bit) are created on first speech, not at startup, because opening one
+fails on a machine with no audio device and the synthesiser must still load there. There is one
+player per sample rate, keyed `(sample_rate, 2)` instead when spatial audio needs stereo. If a
+stereo player cannot be opened, the driver logs a warning, turns spatial audio off and falls back to
+mono.
+
+`cancel()` cancels the asyncio task and stops every player used by the current sequence.
+`pause(switch)` forwards to the same players.
+
+== The TTSBackend port
+
+`ports/tts_backend.py` defines the only interface the domain layer uses to reach an engine.
+Nothing in it imports NVDA or gRPC.
+
+[cols="1,3"]
+|===
+|Member |Contract
+
+|`initialize()`, `check_version()`, `shutdown()`
+|Blocking. Start, handshake and stop the engine.
+
+|`load_voice(config_path)`
+|Blocking. Returns a `LoadedVoice` with the backend's voice id, sample rate, speakers, whether it
+supports streaming output, and a `SynthOptions` with the voice's defaults.
+
+|`get_synth_options(id)`, `set_synth_options(id, **kwargs)`
+|Blocking. Read and change a loaded voice's speaker and scales. `SynthOptions.parameters` carries
+backend-specific knobs that have no named field.
+
+|`synthesize(id, text, rate, volume, pitch, sentence_silence_ms, streaming)`
+|The one true async generator. Yields PCM `bytes`, and runs on the event-loop thread.
+|===
+
+Errors derive from `BackendError`: `BackendUnavailableError` (the engine cannot be started or
+reached), `VoiceLoadError` and `SynthesisError`.
+
+`DengjenVoice.synthesize` in `domain/tts_system.py` skips text under ten characters that consists
+only of ignored punctuation, so those utterances never reach the engine.
+
+[#phrase-cache]
+== Phrase cache
+
+`domain/phrase_cache.py` keeps recently synthesised PCM for short utterances, such as interface
+labels, so repeating them skips the engine round trip.
+
+* A thread-safe LRU of at most 120 entries; an entry larger than 12 KB is not stored.
+* The key is the stripped text, voice key, speaker, rate, volume and pitch rounded to 0.1, and the
+normalise and night-mode flags.
+* Changing night mode, normalisation or spatial audio clears the cache. Structural reading does not.
