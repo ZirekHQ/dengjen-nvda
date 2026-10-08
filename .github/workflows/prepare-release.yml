@@ -109,6 +109,11 @@ jobs:
     permissions:
       contents: write
     uses: ./.github/workflows/release.yml # zizmor: ignore[self-repository] CI is pinned to zizmor v1.28.0, which predates $/ syntax support
+    secrets:
+      MASTODON_INSTANCE_URL: ${{ secrets.MASTODON_INSTANCE_URL }}
+      MASTODON_ACCESS_TOKEN: ${{ secrets.MASTODON_ACCESS_TOKEN }}
+      BLUESKY_HANDLE: ${{ secrets.BLUESKY_HANDLE }}
+      BLUESKY_APP_PASSWORD: ${{ secrets.BLUESKY_APP_PASSWORD }}
     with:
       new_tag: ${{ inputs.new_tag }}
       dry_run: ${{ inputs.dry_run == true }}
