@@ -45,8 +45,9 @@ the next.
 
 `_build_speech_tasks` walks the sequence once:
 
-* Strings accumulate. Before any non-string command, and at the end, the accumulated strings are
-joined with newlines and become `SpeechTask` objects.
+* Strings accumulate. Before any command other than `IndexCommand`, and at the end, the accumulated
+strings are joined with newlines and passed to `_create_speech_tasks`, which creates one or more
+`SpeechTask` objects. `IndexCommand` values do not flush accumulated strings.
 * `IndexCommand` values are collected and reported together in a single `IndexReachedTask`, placed
 after all the speech tasks. NVDA therefore sees every index after the audio has played, not as
 each position is reached.
