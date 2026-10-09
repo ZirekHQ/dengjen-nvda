@@ -5,6 +5,7 @@ All NVDA internals are stubbed by conftest.py. No gRPC/NVDA dependency: every
 voice here is constructed against a FakeTTSBackend.
 """
 
+import threading
 from pathlib import Path
 
 import pytest
@@ -23,7 +24,11 @@ from dengjen_neural_voices.domain.tts_system import (
     SpeechOptions,
     VoiceNotFoundError,
 )
-from dengjen_neural_voices.ports.tts_backend import LoadedVoice, SynthOptions
+from dengjen_neural_voices.ports.tts_backend import (
+    LoadedVoice,
+    SynthOptions,
+    VoiceLoadError,
+)
 
 from tests.fake_tts_backend import FakeTTSBackend
 
@@ -603,3 +608,161 @@ class TestModelTypeScales:
         assert voice.noise_scale is None
         voice.noise_scale = 0.3
         assert backend.set_synth_options_calls == []
+
+
+class _GatedBackend(FakeTTSBackend):
+    def __init__(self):
+        super().__init__()
+        self.release = threading.Event()
+
+    def load_voice(self, config_path):
+        assert self.release.wait(timeout=5), "load was never released"
+        return super().load_voice(config_path)
+
+
+def _unloaded_voice(backend, tmp_path):
+    voice_dir = tmp_path / "en-test-medium"
+    voice_dir.mkdir()
+    (voice_dir / "config.json").write_text("{}", encoding="utf-8")
+    return DengjenVoice.from_path(voice_dir, backend)
+
+
+class TestDengjenVoiceBeginLoad:
+    def test_returns_before_the_backend_finishes(self, tmp_path):
+        backend = _GatedBackend()
+        voice = _unloaded_voice(backend, tmp_path)
+
+        future = voice.begin_load()
+
+        assert not future.done()
+        assert not voice.is_loaded
+        backend.release.set()
+        future.result(timeout=5)
+        assert voice.is_loaded
+
+    def test_concurrent_callers_share_one_backend_call(self, tmp_path):
+        backend = _GatedBackend()
+        voice = _unloaded_voice(backend, tmp_path)
+        futures = []
+        threads = [
+            threading.Thread(target=lambda: futures.append(voice.begin_load()))
+            for _ in range(8)
+        ]
+        for t in threads:
+            t.start()
+        for t in threads:
+            t.join()
+        backend.release.set()
+        futures[0].result(timeout=5)
+
+        assert len(backend.load_voice_calls) == 1
+        assert all(f is futures[0] for f in futures)
+
+    def test_a_failed_load_is_not_cached(self, tmp_path):
+        backend = _GatedBackend()
+        backend.release.set()
+        backend.raise_on_load_voice(VoiceLoadError("corrupt"))
+        voice = _unloaded_voice(backend, tmp_path)
+        failed = voice.begin_load()
+        with pytest.raises(VoiceLoadError):
+            failed.result(timeout=5)
+
+        backend.raise_on_load_voice(None)
+        retry = voice.begin_load()
+        retry.result(timeout=5)
+
+        assert retry is not failed
+        assert voice.is_loaded
+
+    def test_a_base_exception_in_the_worker_still_completes_the_future(
+        self, tmp_path, monkeypatch
+    ):
+        monkeypatch.setattr(threading, "excepthook", lambda args: None)
+        backend = _GatedBackend()
+        backend.release.set()
+        backend.raise_on_load_voice(SystemExit("shim exit"))
+        voice = _unloaded_voice(backend, tmp_path)
+
+        future = voice.begin_load()
+
+        with pytest.raises(SystemExit):
+            future.result(timeout=5)
+        for worker in threading.enumerate():
+            if worker.name == "dengjen-voice-load":
+                worker.join(timeout=5)
+
+    def test_a_loaded_voice_returns_a_completed_future(self, backend):
+        voice = _make_voice(backend)
+        assert voice.begin_load().done()
+
+    def test_load_blocks_and_populates_the_voice(self, backend, tmp_path):
+        voice = _unloaded_voice(backend, tmp_path)
+        voice.load()
+        assert voice.sample_rate == 22050
+        assert voice.remote_id == "fake-remote-id"
+
+    def test_reading_a_load_dependent_attribute_loads_once(self, backend, tmp_path):
+        voice = _unloaded_voice(backend, tmp_path)
+        assert voice.sample_rate == 22050
+        assert voice.is_multi_speaker is False
+        assert len(backend.load_voice_calls) == 1
+
+    def test_unknown_attributes_still_raise(self, backend, tmp_path):
+        voice = _unloaded_voice(backend, tmp_path)
+        with pytest.raises(AttributeError):
+            _ = voice.nonexistent
+        assert backend.load_voice_calls == []
+
+
+class TestSpeechOptionsDoesNotBlock:
+    def test_constructing_options_does_not_wait_for_the_load(self, tmp_path):
+        backend = _GatedBackend()
+        voice = _unloaded_voice(backend, tmp_path)
+
+        options = SpeechOptions(voice=voice)
+
+        assert options.voice is voice
+        assert not voice.is_loaded
+        backend.release.set()
+        voice.begin_load().result(timeout=5)
+        assert len(backend.load_voice_calls) == 1
+
+    def test_a_failing_voice_does_not_raise_from_set_voice(self, tmp_path):
+        backend = _GatedBackend()
+        backend.release.set()
+        backend.raise_on_load_voice(VoiceLoadError("corrupt"))
+        voice = _unloaded_voice(backend, tmp_path)
+
+        options = SpeechOptions(voice=voice)
+
+        assert options.voice is voice
+
+
+class TestVoiceForLanguage:
+    @pytest.fixture
+    def tts(self, backend):
+        voices = [
+            _make_voice(backend, key="en_US-john-medium", language="en_US"),
+            _make_voice(backend, key="fr_FR-durand-medium", language="fr_FR"),
+            _make_voice(backend, key="fr_CA-lea-medium", language="fr_CA"),
+        ]
+        return DengjenTextToSpeechSystem(voices)
+
+    def test_an_exact_language_match_wins(self, tts):
+        assert tts.voice_for_language("fr_CA").key == "fr_CA-lea-medium"
+
+    def test_the_first_same_family_voice_is_the_fallback(self, tts):
+        assert tts.voice_for_language("fr_BE").key == "fr_FR-durand-medium"
+
+    def test_the_given_current_voice_is_kept_when_it_already_matches(self, tts):
+        current = tts.voices[2]
+        assert tts.voice_for_language("fr_CA", current=current) is current
+
+    def test_does_not_change_the_speech_options(self, tts):
+        before = tts.speech_options.voice
+        tts.voice_for_language("fr_FR")
+        assert tts.speech_options.voice is before
+
+    def test_unknown_language_raises(self, tts):
+        with pytest.raises(VoiceNotFoundError):
+            tts.voice_for_language("zz_ZZ")

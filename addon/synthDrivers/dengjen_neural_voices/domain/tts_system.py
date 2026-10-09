@@ -5,14 +5,17 @@
 
 Imports no gRPC and no I/O-heavy NVDA module -- the one accepted exception is
 languageHandler.normalizeLanguage, a pure string-normalization function with
-no runtime/subprocess dependency of its own.
+no runtime/subprocess dependency of its own. Voice loading runs on a worker
+thread through the TTSBackend port.
 """
 
 import copy
 import operator
 import os
+import threading
 from abc import ABC, abstractmethod
 from collections.abc import Mapping, Sequence
+from concurrent.futures import Future
 from contextlib import contextmanager
 from dataclasses import dataclass, field
 from pathlib import Path
@@ -86,6 +89,29 @@ def _default_scale(profile, defaults, name):
     return getattr(defaults, name) if value is None else value
 
 
+_LOAD_DEPENDENT = frozenset(
+    {
+        "config_path",
+        "default_scales",
+        "sample_rate",
+        "speakers",
+        "speaker_names",
+        "is_multi_speaker",
+        "default_speaker",
+    }
+)
+
+
+def _completed_future():
+    future = Future()
+    future.set_result(None)
+    return future
+
+
+def _failed(future):
+    return future.done() and (future.cancelled() or future.exception() is not None)
+
+
 @dataclass
 class DengjenVoice:
     key: str
@@ -98,6 +124,12 @@ class DengjenVoice:
     properties: Mapping[str, str] | None = field(default_factory=dict)
     remote_id: str | None = None
     supports_streaming_output: bool = False
+    _load_lock: threading.Lock = field(
+        default_factory=threading.Lock, init=False, repr=False, compare=False
+    )
+    _load_future: Future | None = field(
+        default=None, init=False, repr=False, compare=False
+    )
 
     @classmethod
     def from_path(cls, path, backend):
@@ -122,9 +154,46 @@ class DengjenVoice:
             properties=properties,
         )
 
+    @property
+    def is_loaded(self):
+        return bool(self.remote_id)
+
+    def begin_load(self):
+        with self._load_lock:
+            if self.is_loaded:
+                return _completed_future()
+            current = self._load_future
+            if current is not None and not _failed(current):
+                return current
+            self._load_future = Future()
+            threading.Thread(
+                target=self._run_load,
+                args=(self._load_future,),
+                name="dengjen-voice-load",
+                daemon=True,
+            ).start()
+            return self._load_future
+
     def load(self):
-        if self.remote_id:
-            return
+        self.begin_load().result()
+
+    def __getattr__(self, name):
+        if name not in _LOAD_DEPENDENT:
+            raise AttributeError(name)
+        self.load()
+        return self.__dict__[name]
+
+    def _run_load(self, future):
+        try:
+            self._load_blocking()
+        except BaseException as exc:
+            future.set_exception(exc)
+            if not isinstance(exc, Exception):
+                raise
+        else:
+            future.set_result(None)
+
+    def _find_config_path(self):
         candidates = [
             p for p in self.location.glob("*.json") if p.name != VOICE_METADATA_FILENAME
         ]
@@ -132,13 +201,16 @@ class DengjenVoice:
             raise RuntimeError(
                 f"Could not load voice from `{os.fspath(self.location)}`"
             )
-        self.config_path = next(
-            iter(sorted(candidates, key=lambda p: p.name != "config.json"))
-        )
+        return next(iter(sorted(candidates, key=lambda p: p.name != "config.json")))
+
+    def _load_blocking(self):
+        self.config_path = self._find_config_path()
         loaded = self.backend.load_voice(str(self.config_path))
-        self.remote_id = loaded.backend_voice_id
-        self.supports_streaming_output = loaded.supports_streaming_output
+        self._apply_loaded(loaded)
+
+    def _apply_loaded(self, loaded):
         profile = profile_for(self.model_type)
+        self.supports_streaming_output = loaded.supports_streaming_output
         self.default_scales = Scales(
             **{
                 name: _default_scale(profile, loaded.defaults, name)
@@ -152,6 +224,7 @@ class DengjenVoice:
         self.default_speaker = (
             loaded.defaults.speaker if self.is_multi_speaker else None
         )
+        self.remote_id = loaded.backend_voice_id
 
     def _get_prosody_option(self, name):
         profile = profile_for(self.model_type)
@@ -256,8 +329,8 @@ class SpeechOptions:
         self.sentence_silence_ms = sentence_silence_ms
 
     def set_voice(self, voice: DengjenVoice):
-        voice.load()
         self.voice = voice
+        voice.begin_load()
 
     @property
     def speaker(self):
@@ -339,20 +412,24 @@ class DengjenTextToSpeechSystem:
 
     @language.setter
     def language(self, new_language: str):
+        voice = self.voice_for_language(new_language)
+        if voice is not self.speech_options.voice:
+            self.speech_options.set_voice(voice)
+
+    def voice_for_language(self, new_language: str, current=None):
+        current = current or self.speech_options.voice
         lang = normalizeLanguage(new_language)
-        if self.speech_options.voice.language == lang:
-            return
+        if current.language == lang:
+            return current
         lang_code = lang.split("_")[0] + "_"
         possible_voices = []
         for voice in self.voices:
             if voice.language == lang:
-                self.speech_options.set_voice(voice)
-                return
+                return voice
             elif voice.language.startswith(lang_code):
                 possible_voices.append(voice)
         if possible_voices:
-            self.speech_options.set_voice(possible_voices[0])
-            return
+            return possible_voices[0]
         raise VoiceNotFoundError(
             f"A voice with the given language `{new_language}` was not found"
         )

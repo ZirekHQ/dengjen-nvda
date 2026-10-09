@@ -1,29 +1,21 @@
 """
-Tests for the SynthDriver itself: construction, speech sequence handling,
-flush/cancel ordering, the settings NVDA reads and writes through driver
-properties, and _set_voice's failure handling
-(addon/synthDrivers/dengjen_neural_voices/adapters/nvda/synth_driver.py).
+Tests for the SynthDriver (addon/synthDrivers/dengjen_neural_voices/adapters/nvda/synth_driver.py):
+construction, speech sequence handling, flush/cancel ordering, the settings
+NVDA reads and writes through driver properties, and background voice loading
+and switching.
 
-conftest.py registers `dengjen_neural_voices` as a package without running
-its __init__.py, so until now nothing imported or drove the SynthDriver
-class (see issue #65 -- this is where user-reported regressions have
-historically lived). This module executes the real synth_driver.py under the
-same stubs used for the rest of the package, replacing the hollow package
-stub, then constructs the driver against a fake on-disk voice.
-
-The TestSetVoice* classes below additionally cover issue #69: a voice that
-exists on disk but fails to load (e.g. a corrupted .onnx file) must not
-leave the driver in a half-switched state -- the previously active voice
-should remain current, and NVDA should report a message instead of letting
-an unhandled exception surface as an error chime. They load a second,
-separate instance of the same module under a private name so the fake TTS
-stand-ins used here don't interfere with the on-disk fixtures above.
+Executes the real synth_driver.py under the stubs conftest.py installs, against
+a fake on-disk voice and a fake backend. A voice that exists on disk but fails
+to load (issue #69) must leave the previously active voice current and make
+NVDA report a message instead of an error chime.
 """
 
 import asyncio
 import os
+import threading
+import time
 from types import SimpleNamespace
-from unittest.mock import MagicMock
+from unittest.mock import MagicMock, call
 
 import config
 import pytest
@@ -107,9 +99,34 @@ def fake_backend(monkeypatch):
     return backend
 
 
+class GatedBackend(FakeTTSBackend):
+    def __init__(self):
+        super().__init__()
+        self.release = threading.Event()
+
+    def load_voice(self, config_path):
+        assert self.release.wait(timeout=5), "load was never released"
+        return super().load_voice(config_path)
+
+
+def wait_until(predicate, timeout=5.0):
+    deadline = time.monotonic() + timeout
+    while time.monotonic() < deadline:
+        if predicate():
+            return
+        time.sleep(0.005)
+    raise AssertionError("condition not met in time")
+
+
+def wait_ready(driver):
+    voice = driver.tts.speech_options.voice
+    wait_until(lambda: driver._scaled_voice is voice)
+
+
 @pytest.fixture
 def driver(configured_voice, fake_backend):
     d = SynthDriver()
+    wait_ready(d)
     yield d
     d.terminate()
 
@@ -841,64 +858,11 @@ class TestSettings:
         assert any("noise_w" in kwargs for kwargs in calls)
 
 
-_failure_driver_module = load_module_from_path(
-    "dengjen_neural_voices.adapters.nvda._init_under_test",
-    os.path.join(SYNTH_PKG_DIR, "adapters", "nvda", "synth_driver.py"),
-    package="dengjen_neural_voices.adapters.nvda",
-)
-_FailureSynthDriver = _failure_driver_module.SynthDriver
-
-
-class _FakeVoiceEntry:
-    """Stand-in for a _standard_voice_map value (a DengjenVoice)."""
-
-    def __init__(self, key, variant="unknown"):
-        self.key = key
-        self.variant = variant
-
-
 class _FakeVoiceInfo:
     """Stand-in for synthDriverHandler.VoiceInfo -- only .displayName is used."""
 
     def __init__(self, display_name):
         self.displayName = display_name
-
-
-class _FakeTTSRaising:
-    """Stand-in for DengjenTextToSpeechSystem whose voice setter always fails,
-    as happens when the underlying .onnx model is corrupted/incomplete."""
-
-    voice = None
-
-    def __init__(self):
-
-        self.speech_options = MagicMock()
-
-    def __setattr__(self, name, value):
-        if name == "voice":
-            raise RuntimeError("Protobuf parsing failed")
-        super().__setattr__(name, value)
-
-
-class _FakeTTSAccepting:
-    """Stand-in for DengjenTextToSpeechSystem whose voice setter succeeds."""
-
-    def __init__(self):
-        self.voice = None
-        self.speech_options = MagicMock()
-
-
-def _make_driver(voice_map, available_voices, tts, initial_voice=None):
-    driver = _FailureSynthDriver.__new__(_FailureSynthDriver)
-    driver._standard_voice_map = voice_map
-    driver.availableVoices = available_voices
-    driver._voice_map = {}
-    driver.tts = tts
-    driver.noise_scale = 50
-    driver.length_scale = 50
-    driver.noise_w = 50
-    driver._SynthDriver__voice = initial_voice
-    return driver
 
 
 @pytest.fixture(autouse=True)
@@ -945,97 +909,6 @@ class TestEngineLostMidSession:
         log.exception.reset_mock()
         dead_engine.noise_scale = 60
         log.exception.assert_called_once()
-
-
-class TestSetVoiceFailure:
-    def test_failed_load_keeps_the_previous_voice(self):
-        driver = _make_driver(
-            voice_map={
-                "alex": _FakeVoiceEntry("en_US-alex-medium"),
-                "bryce": _FakeVoiceEntry("en_US-bryce-medium"),
-            },
-            available_voices={
-                "alex": _FakeVoiceInfo("Alex (en-US)"),
-                "bryce": _FakeVoiceInfo("Bryce (en-US)"),
-            },
-            tts=_FakeTTSRaising(),
-            initial_voice="alex",
-        )
-
-        driver._set_voice("bryce")
-
-        assert driver._SynthDriver__voice == "alex"
-
-    def test_failed_load_reports_a_message_naming_the_voice(self):
-        driver = _make_driver(
-            voice_map={"bryce": _FakeVoiceEntry("en_US-bryce-medium")},
-            available_voices={"bryce": _FakeVoiceInfo("Bryce (en-US)")},
-            tts=_FakeTTSRaising(),
-            initial_voice=None,
-        )
-
-        driver._set_voice("bryce")
-
-        ui.message.assert_called_once()
-        (message,), _kwargs = ui.message.call_args
-        assert "Bryce (en-US)" in message
-
-    def test_failed_load_does_not_raise(self):
-        driver = _make_driver(
-            voice_map={"bryce": _FakeVoiceEntry("en_US-bryce-medium")},
-            available_voices={"bryce": _FakeVoiceInfo("Bryce (en-US)")},
-            tts=_FakeTTSRaising(),
-            initial_voice=None,
-        )
-
-        driver._set_voice("bryce")
-
-    def test_failed_load_logs_the_exception(self):
-        driver = _make_driver(
-            voice_map={"bryce": _FakeVoiceEntry("en_US-bryce-medium")},
-            available_voices={"bryce": _FakeVoiceInfo("Bryce (en-US)")},
-            tts=_FakeTTSRaising(),
-            initial_voice=None,
-        )
-
-        driver._set_voice("bryce")
-
-        log.exception.assert_called_once()
-
-
-class TestSetVoiceSuccess:
-    def test_successful_load_switches_the_current_voice(self):
-        driver = _make_driver(
-            voice_map={
-                "alex": _FakeVoiceEntry("en_US-alex-medium"),
-                "danny": _FakeVoiceEntry("en_US-danny-low"),
-            },
-            available_voices={
-                "alex": _FakeVoiceInfo("Alex (en-US)"),
-                "danny": _FakeVoiceInfo("Danny (en-US)"),
-            },
-            tts=_FakeTTSAccepting(),
-            initial_voice="alex",
-        )
-
-        driver._set_voice("danny")
-
-        assert driver._SynthDriver__voice == "danny"
-        assert driver.tts.voice == "en_US-danny-low"
-        ui.message.assert_not_called()
-
-    def test_falls_back_to_the_first_available_voice_when_value_unknown(self):
-        driver = _make_driver(
-            voice_map={"alex": _FakeVoiceEntry("en_US-alex-medium")},
-            available_voices={"alex": _FakeVoiceInfo("Alex (en-US)")},
-            tts=_FakeTTSAccepting(),
-            initial_voice=None,
-        )
-
-        driver._set_voice("does-not-exist")
-
-        assert driver._SynthDriver__voice == "alex"
-        assert driver.tts.voice == "en_US-alex-medium"
 
 
 @pytest.fixture
@@ -1239,3 +1112,473 @@ class TestSpeechTaskExecution:
             )
             is None
         )
+
+
+class TestStartupPreload:
+    @pytest.fixture
+    def fake_backend(self, monkeypatch):
+        backend = GatedBackend()
+        monkeypatch.setattr(driver_module, "_bootstrap_backend", lambda: backend)
+        return backend
+
+    @pytest.fixture
+    def pending_driver(self, configured_voice, fake_backend):
+        d = SynthDriver()
+        yield d
+        fake_backend.release.set()
+        d.terminate()
+
+    def test_construction_does_not_wait_for_the_model(self, pending_driver):
+        assert pending_driver.tts is not None
+        assert not pending_driver.tts.speech_options.voice.is_loaded
+
+    def test_speech_waits_for_the_load_then_plays(self, pending_driver, fake_backend):
+        spoken = []
+        pending_driver._speak_now = spoken.append
+
+        pending_driver.speak(["hi"])
+
+        assert spoken == []
+        fake_backend.release.set()
+        wait_until(lambda: spoken == [["hi"]])
+
+    def test_the_latest_deferred_utterance_wins(self, pending_driver, fake_backend):
+        spoken = []
+        pending_driver._speak_now = spoken.append
+
+        pending_driver.speak(["a"])
+        pending_driver.speak(["b"])
+        fake_backend.release.set()
+        wait_ready(pending_driver)
+
+        assert spoken == [["b"]]
+
+    def test_cancel_drops_a_deferred_utterance(self, pending_driver, fake_backend):
+        spoken = []
+        pending_driver._speak_now = spoken.append
+
+        pending_driver.speak(["stale"])
+        pending_driver.cancel()
+        fake_backend.release.set()
+        wait_ready(pending_driver)
+
+        assert spoken == []
+
+    def test_sliders_set_before_the_load_are_applied_after_it(
+        self, pending_driver, fake_backend
+    ):
+        pending_driver.noise_scale = 30
+
+        assert fake_backend.set_synth_options_calls == []
+        fake_backend.release.set()
+        wait_ready(pending_driver)
+        assert fake_backend.set_synth_options_calls != []
+        assert pending_driver.noise_scale == 30
+
+    def test_speaker_set_before_the_load_is_kept_without_a_backend_call(
+        self, pending_driver, fake_backend
+    ):
+        pending_driver.speaker = "alice"
+
+        assert fake_backend.get_synth_options_calls == []
+        assert pending_driver._current_speaker == "alice"
+
+    def test_available_speakers_is_empty_until_loaded(self, pending_driver):
+        assert pending_driver.availableSpeakers == {}
+
+    def test_terminate_during_a_load_leaves_the_late_callback_inert(
+        self, pending_driver, fake_backend
+    ):
+        spoken = []
+        pending_driver._speak_now = spoken.append
+        pending_driver.speak(["x"])
+        voice = pending_driver.tts.speech_options.voice
+
+        pending_driver.terminate()
+        fake_backend.release.set()
+        done = threading.Event()
+        voice.begin_load().add_done_callback(lambda _f: done.set())
+        assert done.wait(timeout=5)
+
+        assert spoken == []
+
+
+class TestFailedStartupLoad:
+    def test_the_next_utterance_retries_the_load(self, configured_voice, fake_backend):
+        fake_backend.raise_on_load_voice(VoiceLoadError("corrupt"))
+        d = SynthDriver()
+        wait_until(lambda: log.exception.called)
+        fake_backend.raise_on_load_voice(None)
+        spoken = []
+        d._speak_now = spoken.append
+
+        d.speak(["again"])
+
+        wait_until(lambda: spoken == [["again"]])
+        ui.message.assert_not_called()
+        d.terminate()
+
+    def test_a_dropped_utterance_still_tells_nvda_speech_is_done(
+        self, configured_voice, fake_backend
+    ):
+        fake_backend.raise_on_load_voice(VoiceLoadError("corrupt"))
+        d = SynthDriver()
+        wait_until(lambda: log.exception.called)
+        driver_module.synthDoneSpeaking.notify.reset_mock()
+
+        d.speak(["lost"])
+
+        wait_until(lambda: driver_module.synthDoneSpeaking.notify.called)
+        d.terminate()
+
+
+class TestStartupLoadFallsBackToAnotherSynth:
+    @pytest.fixture
+    def fallback(self, monkeypatch):
+        fallback = MagicMock(return_value=True)
+        monkeypatch.setattr(driver_module, "findAndSetNextSynth", fallback)
+        return fallback
+
+    @pytest.fixture
+    def gated_backend(self, monkeypatch):
+        backend = GatedBackend()
+        monkeypatch.setattr(driver_module, "_bootstrap_backend", lambda: backend)
+        return backend
+
+    def test_a_failed_startup_load_hands_nvda_the_next_synth(
+        self, configured_voice, gated_backend, fallback, monkeypatch
+    ):
+        gated_backend.raise_on_load_voice(VoiceLoadError("corrupt"))
+        d = SynthDriver()
+        monkeypatch.setattr(driver_module, "getSynth", lambda: d)
+        gated_backend.release.set()
+
+        wait_until(lambda: fallback.called)
+
+        fallback.assert_called_once_with("dengjen_neural_voices")
+        d.terminate()
+
+    def test_a_driver_nvda_already_replaced_does_not_switch_again(
+        self, configured_voice, fake_backend, fallback
+    ):
+        fake_backend.raise_on_load_voice(VoiceLoadError("corrupt"))
+        d = SynthDriver()
+
+        wait_until(lambda: log.exception.called)
+
+        fallback.assert_not_called()
+        d.terminate()
+
+    def test_a_successful_startup_load_keeps_the_synth(
+        self, configured_voice, fake_backend, fallback, monkeypatch
+    ):
+        d = SynthDriver()
+        monkeypatch.setattr(driver_module, "getSynth", lambda: d)
+        wait_ready(d)
+
+        fallback.assert_not_called()
+        d.terminate()
+
+    def test_a_failed_retry_on_speech_keeps_the_synth(
+        self, configured_voice, fake_backend, fallback
+    ):
+        fake_backend.raise_on_load_voice(VoiceLoadError("corrupt"))
+        d = SynthDriver()
+        wait_until(lambda: log.exception.called)
+        log.exception.reset_mock()
+
+        d.speak(["again"])
+
+        wait_until(lambda: log.exception.called)
+        fallback.assert_not_called()
+        d.terminate()
+
+
+class TestStartupLoadRefreshesTheSpeechSettings:
+    def test_the_gui_is_refreshed_and_stale_choices_dropped_when_the_voice_loads(
+        self, configured_voice, monkeypatch
+    ):
+        backend = GatedBackend()
+        monkeypatch.setattr(driver_module, "_bootstrap_backend", lambda: backend)
+        refreshed = []
+        monkeypatch.setattr(
+            driver_module,
+            "update_displaied_params_on_voice_change",
+            lambda synth: refreshed.append(synth),
+        )
+        d = SynthDriver()
+        d._availableSpeakers = {}
+        backend.release.set()
+
+        wait_until(lambda: refreshed)
+
+        assert refreshed == [d]
+        assert not hasattr(d, "_availableSpeakers")
+        d.terminate()
+
+    def test_a_gui_refresh_failure_does_not_stop_the_voice_becoming_ready(
+        self, configured_voice, fake_backend, monkeypatch
+    ):
+        def explode(synth):
+            raise RuntimeError("no dialog")
+
+        monkeypatch.setattr(
+            driver_module, "update_displaied_params_on_voice_change", explode
+        )
+        d = SynthDriver()
+
+        wait_ready(d)
+
+        d.terminate()
+
+
+OTHER_KEY = "en_US-other-medium"
+
+
+FRENCH_KEY = "fr_FR-durand-medium"
+THIRD_KEY = "en_US-third-medium"
+FAST_KEY = "en_US-test+RT-medium"
+
+
+@pytest.fixture
+def second_voice(voices_dir):
+    _write_voice(voices_dir, OTHER_KEY)
+    _write_voice(voices_dir, THIRD_KEY)
+    _write_voice(voices_dir, FRENCH_KEY)
+    _write_voice(voices_dir, FAST_KEY)
+
+
+class TestVoiceSwitch:
+    @pytest.fixture
+    def fake_backend(self, monkeypatch):
+        backend = GatedBackend()
+        backend.release.set()
+        monkeypatch.setattr(driver_module, "_bootstrap_backend", lambda: backend)
+        return backend
+
+    @pytest.fixture
+    def switch_driver(self, second_voice, configured_voice, fake_backend):
+        d = SynthDriver()
+        wait_ready(d)
+        d.availableVoices = {
+            key: _FakeVoiceInfo(f"{key} (en-US)") for key in d.availableVoices
+        }
+        d._SynthDriver__voice = VOICE_KEY
+        yield d
+        fake_backend.release.set()
+        d.terminate()
+
+    def test_switch_returns_before_the_new_voice_loads(
+        self, switch_driver, fake_backend
+    ):
+        fake_backend.release.clear()
+
+        switch_driver._set_voice(OTHER_KEY)
+
+        assert switch_driver._SynthDriver__voice == OTHER_KEY
+        assert switch_driver.tts.voice == OTHER_KEY
+        assert not switch_driver.tts.speech_options.voice.is_loaded
+
+    def test_switch_completes_once_loaded(self, switch_driver, fake_backend):
+        fake_backend.release.clear()
+        switch_driver._set_voice(OTHER_KEY)
+
+        fake_backend.release.set()
+        wait_ready(switch_driver)
+
+        assert switch_driver.tts.voice == OTHER_KEY
+        ui.message.assert_not_called()
+
+    def test_speech_during_a_switch_waits_for_the_new_voice(
+        self, switch_driver, fake_backend
+    ):
+        spoken = []
+        switch_driver._speak_now = spoken.append
+        fake_backend.release.clear()
+        switch_driver._set_voice(OTHER_KEY)
+
+        switch_driver.speak(["hello"])
+
+        assert spoken == []
+        fake_backend.release.set()
+        wait_until(lambda: spoken == [["hello"]])
+        assert switch_driver.tts.voice == OTHER_KEY
+
+    def test_failed_load_restores_the_previous_voice_and_reports(
+        self, switch_driver, fake_backend
+    ):
+        fake_backend.raise_on_load_voice(VoiceLoadError("corrupt"))
+
+        switch_driver._set_voice(OTHER_KEY)
+
+        wait_until(lambda: ui.message.called)
+        assert switch_driver._SynthDriver__voice == VOICE_KEY
+        assert switch_driver.tts.voice == VOICE_KEY
+        (message,), _ = ui.message.call_args
+        assert switch_driver.availableVoices[OTHER_KEY].displayName in message
+        log.exception.assert_called()
+
+    def test_unknown_voice_falls_back_to_the_first_available(self, switch_driver):
+        switch_driver._set_voice("does-not-exist")
+
+        first = next(iter(switch_driver.availableVoices))
+        assert switch_driver._SynthDriver__voice == first
+
+    def test_a_superseded_switch_applies_and_reverts_nothing(
+        self, switch_driver, fake_backend
+    ):
+        switch_driver._finish_switch = MagicMock()
+        switch_driver._revert_switch = MagicMock()
+        fake_backend.release.clear()
+        switch_driver._set_voice(OTHER_KEY)
+        slow = switch_driver.tts.speech_options.voice
+
+        switch_driver._set_voice(VOICE_KEY)
+        fake_backend.release.set()
+        done = threading.Event()
+        slow.begin_load().add_done_callback(lambda _f: done.set())
+        assert done.wait(timeout=5)
+
+        assert switch_driver._finish_switch.call_args_list == [call(VOICE_KEY)]
+        switch_driver._revert_switch.assert_not_called()
+        assert switch_driver.tts.voice == VOICE_KEY
+
+    def test_variant_before_the_load_does_not_block(self, switch_driver, fake_backend):
+        fake_backend.release.clear()
+        switch_driver._set_voice(OTHER_KEY)
+
+        started = time.monotonic()
+        switch_driver.variant = "standard"
+
+        assert time.monotonic() - started < 1
+        assert switch_driver.tts.voice == OTHER_KEY
+
+    def test_fast_variant_switch_returns_before_its_voice_loads(
+        self, switch_driver, fake_backend
+    ):
+        fake_backend.release.clear()
+
+        switch_driver.variant = "fast"
+
+        assert switch_driver.tts.voice == FAST_KEY
+        assert not switch_driver.tts.speech_options.voice.is_loaded
+        fake_backend.release.set()
+        wait_ready(switch_driver)
+        ui.message.assert_not_called()
+
+    def test_failed_variant_load_restores_the_previous_voice_and_reports(
+        self, switch_driver, fake_backend
+    ):
+        fake_backend.raise_on_load_voice(VoiceLoadError("corrupt"))
+
+        switch_driver.variant = "fast"
+
+        wait_until(lambda: ui.message.called)
+        assert switch_driver.tts.voice == VOICE_KEY
+        log.exception.assert_called()
+
+    def test_a_failed_second_switch_reverts_to_the_last_loaded_voice(
+        self, switch_driver, fake_backend
+    ):
+        fake_backend.release.clear()
+        switch_driver._set_voice(OTHER_KEY)
+        switch_driver._set_voice(THIRD_KEY)
+
+        fake_backend.raise_on_load_voice(VoiceLoadError("corrupt"))
+        fake_backend.release.set()
+
+        wait_until(lambda: ui.message.called)
+        assert switch_driver.tts.voice == VOICE_KEY
+        assert switch_driver._SynthDriver__voice == VOICE_KEY
+
+    def test_speech_waits_for_a_switch_back_to_a_loaded_voice(
+        self, switch_driver, fake_backend, monkeypatch
+    ):
+        switch_driver._set_voice(OTHER_KEY)
+        wait_ready(switch_driver)
+        queued = []
+        monkeypatch.setattr(
+            driver_module.wx,
+            "CallAfter",
+            lambda func, *a, **kw: queued.append(lambda: func(*a, **kw)),
+        )
+        spoken = []
+        switch_driver._speak_now = spoken.append
+        switch_driver._set_voice(VOICE_KEY)
+
+        switch_driver.speak(["x"])
+
+        assert spoken == []
+        while queued:
+            queued.pop(0)()
+        assert spoken == [["x"]]
+
+    def test_a_mid_utterance_language_change_does_not_block(
+        self, switch_driver, fake_backend
+    ):
+        spoken = []
+        switch_driver._speak_now = spoken.append
+        fake_backend.release.clear()
+        sequence = ["a", _lang_change_command("fr_FR"), "b"]
+
+        started = time.monotonic()
+        switch_driver.speak(sequence)
+
+        assert time.monotonic() - started < 1
+        assert spoken == []
+        fake_backend.release.set()
+        wait_until(lambda: spoken == [sequence])
+
+    def test_a_language_voice_failure_keeps_a_newer_deferred_utterance(
+        self, switch_driver
+    ):
+        older, newer = ["a"], ["b"]
+        switch_driver._deferred_speech = newer
+        driver_module.synthDoneSpeaking.notify.reset_mock()
+
+        switch_driver._on_deferred_load_failed(older, VoiceLoadError("corrupt"))
+
+        assert switch_driver._deferred_speech is newer
+        driver_module.synthDoneSpeaking.notify.assert_not_called()
+
+    def test_a_language_voice_failure_drops_the_utterance_that_needed_it(
+        self, switch_driver
+    ):
+        sequence = ["a"]
+        switch_driver._deferred_speech = sequence
+        driver_module.synthDoneSpeaking.notify.reset_mock()
+
+        switch_driver._on_deferred_load_failed(sequence, VoiceLoadError("corrupt"))
+
+        assert switch_driver._deferred_speech is None
+        driver_module.synthDoneSpeaking.notify.assert_called()
+
+    def test_a_late_load_after_the_app_is_gone_logs_nothing_at_error(
+        self, switch_driver, monkeypatch, caplog
+    ):
+        def app_gone(*_a, **_kw):
+            raise RuntimeError("wx app destroyed")
+
+        monkeypatch.setattr(driver_module.wx, "CallAfter", app_gone)
+        voice = switch_driver.tts.speech_options.voice
+
+        switch_driver._watch_load(voice, MagicMock(), MagicMock())
+
+        assert not [r for r in caplog.records if r.levelname == "ERROR"]
+
+
+class TestFailedStartupSwitch:
+    def test_the_startup_voice_setting_fails_quietly_and_keeps_a_voice_name(
+        self, configured_voice, fake_backend
+    ):
+        fake_backend.raise_on_load_voice(VoiceLoadError("corrupt"))
+        d = SynthDriver()
+        wait_until(lambda: log.exception.called)
+        log.exception.reset_mock()
+
+        d._set_voice(VOICE_KEY)
+
+        wait_until(lambda: log.exception.called)
+        ui.message.assert_not_called()
+        assert d._SynthDriver__voice == VOICE_KEY
+        d.terminate()

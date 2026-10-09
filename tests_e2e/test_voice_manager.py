@@ -645,7 +645,11 @@ def test_speech_settings_list_every_speaker_of_a_multi_speaker_voice(
     _activate_dengjen(nvda, kokoro_installed)
     _open_speech_settings(nvda)
     try:
-        assert _voice_panel_state(nvda, "panel.speakerList.GetCount()") > 1
+        wait_until(
+            lambda: _voice_panel_state(nvda, "panel.speakerList.GetCount()") > 1,
+            timeout=15,
+            description="the speaker list to fill once the voice finishes loading",
+        )
     finally:
         _close_speech_settings(nvda)
     nvda.should_have_no_errors()

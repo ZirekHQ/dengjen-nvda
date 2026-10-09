@@ -2,11 +2,13 @@ import typing
 from asyncio.exceptions import CancelledError as AsyncioCancelledError
 from collections import OrderedDict
 from contextlib import suppress
+from functools import partial
 
 import addonHandler
 import config
 import languageHandler
 import ui
+import wx
 from autoSettingsUtils.driverSetting import (
     BooleanDriverSetting,
     DriverSetting,
@@ -28,6 +30,8 @@ from synthDriverHandler import (
 )
 from synthDriverHandler import (
     VoiceInfo,
+    findAndSetNextSynth,
+    getSynth,
     synthDoneSpeaking,
     synthIndexReached,
 )
@@ -359,6 +363,10 @@ class SynthDriver(NvdaSynthDriver):
         self._player = None
         self._players = {}
         self._active_players = set()
+        self._deferred_speech = None
+        self._scaled_voice = None
+        self._switch_origin = None
+        self._terminated = False
         self._current_speaker = None
         self._noise_scale_factor = None
         self._length_scale_factor = None
@@ -402,8 +410,12 @@ class SynthDriver(NvdaSynthDriver):
         self._standard_voice_map = {v.standard_variant_key: v for v in self.voices}
         self.availableVoices = self._get_valid_voices()
         self.__voice = None
+        self._watch_load(
+            configured_voice, self._on_startup_voice_ready, self._on_startup_load_failed
+        )
 
     def terminate(self):
+        self._terminated = True
         self.cancel()
         if self.tts is not None:
             self.tts.shutdown()
@@ -417,8 +429,109 @@ class SynthDriver(NvdaSynthDriver):
         if self.tts is None:
             log.error("speak() called with no TTS backend available; dropping speech.")
             return
+        needed = self._voices_needed(speechSequence)
+        if self._ready_to_speak(needed):
+            self._speak_now(speechSequence)
+            return
+        self._deferred_speech = speechSequence
+        self._watch_load(needed[0], self._on_voice_ready, self._on_load_failed)
+        for voice in needed[1:]:
+            self._watch_load(
+                voice,
+                self._flush_deferred,
+                partial(self._on_deferred_load_failed, speechSequence),
+                current_only=False,
+            )
+
+    def _voices_needed(self, speech_sequence):
+        current = self.tts.speech_options.voice
+        voices = [current]
+        default_lang = self.tts.language
+        for item in speech_sequence:
+            if type(item) is not LangChangeCommand:
+                continue
+            lang = default_lang if item.isDefault else item.lang
+            with suppress(VoiceNotFoundError):
+                current = self.tts.voice_for_language(lang, current=current)
+                voices.append(current)
+        return voices
+
+    def _ready_to_speak(self, voices):
+        return (
+            self._switch_origin is None
+            and self._scaled_voice is voices[0]
+            and all(voice.is_loaded for voice in voices)
+        )
+
+    def _flush_deferred(self):
+        pending = self._deferred_speech
+        if pending is None or not self._ready_to_speak(self._voices_needed(pending)):
+            return
+        self._deferred_speech = None
+        self._speak_now(pending)
+
+    def _speak_now(self, speech_sequence):
         with self.tts.create_synthesis_context():
-            self._fast_prepare_and_run_speech_task(speechSequence)
+            self._fast_prepare_and_run_speech_task(speech_sequence)
+
+    def _watch_load(self, voice, on_ready, on_failed, current_only=True):
+        def hand_off(future):
+            try:
+                wx.CallAfter(
+                    self._finish_load, voice, future, on_ready, on_failed, current_only
+                )
+            except Exception:
+                log.debug("Dropped a voice-load callback; wx is gone", exc_info=True)
+
+        voice.begin_load().add_done_callback(hand_off)
+
+    def _finish_load(self, voice, future, on_ready, on_failed, current_only=True):
+        if self._terminated:
+            return
+        if current_only and self.tts.speech_options.voice is not voice:
+            return
+        error = future.exception()
+        if error is None:
+            on_ready()
+        else:
+            on_failed(error)
+
+    def _on_voice_ready(self):
+        voice = self.tts.speech_options.voice
+        if self._scaled_voice is not voice:
+            self._reapply_scale_settings()
+        if self._current_speaker is None:
+            self._current_speaker = voice.default_speaker
+        self._flush_deferred()
+
+    def _on_startup_voice_ready(self):
+        self._forget_cached_choices()
+        self._refresh_speech_gui()
+        self._on_voice_ready()
+
+    def _refresh_speech_gui(self):
+        try:
+            update_displaied_params_on_voice_change(self)
+        except Exception:
+            log.exception("Failed to update Speech GUI", exc_info=True)
+
+    def _on_load_failed(self, error):
+        dropped, self._deferred_speech = self._deferred_speech, None
+        log.exception("Failed to load the current voice", exc_info=error)
+        if dropped is not None:
+            self._on_index_reached(None)
+
+    def _on_deferred_load_failed(self, sequence, error):
+        if self._deferred_speech is sequence:
+            self._on_load_failed(error)
+        else:
+            log.error("Failed to load a language voice", exc_info=error)
+
+    def _on_startup_load_failed(self, error):
+        self._on_load_failed(error)
+        # The constructor succeeded, so NVDA only learns of the failure from us.
+        if getSynth() is self:
+            findAndSetNextSynth(self.name)
 
     def _fast_prepare_and_run_speech_task(self, speech_sequence):
         self.cancel()
@@ -554,6 +667,7 @@ class SynthDriver(NvdaSynthDriver):
         return None
 
     def cancel(self):
+        self._deferred_speech = None
         if self._current_task is not None:
             asyncio_cancel_task(self._current_task)
         for player in self._active_players:
@@ -698,10 +812,14 @@ class SynthDriver(NvdaSynthDriver):
             and getattr(self, factor_attr, None) == value
         ):
             return
-        try:
-            self._push_scale(self.tts.speech_options.voice, name, value, spec)
-        except BackendError:
-            log.exception(f"Could not apply {name}: the speech engine is unreachable")
+        voice = self.tts.speech_options.voice
+        if voice.is_loaded:
+            try:
+                self._push_scale(voice, name, value, spec)
+            except BackendError:
+                log.exception(
+                    f"Could not apply {name}: the speech engine is unreachable"
+                )
         setattr(self, factor_attr, value)
         phrase_cache.clear()
 
@@ -726,6 +844,9 @@ class SynthDriver(NvdaSynthDriver):
 
         for name in self._SCALE_SETTINGS:
             self._set_scale_factor(name, self._get_scale_factor(name), force=True)
+        voice = self.tts.speech_options.voice
+        if voice.is_loaded:
+            self._scaled_voice = voice
 
     def _get_noise_scale(self):
         return self._get_scale_factor("noise_scale")
@@ -749,40 +870,81 @@ class SynthDriver(NvdaSynthDriver):
         if value not in self.availableVoices:
             value = next(iter(self.availableVoices))
         try:
-            self.tts.voice = self._standard_voice_map[value].key
-        except Exception:
+            self._begin_switch(value, self._target_voice_key(value))
+        except VoiceNotFoundError:
             log.exception(f"Failed to load voice `{value}`")
-            ui.message(
-                _("Failed to load voice {voice}. Keeping the previous voice.").format(
-                    voice=self.availableVoices[value].displayName
-                )
-            )
-            return
+            self._announce_switch_failure(value)
+
+    def _begin_switch(self, value, voice_key):
+        origin = self._switch_origin or (self.tts.voice, self.__voice)
+        self.tts.voice = voice_key
+        self._switch_origin = origin
         self.__voice = value
+        self._forget_cached_choices()
+        self._watch_load(
+            self.tts.speech_options.voice,
+            partial(self._finish_switch, value),
+            partial(self._revert_switch, value, origin),
+        )
+
+    def _target_voice_key(self, value):
+        standard = self._standard_voice_map[value]
+        variant = (
+            DengjenConfig[value].get("variant", "standard")
+            if value in DengjenConfig
+            else "standard"
+        )
+        if variant.lower() == "fast" and standard.fast_variant_key in self._voice_map:
+            return standard.fast_variant_key
+        return standard.key
+
+    def _forget_cached_choices(self):
+        for attr in ("_availableVariants", "_availableSpeakers"):
+            with suppress(AttributeError):
+                delattr(self, attr)
+
+    def _announce_switch_failure(self, value):
+        ui.message(
+            _("Failed to load voice {voice}. Keeping the previous voice.").format(
+                voice=self.availableVoices[value].displayName
+            )
+        )
+
+    def _finish_switch(self, value):
+        self._switch_origin = None
+        self._forget_cached_choices()
         phrase_cache.clear()
-        with suppress(AttributeError):
-            del self._availableVariants
-        with suppress(AttributeError):
-            del self._availableSpeakers
         if value in DengjenConfig:
             variant = DengjenConfig[value].get("variant", self.variant)
-            speaker = DengjenConfig[value].get("speaker")
         else:
             variant = self._standard_voice_map[value].variant
-            speaker = None
         self._set_variant(variant)
+        self._apply_voice_speaker(value)
+        self._refresh_speech_gui()
+        self._on_voice_ready()
 
+    def _apply_voice_speaker(self, value):
+        speaker = (
+            DengjenConfig[value].get("speaker") if value in DengjenConfig else None
+        )
         if speaker is not None:
             self._set_speaker(speaker)
         else:
-            voice_obj = getattr(
-                getattr(self.tts, "speech_options", None), "voice", None
-            )
-            self._current_speaker = getattr(voice_obj, "default_speaker", None)
-        try:
-            update_displaied_params_on_voice_change(self)
-        except Exception:
-            log.exception("Failed to update Speech GUI", exc_info=True)
+            self._current_speaker = self.tts.speech_options.voice.default_speaker
+
+    def _revert_switch(self, value, previous, error):
+        previous_key, previous_value = previous
+        self._switch_origin = None
+        log.exception(f"Failed to load voice `{value}`", exc_info=error)
+        with suppress(VoiceNotFoundError):
+            self.tts.voice = previous_key
+        self.__voice = previous_value or self._get_voice()
+        self._forget_cached_choices()
+        if previous_value is not None:
+            self._announce_switch_failure(value)
+        self._watch_load(
+            self.tts.speech_options.voice, self._on_voice_ready, self._on_load_failed
+        )
 
     def _get_language(self):
         return self.tts.language
@@ -804,18 +966,11 @@ class SynthDriver(NvdaSynthDriver):
             return
         if voice_key not in self._voice_map:
             return
-        prev_speaker = getattr(self, "_current_speaker", None)
-        if prev_speaker is None:
-            with suppress(Exception):
-                prev_speaker = self.tts.speech_options.voice.speaker
-        self.tts.voice = voice_key
-        if prev_speaker is not None:
-            with suppress(Exception):
-                self.tts.speech_options.voice.speaker = prev_speaker
-        self._current_speaker = prev_speaker
         DengjenConfig.setdefault(self.voice, {})["variant"] = value
-
-        self._reapply_scale_settings()
+        if voice_key == self.tts.voice:
+            self._reapply_scale_settings()
+            return
+        self._begin_switch(self._get_voice(), voice_key)
 
     def _getAvailableVariants(self):
         std_key, rt_key = DengjenTextToSpeechSystem.get_voice_variants(self.__voice)
@@ -846,11 +1001,17 @@ class SynthDriver(NvdaSynthDriver):
     def _get_speaker(self):
         if self._current_speaker is not None:
             return self._current_speaker
+        if not self.tts.speech_options.voice.is_loaded:
+            return None
         spk = self.tts.speaker
         self._current_speaker = spk
         return spk
 
     def _set_speaker(self, value):
+        if not self.tts.speech_options.voice.is_loaded:
+            self._current_speaker = value
+            DengjenConfig.setdefault(self.voice, {})["speaker"] = value
+            return
         try:
             self.tts.speaker = value
             self._current_speaker = value
@@ -867,4 +1028,6 @@ class SynthDriver(NvdaSynthDriver):
         phrase_cache.clear()
 
     def _get_availableSpeakers(self):
+        if not self.tts.speech_options.voice.is_loaded:
+            return {}
         return {spk: VoiceInfo(spk, spk, None) for spk in self.tts.get_speakers()}
