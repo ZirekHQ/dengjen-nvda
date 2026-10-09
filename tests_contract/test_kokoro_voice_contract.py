@@ -1,25 +1,17 @@
 """
 Contract test proving the real, vendored dengjen-tts-grpc.exe loads a
-Kokoro voice config and synthesizes through it end-to-end.
+Kokoro voice config and synthesizes non-empty audio through it end-to-end.
 
-Downloads only 2 of the 54 presets (not all 54) to keep CI light -- the
-engine's config schema doesn't care how many are listed. _build_kokoro_config
-below duplicates kokoro_download.build_kokoro_config's exact shape rather
-than importing it -- see the module-level note in the plan/PR for why.
-
-Gives a coarse smoke-level timing bound, not a tuned regression ceiling
-(unlike test_synthesis_latency_contract.py's Piper numbers) -- issue #31's
-precise real-hardware latency question still needs a manual Windows run.
+Uses 2 of the 54 presets (KOKORO_PRESETS in conftest.py) to keep CI light --
+the engine's config schema doesn't care how many are listed. First-chunk
+latency is gated by test_synthesis_latency_contract.py.
 """
 
-import json
 import os
 import shutil
 import sys
 import tempfile
-import time
 import types
-import urllib.request
 
 import espeakng_loader
 import pytest
@@ -75,50 +67,9 @@ sys.modules.setdefault("dengjen_neural_voices", _dengjen_pkg)
 from dengjen_neural_voices import aio
 from dengjen_neural_voices.adapters.dengjen_grpc import DengjenGrpcBackend
 
-KOKORO_REPO_RESOLVE_URL = (
-    "https://huggingface.co/onnx-community/Kokoro-82M-v1.0-ONNX/resolve/main"
-)
-PRESETS_UNDER_TEST = ["af_heart", "am_adam"]
-DOWNLOAD_TIMEOUT = 60
+from tests_contract.conftest import KOKORO_PRESETS as PRESETS_UNDER_TEST
+
 CALL_TIMEOUT = 30
-SMOKE_CEILING_MS = 2000  # coarse -- see module docstring
-
-
-def _build_kokoro_config(preset_names):
-    """Duplicates kokoro_download.build_kokoro_config's exact shape -- see
-    the module docstring for why this isn't imported instead."""
-    return {
-        "model_type": "kokoro",
-        "model_path": "model.onnx",
-        "voices_dir": "voices",
-        "vocab_path": "tokenizer.json",
-        "sample_rate": 24000,
-        "voices": list(preset_names),
-    }
-
-
-def _download(relative_path, target_path):
-    url = f"{KOKORO_REPO_RESOLVE_URL}/{relative_path}"
-    with (
-        urllib.request.urlopen(url, timeout=DOWNLOAD_TIMEOUT) as response,
-        open(target_path, "wb") as f,
-    ):
-        f.write(response.read())
-
-
-@pytest.fixture(scope="session")
-def kokoro_config_path(tmp_path_factory):
-    install_dir = tmp_path_factory.mktemp("kokoro")
-    (install_dir / "voices").mkdir()
-    _download("onnx/model.onnx", install_dir / "model.onnx")
-    _download("tokenizer.json", install_dir / "tokenizer.json")
-    for name in PRESETS_UNDER_TEST:
-        _download(f"voices/{name}.bin", install_dir / "voices" / f"{name}.bin")
-    config_path = install_dir / "config.json"
-    config_path.write_text(
-        json.dumps(_build_kokoro_config(PRESETS_UNDER_TEST)), encoding="utf-8"
-    )
-    return str(config_path)
 
 
 @pytest.fixture(scope="session")
@@ -155,28 +106,18 @@ class TestKokoroVoiceContract:
         assert set(loaded_voice.speakers.values()) == set(PRESETS_UNDER_TEST)
         assert 0 in loaded_voice.speakers
 
-    def test_synthesizes_non_empty_audio_within_smoke_ceiling(
-        self, backend, loaded_voice
-    ):
+    def test_synthesizes_non_empty_audio(self, backend, loaded_voice):
+        vid = loaded_voice.backend_voice_id
+        stream = loaded_voice.supports_streaming_output
+
         @aio.asyncio_coroutine_to_concurrent_future
-        async def _time_to_first_chunk():
-            start = time.perf_counter()
+        async def _first_chunk():
             async for chunk in backend.synthesize(
-                loaded_voice.backend_voice_id,
-                "Hello, this is a test.",
-                None,
-                None,
-                None,
-                None,
-                loaded_voice.supports_streaming_output,
+                vid, "Hello, this is a test.", None, None, None, None, stream
             ):
-                assert chunk, "expected a non-empty audio chunk"
-                return time.perf_counter() - start
+                return chunk
             raise AssertionError("expected at least one audio chunk")
 
-        elapsed = _time_to_first_chunk().result(timeout=CALL_TIMEOUT)
-        assert (elapsed * 1000) < SMOKE_CEILING_MS, (
-            f"first-chunk latency {elapsed * 1000:.1f}ms exceeds the "
-            f"{SMOKE_CEILING_MS}ms smoke ceiling -- this is not issue #31's "
-            "precise latency number, just a build-didn't-regress-wildly check"
+        assert _first_chunk().result(timeout=CALL_TIMEOUT), (
+            "expected a non-empty audio chunk"
         )
