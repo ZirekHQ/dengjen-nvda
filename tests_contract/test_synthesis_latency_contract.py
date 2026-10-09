@@ -9,6 +9,10 @@ is Jakob Nielsen's general "user's flow of thought stays uninterrupted"
 response-time limit (1s) -- an absolute ceiling independent of word count,
 since there is no screen-reader-specific published latency standard to
 anchor to.
+
+The Kokoro ceiling is twice the slowest of five first-chunk samples measured
+on the local Windows VM, rounded up to 100 ms. It gates regressions only; it
+is not a tier-2 bound.
 """
 
 import os
@@ -94,6 +98,9 @@ MAX_TAIL_SILENCE_MS = 50
 FIRST_REQUEST_TEXT = "Một."
 SECOND_REQUEST_TEXT = "Hai."
 
+KOKORO_TEXT = "Hello, this is a test."
+KOKORO_FIRST_CHUNK_CEILING_MS = 1700
+
 
 def _download(url, target_path):
     with (
@@ -144,6 +151,52 @@ def loaded_voice(backend, downloaded_voice):
 
     _warm_up().result(timeout=CALL_TIMEOUT)
     return voice
+
+
+@pytest.fixture(scope="session")
+def kokoro_voice(backend, kokoro_config_path):
+    voice = backend.load_voice(kokoro_config_path)
+
+    @aio.asyncio_coroutine_to_concurrent_future
+    async def _warm_up():
+        async for _chunk in backend.synthesize(
+            voice.backend_voice_id,
+            "Hello.",
+            None,
+            None,
+            None,
+            None,
+            voice.supports_streaming_output,
+        ):
+            pass
+
+    _warm_up().result(timeout=CALL_TIMEOUT)
+    return voice
+
+
+class TestKokoroSynthesisLatencyContract:
+    def test_first_chunk_latency_stays_under_ceiling(self, backend, kokoro_voice):
+        @aio.asyncio_coroutine_to_concurrent_future
+        async def _time_to_first_chunk():
+            start = time.perf_counter()
+            async for _chunk in backend.synthesize(
+                kokoro_voice.backend_voice_id,
+                KOKORO_TEXT,
+                None,
+                None,
+                None,
+                None,
+                kokoro_voice.supports_streaming_output,
+            ):
+                return time.perf_counter() - start
+            raise AssertionError("expected at least one audio chunk")
+
+        elapsed_ms = _time_to_first_chunk().result(timeout=CALL_TIMEOUT) * 1000
+
+        assert elapsed_ms < KOKORO_FIRST_CHUNK_CEILING_MS, (
+            f"Kokoro first-chunk latency {elapsed_ms:.1f}ms exceeds the "
+            f"{KOKORO_FIRST_CHUNK_CEILING_MS}ms regression ceiling"
+        )
 
 
 class TestSynthesisLatencyContract:

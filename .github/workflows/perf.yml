@@ -1,0 +1,143 @@
+name: Performance
+
+on:
+  pull_request:
+    branches: [main]
+    paths:
+      - addon/synthDrivers/dengjen_neural_voices/domain/audio_processing.py
+      - addon/synthDrivers/dengjen_neural_voices/domain/phrase_cache.py
+      - addon/synthDrivers/dengjen_neural_voices/adapters/nvda/synth_driver.py
+      - addon/synthDrivers/dengjen_neural_voices/adapters/dengjen_grpc/**
+      - dengjen-tts.lock
+      - benchmarks/**
+      - .github/workflows/perf.yml
+  schedule:
+    - cron: "0 5 * * 1"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: perf-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  driver-bench:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          ref: ${{ github.event.pull_request.head.sha || github.sha }}
+          fetch-depth: 0
+          persist-credentials: false
+
+      - name: Set up Python
+        uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7.0.0
+        with:
+          python-version-file: .python-version
+
+      - name: Fetch vendored libs
+        uses: ./.github/actions/fetch-vendored-libs
+
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade --only-binary :all: -r requirements-bootstrap.txt
+          pip install --only-binary :all: -r requirements-test.txt
+
+      - name: Benchmark head and merge base
+        if: github.event_name == 'pull_request'
+        env:
+          BASE_REF: ${{ github.base_ref }}
+        run: |
+          BASE_SHA=$(git merge-base "origin/${BASE_REF}" HEAD)
+          git worktree add "$RUNNER_TEMP/base" "$BASE_SHA"
+          mkdir -p "$RUNNER_TEMP/bench"
+          for round in 1 2; do
+            python -m benchmarks.driver_bench "$RUNNER_TEMP/base" \
+              --out "$RUNNER_TEMP/bench/base-$round.json" \
+              || echo "::warning::Base benchmark run $round failed"
+            python -m benchmarks.driver_bench "$GITHUB_WORKSPACE" \
+              --out "$RUNNER_TEMP/bench/head-$round.json"
+          done
+
+      - name: Compare head with merge base
+        if: github.event_name == 'pull_request'
+        run: |
+          python -m benchmarks.compare \
+            --base "$RUNNER_TEMP"/bench/base-*.json \
+            --head "$RUNNER_TEMP"/bench/head-*.json
+
+      - name: Benchmark main
+        if: github.event_name != 'pull_request'
+        run: python -m benchmarks.driver_bench "$GITHUB_WORKSPACE" --out bench-main.json
+
+      - name: Store results for the trend
+        if: github.event_name != 'pull_request'
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: driver-bench-main
+          path: bench-main.json
+          retention-days: 90
+
+  changes:
+    runs-on: ubuntu-latest
+    outputs:
+      lock_changed: ${{ steps.diff.outputs.lock_changed }}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          ref: ${{ github.event.pull_request.head.sha || github.sha }}
+          fetch-depth: 0
+          persist-credentials: false
+
+      - id: diff
+        env:
+          EVENT_NAME: ${{ github.event_name }}
+          BASE_REF: ${{ github.base_ref }}
+        run: |
+          if [ "$EVENT_NAME" != "pull_request" ]; then
+            echo "lock_changed=true" >> "$GITHUB_OUTPUT"
+          elif git diff --name-only "origin/${BASE_REF}...HEAD" | grep -qx dengjen-tts.lock; then
+            echo "lock_changed=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "lock_changed=false" >> "$GITHUB_OUTPUT"
+          fi
+
+  kokoro-latency:
+    needs: changes
+    if: needs.changes.outputs.lock_changed == 'true'
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          ref: ${{ github.event.pull_request.head.sha || github.sha }}
+          persist-credentials: false
+
+      - name: Set up Python
+        uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7.0.0
+        with:
+          python-version-file: .python-version
+
+      - name: Fetch dengjen-tts engine
+        uses: ./.github/actions/fetch-dengjen-tts
+
+      - name: Fetch vendored libs
+        uses: ./.github/actions/fetch-vendored-libs
+
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade --only-binary :all: -r requirements-bootstrap.txt
+          pip install --only-binary :all: -r requirements-test.txt
+
+      - name: Cache Kokoro voice
+        uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+        with:
+          path: ${{ runner.temp }}/kokoro-latency
+          # Change the suffix when KOKORO_PRESETS changes.
+          key: kokoro-latency-${{ hashFiles('dengjen-tts.lock') }}-kokoro-presets
+
+      - name: Kokoro first-chunk latency
+        env:
+          DENGJEN_KOKORO_CACHE: ${{ runner.temp }}/kokoro-latency
+        run: pytest tests_contract/test_synthesis_latency_contract.py -k kokoro -v
