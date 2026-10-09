@@ -153,45 +153,31 @@ def loaded_voice(backend, downloaded_voice):
     return voice
 
 
+def _first_chunk_seconds(backend, voice, text):
+    vid, stream = voice.backend_voice_id, voice.supports_streaming_output
+
+    @aio.asyncio_coroutine_to_concurrent_future
+    async def _run():
+        start = time.perf_counter()
+        async for _chunk in backend.synthesize(
+            vid, text, None, None, None, None, stream
+        ):
+            return time.perf_counter() - start
+        raise AssertionError("expected at least one audio chunk")
+
+    return _run().result(timeout=CALL_TIMEOUT)
+
+
 @pytest.fixture(scope="session")
 def kokoro_voice(backend, kokoro_config_path):
     voice = backend.load_voice(kokoro_config_path)
-
-    @aio.asyncio_coroutine_to_concurrent_future
-    async def _warm_up():
-        async for _chunk in backend.synthesize(
-            voice.backend_voice_id,
-            "Hello.",
-            None,
-            None,
-            None,
-            None,
-            voice.supports_streaming_output,
-        ):
-            pass
-
-    _warm_up().result(timeout=CALL_TIMEOUT)
+    _first_chunk_seconds(backend, voice, "Hello.")
     return voice
 
 
 class TestKokoroSynthesisLatencyContract:
     def test_first_chunk_latency_stays_under_ceiling(self, backend, kokoro_voice):
-        @aio.asyncio_coroutine_to_concurrent_future
-        async def _time_to_first_chunk():
-            start = time.perf_counter()
-            async for _chunk in backend.synthesize(
-                kokoro_voice.backend_voice_id,
-                KOKORO_TEXT,
-                None,
-                None,
-                None,
-                None,
-                kokoro_voice.supports_streaming_output,
-            ):
-                return time.perf_counter() - start
-            raise AssertionError("expected at least one audio chunk")
-
-        elapsed_ms = _time_to_first_chunk().result(timeout=CALL_TIMEOUT) * 1000
+        elapsed_ms = _first_chunk_seconds(backend, kokoro_voice, KOKORO_TEXT) * 1000
 
         assert elapsed_ms < KOKORO_FIRST_CHUNK_CEILING_MS, (
             f"Kokoro first-chunk latency {elapsed_ms:.1f}ms exceeds the "

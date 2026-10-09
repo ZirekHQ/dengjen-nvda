@@ -107,16 +107,13 @@ class TestKokoroVoiceContract:
         assert 0 in loaded_voice.speakers
 
     def test_synthesizes_non_empty_audio(self, backend, loaded_voice):
+        vid = loaded_voice.backend_voice_id
+        stream = loaded_voice.supports_streaming_output
+
         @aio.asyncio_coroutine_to_concurrent_future
         async def _first_chunk():
             async for chunk in backend.synthesize(
-                loaded_voice.backend_voice_id,
-                "Hello, this is a test.",
-                None,
-                None,
-                None,
-                None,
-                loaded_voice.supports_streaming_output,
+                vid, "Hello, this is a test.", None, None, None, None, stream
             ):
                 return chunk
             raise AssertionError("expected at least one audio chunk")

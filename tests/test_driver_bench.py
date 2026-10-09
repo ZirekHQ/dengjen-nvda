@@ -65,21 +65,9 @@ def test_processor_cases_report_chunk_duration():
 
 def test_smoke_run_measures_every_case_on_the_head_tree(tmp_path):
     out = tmp_path / "result.json"
-    subprocess.run(
-        [
-            sys.executable,
-            "-m",
-            "benchmarks.driver_bench",
-            REPO_ROOT,
-            "--out",
-            str(out),
-            "--repeats",
-            "1",
-        ],
-        cwd=REPO_ROOT,
-        check=True,
-        timeout=180,
-    )
+    cmd = [sys.executable, "-m", "benchmarks.driver_bench", REPO_ROOT]
+    cmd += ["--out", str(out), "--repeats", "1"]
+    subprocess.run(cmd, cwd=REPO_ROOT, check=True, timeout=180)
     results = json.loads(out.read_text("utf-8"))
     assert set(results) == {c.case_id for c in driver_bench.all_cases()}
     assert all(entry.get("median_ms", 0) > 0 for entry in results.values())

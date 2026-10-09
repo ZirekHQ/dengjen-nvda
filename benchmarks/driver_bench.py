@@ -200,26 +200,26 @@ def _fake_synthesis_task(chunk):
     )
 
 
+def _make_speak(target, task, spatial):
+    driver, aio = target.driver(), target.module("aio")
+
+    @aio.asyncio_coroutine_to_concurrent_future
+    async def speak():
+        driver.phrase_cache.clear()
+        player = _TimedPlayer()
+        speech = driver.SpeechTask(
+            task, player, normalize=True, night_mode=True, spatial_audio=spatial
+        )
+        start = time.perf_counter()
+        await speech()
+        return (player.first_feed - start) * 1000
+
+    return lambda: speak().result(timeout=10)
+
+
 def _first_audio_make(rate, spatial):
     task = _fake_synthesis_task(pcm_chunk(rate))
-
-    def make(target):
-        driver, aio = target.driver(), target.module("aio")
-
-        @aio.asyncio_coroutine_to_concurrent_future
-        async def speak():
-            driver.phrase_cache.clear()
-            player = _TimedPlayer()
-            speech = driver.SpeechTask(
-                task, player, normalize=True, night_mode=True, spatial_audio=spatial
-            )
-            start = time.perf_counter()
-            await speech()
-            return (player.first_feed - start) * 1000
-
-        return lambda: speak().result(timeout=10)
-
-    return make
+    return lambda target: _make_speak(target, task, spatial)
 
 
 def first_audio_cases():
