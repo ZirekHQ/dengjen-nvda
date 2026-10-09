@@ -43,13 +43,16 @@ xref:speech-pipeline.adoc[Speech pipeline]); the NVDA driver and the gRPC adapte
 * `DengjenVoice.from_path(path, backend)` takes the key from the directory name and the rest of
 its identity from the voice's `voice.json`. For Piper voices it reads the quality from the last
 segment of a `<language>-<name>-<quality>` key.
-* `load()` picks the voice's JSON config file, preferring `config.json` and ignoring `voice.json`,
-and asks the backend to load it. The result supplies the backend voice id, sample rate, speakers,
-whether streaming output is supported, and the default scales (from `model_profiles`).
+* `begin_load()` picks the voice's JSON config file, preferring `config.json` and ignoring `voice.json`,
+and asks the backend to load it on a worker thread. It returns a future that concurrent callers
+share; a failed load is not cached, so the next call retries. `load()` waits on that future, and
+reading a load-dependent attribute such as `sample_rate` does the same. `is_loaded` is true once the
+result is applied. The result supplies the backend voice id, sample rate, speakers, whether streaming
+output is supported, and the default scales (from `model_profiles`).
 * `synthesize()` forwards to the backend. A voice never calls the engine directly.
 
 `SpeechOptions` holds the voice and the rate, volume, pitch and sentence silence for one utterance.
-Assigning a voice loads it (`voice.load()`). `DengjenTextToSpeechSystem.create_speech_provider(text)`
+Assigning a voice starts its load (`voice.begin_load()`) and returns without waiting. `DengjenTextToSpeechSystem.create_speech_provider(text)`
 hands each `SpeechProvider` a copy of the current options, so changing the rate, volume, pitch or
 selected voice after a task is queued does not alter that task. The copy is shallow: the voice object
 itself is shared, which is why `SpeechTask` sets and restores the speaker around its own run.

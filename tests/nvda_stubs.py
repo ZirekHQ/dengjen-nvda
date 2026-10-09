@@ -231,6 +231,7 @@ def install(*, stub_wx: bool = True) -> None:
         synthDoneSpeaking=MagicMock(),
         synthIndexReached=MagicMock(),
         getSynth=lambda: _default_synth,
+        findAndSetNextSynth=MagicMock(return_value=True),
     )
 
     _stub_module("autoSettingsUtils")
