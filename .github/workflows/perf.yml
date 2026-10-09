@@ -53,13 +53,19 @@ jobs:
           BASE_SHA=$(git merge-base "origin/${BASE_REF}" HEAD)
           git worktree add "$RUNNER_TEMP/base" "$BASE_SHA"
           mkdir -p "$RUNNER_TEMP/bench"
-          for round in 1 2; do
+          run_base() {
             python -m benchmarks.driver_bench "$RUNNER_TEMP/base" \
-              --out "$RUNNER_TEMP/bench/base-$round.json" \
-              || echo "::warning::Base benchmark run $round failed"
+              --out "$RUNNER_TEMP/bench/base-$1.json" \
+              || echo "::warning::Base benchmark run $1 failed"
+          }
+          run_head() {
             python -m benchmarks.driver_bench "$GITHUB_WORKSPACE" \
-              --out "$RUNNER_TEMP/bench/head-$round.json"
-          done
+              --out "$RUNNER_TEMP/bench/head-$1.json"
+          }
+          run_base 1
+          run_head 1
+          run_head 2
+          run_base 2
 
       - name: Compare head with merge base
         if: github.event_name == 'pull_request'
