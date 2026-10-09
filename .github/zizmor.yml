@@ -13,3 +13,4 @@ rules:
       - sonar.yml
       - sonar-fork-coverage.yml
       - nvda-compat-guard.yml
+      - perf.yml
