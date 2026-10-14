@@ -404,7 +404,7 @@ def _copy_voice_tree(src: Path, dest: Path) -> None:
 @pytest.fixture(scope="session")
 def kokoro_installed(nvda_session, downloaded_voice_key):
     """Installs the real Kokoro voice, once per session -- from a warm local
-    cache when one exists (seeded by build_addon.yml's "Restore Kokoro voice
+    cache when one exists (seeded by build_addon.yaml's "Restore Kokoro voice
     cache" step), otherwise via the real Kokoro tab exactly as before, which
     then warms the cache for "Save Kokoro voice cache" to persist.
 

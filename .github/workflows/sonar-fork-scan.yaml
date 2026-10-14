@@ -1,7 +1,7 @@
 name: Sonar fork scan
 
 # A job holding SONAR_TOKEN must never execute fork-derived code: it only `tar`-extracts
-# sonar-fork-coverage.yml's artifact, and overwrites the scan config from main because
+# sonar-fork-coverage.yaml's artifact, and overwrites the scan config from main because
 # the fork controls every extracted file.
 
 on: # zizmor: ignore[dangerous-triggers] only tar-extracts the secretless coverage artifact; see the header
@@ -116,7 +116,7 @@ jobs:
             echo "id=$RUN_ID" >> "$GITHUB_OUTPUT"
             exit 0
           fi
-          RUN_ID=$(gh api "repos/$GITHUB_REPOSITORY/actions/workflows/sonar-fork-coverage.yml/runs?event=pull_request&status=success&per_page=20" \
+          RUN_ID=$(gh api "repos/$GITHUB_REPOSITORY/actions/workflows/sonar-fork-coverage.yaml/runs?event=pull_request&status=success&per_page=20" \
             --jq "[.workflow_runs[] | select(.head_sha == \"$HEAD_SHA\")][0].id")
           if [ -z "$RUN_ID" ] || [ "$RUN_ID" = "null" ]; then
             echo "::error::No successful 'Sonar fork coverage' run found for $HEAD_SHA. Push a commit or re-run that workflow first."
