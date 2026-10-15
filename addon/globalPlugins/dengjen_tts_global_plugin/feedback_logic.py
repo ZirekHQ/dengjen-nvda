@@ -25,7 +25,7 @@ def build_bug_report_url(
     windows_version: str | None,
 ) -> str:
     return _issue_url(
-        "bug_report.yaml",
+        "bug_report.yml",
         {
             "addon-version": addon_version,
             "nvda-version": nvda_version,
@@ -35,4 +35,4 @@ def build_bug_report_url(
 
 
 def build_feature_request_url() -> str:
-    return _issue_url("feature_request.yaml", {})
+    return _issue_url("feature_request.yml", {})
