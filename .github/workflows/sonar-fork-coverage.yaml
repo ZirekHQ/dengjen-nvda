@@ -1,6 +1,6 @@
 name: Sonar fork coverage
 
-# Forks never get SONAR_TOKEN, so sonar.yml skips them. This workflow builds
+# Forks never get SONAR_TOKEN, so sonar.yaml skips them. This workflow builds
 # the checkout + coverage report with only the safe, secret-less fork
 # `pull_request` token, and must never gain `secrets:` access.
 
@@ -76,7 +76,7 @@ jobs:
     needs: ["windows_coverage"]
     permissions:
       contents: read
-    # Same-repo PRs are scanned directly by sonar.yml; only forks need this.
+    # Same-repo PRs are scanned directly by sonar.yaml; only forks need this.
     if: github.event.pull_request.head.repo.full_name != github.repository
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1

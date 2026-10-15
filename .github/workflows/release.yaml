@@ -1,7 +1,7 @@
 name: Release
 
-# build-and-release calls build_addon.yml via workflow_call, not push:tags -- a bot-authored
-# tag push doesn't fire that listener (GitHub's recursion guard). prepare-release.yml is the
+# build-and-release calls build_addon.yaml via workflow_call, not push:tags -- a bot-authored
+# tag push doesn't fire that listener (GitHub's recursion guard). prepare-release.yaml is the
 # single entry point; this file has no trigger/gate of its own.
 on:
   push:
@@ -111,7 +111,7 @@ jobs:
     needs: [resolve, tag]
     permissions:
       contents: write
-    uses: ./.github/workflows/build_addon.yml # zizmor: ignore[self-repository] CI is pinned to zizmor v1.28.0, which predates $/ syntax support
+    uses: ./.github/workflows/build_addon.yaml # zizmor: ignore[self-repository] CI is pinned to zizmor v1.28.0, which predates $/ syntax support
     with:
       ref: refs/tags/v${{ needs.resolve.outputs.version }}
 

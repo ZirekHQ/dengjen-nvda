@@ -16,7 +16,7 @@ from the pin, and skips the download when the pinned version is already installe
 * `python update_dengjen_tts.py bump [VERSION]` re-pins to `VERSION`, or to the latest stable
 release when omitted. It downloads the Windows x64 zip, checks it against the sha256 digest the
 release publishes, and writes the version and hash to the lock file.
-* The `update-dengjen-tts.yml` workflow runs `bump` daily at 06:17 UTC, on a `dengjen-tts-release`
+* The `update-dengjen-tts.yaml` workflow runs `bump` daily at 06:17 UTC, on a `dengjen-tts-release`
 repository dispatch (optional payload `{"version": "MAJOR.MINOR.PATCH"}`), and on manual dispatch. It
 opens a pull request, and leaves a version alone when its branch already has a pull request, whether
 open, closed or merged.

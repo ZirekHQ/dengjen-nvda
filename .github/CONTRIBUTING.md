@@ -104,7 +104,7 @@ Each of these cost a CI round or a review finding to nail down — read before w
 - **Walk tab order with `Navigate()`, not `wx.UIActionSimulator`.** The simulator imports fine on `windows-latest` and does nothing: six simulated Tabs left focus exactly where `SetFocus()` had put it, because the job has no foreground session for OS-level input to land in. `Navigate()` raises the same `wxNavigationKeyEvent` a real Tab does and works with no event loop and without `Show()`. Its one blind spot is native handling: a forward walk leaves the notebook page, lands on the tab strip, and then cycles between that and the dialog's Close button, because entering a page from the tab strip lives in `wxNotebook::MSWTranslateMessage`, which only a real `WM_KEYDOWN` reaches. So start the walk inside the page and slice at the Close button (#97).
 - **Never call `ShowModal()`.** With no running event loop it blocks until the CI job times out. Construct the dialog, assert against it, `Destroy()` it.
 
-Coverage note: `tests/`, `tests_contract/` and `tests_gui/` feed one `coverage.xml` — `tests_e2e/` contributes none, since it drives a real installed add-on rather than an in-process coverage-instrumented one. `sonar.yml` runs a `windows_coverage` job that measures those three trees — each into its own `COVERAGE_FILE`, because a bare `pytest --cov` erases the data files it finds — and the scan job `coverage combine`s them with its own ubuntu run. `relative_files` in `.coveragerc` is what lets that work across OSes: combine remaps the Windows data's `addon\...` paths onto `addon/...`. Only `grpc_client/**` stays in `sonar.coverage.exclusions`, because no tree executes it (`tests_contract/` talks to the generated stubs directly).
+Coverage note: `tests/`, `tests_contract/` and `tests_gui/` feed one `coverage.xml` — `tests_e2e/` contributes none, since it drives a real installed add-on rather than an in-process coverage-instrumented one. `sonar.yaml` runs a `windows_coverage` job that measures those three trees — each into its own `COVERAGE_FILE`, because a bare `pytest --cov` erases the data files it finds — and the scan job `coverage combine`s them with its own ubuntu run. `relative_files` in `.coveragerc` is what lets that work across OSes: combine remaps the Windows data's `addon\...` paths onto `addon/...`. Only `grpc_client/**` stays in `sonar.coverage.exclusions`, because no tree executes it (`tests_contract/` talks to the generated stubs directly).
 
 ## Bundled libraries
 
@@ -122,7 +122,7 @@ python update_dengjen_tts.py fetch          # install the pinned release; run be
 python update_dengjen_tts.py bump [VERSION] # re-pin (default: latest stable grpc release)
 ```
 
-`fetch` fails on a sha256 mismatch and skips the download when the pinned release and its `.exe` are already installed. CI caches it per `dengjen-tts.lock` via `.github/actions/fetch-dengjen-tts`. `update-dengjen-tts.yml` runs `bump` daily, on a `dengjen-tts-release` `repository_dispatch` event, or manually. It opens a PR only when the pin changed and no PR for `chore/update-dengjen-tts-<version>` exists in any state.
+`fetch` fails on a sha256 mismatch and skips the download when the pinned release and its `.exe` are already installed. CI caches it per `dengjen-tts.lock` via `.github/actions/fetch-dengjen-tts`. `update-dengjen-tts.yaml` runs `bump` daily, on a `dengjen-tts-release` `repository_dispatch` event, or manually. It opens a PR only when the pin changed and no PR for `chore/update-dengjen-tts-<version>` exists in any state.
 
 ## Submitting a PR
 
@@ -134,7 +134,7 @@ Use the pull request template. Link the issue with `Closes #N` in the PR body �
 
 - **Build, unit tests, lint, audit and zizmor** run on every PR. The Windows leg also runs `tests_gui/`, and the e2e job drives a real NVDA.
 - **SonarCloud** scans fork PRs automatically once the `Sonar fork coverage` run succeeds. A maintainer can comment `/sonar` to re-run the scan. The gate needs at least 80% coverage on new code, and cognitive complexity of at most 15 per function.
-- **Performance** (`perf.yml`): when a PR touches the audio-processing, phrase-cache, synth-driver or gRPC-adapter code, `dengjen-tts.lock`, `benchmarks/` or the workflow itself, CI benchmarks the PR head against its merge base on one runner and writes a table to the job summary. A case at 2x or slower shows a warning, and a case that crashes on the head shows as failed; a slowdown never blocks a merge. Run it yourself after `python vendor_libs.py fetch`: from your checkout run `python -m benchmarks.driver_bench . --out head.json`, then the same command with the path of a base worktree instead of `.` and `--out base.json`, then `python -m benchmarks.compare --base base.json --head head.json`. The weekly run stores `main`'s results as the `driver-bench-main` artifact. An engine bump, the weekly run and a manual run also run the Kokoro first-chunk latency test on Windows.
+- **Performance** (`perf.yaml`): when a PR touches the audio-processing, phrase-cache, synth-driver or gRPC-adapter code, `dengjen-tts.lock`, `benchmarks/` or the workflow itself, CI benchmarks the PR head against its merge base on one runner and writes a table to the job summary. A case at 2x or slower shows a warning, and a case that crashes on the head shows as failed; a slowdown never blocks a merge. Run it yourself after `python vendor_libs.py fetch`: from your checkout run `python -m benchmarks.driver_bench . --out head.json`, then the same command with the path of a base worktree instead of `.` and `--out base.json`, then `python -m benchmarks.compare --base base.json --head head.json`. The weekly run stores `main`'s results as the `driver-bench-main` artifact. An engine bump, the weekly run and a manual run also run the Kokoro first-chunk latency test on Windows.
 - **CodeRabbit** reviews are advisory. Fix a finding or reply on the thread explaining why it doesn't apply. Maintainers close bot threads that are verifiably fixed, so you don't need to chase them.
 - A thread you opened is closed by its author or a maintainer, never by marking it resolved to clear the count.
 
@@ -162,14 +162,14 @@ version.
    major, only docs/chore/style/refactor/test since the last tag means no release) and opens a PR
    bumping `buildVars.py`.
 2. Review and merge that PR. **This is the release gate** — merging it releases the version in the
-   diff, with nothing further to confirm: [`release.yml`](workflows/release.yml) tags that merge
-   commit `vX.Y.Z`, which calls [`build_addon.yml`](workflows/build_addon.yml) directly and
+   diff, with nothing further to confirm: [`release.yaml`](workflows/release.yaml) tags that merge
+   commit `vX.Y.Z`, which calls [`build_addon.yaml`](workflows/build_addon.yaml) directly and
    publishes a GitHub Release with the `.nvda-addon`, the `.pot`, and notes from
    `gh release create --generate-notes` (scoped to the previous `vX.Y.Z(-beta.N)` tag) with the
    SHA256 appended.
 3. **Direct-release override**: setting `new_tag` (and optionally `dry_run`) on **Prepare
    release** skips `next-version.sh`, `bump-version.sh`, and the PR entirely, and hands off
-   straight to `release.yml` for the tag/publish given in `new_tag`. Because this bypasses the PR
+   straight to `release.yaml` for the tag/publish given in `new_tag`. Because this bypasses the PR
    review that's normally the release gate, it requires approval on the `release` environment
    (Maintainers team) before it runs. **Self-approval is currently still possible** — the
    environment's `prevent_self_review` setting hasn't been flipped to `true` yet (repo Settings,
@@ -181,7 +181,7 @@ version.
 If publishing fails partway through, retry — no new tag needed either way, since the build/publish
 steps re-run cleanly against the same tag:
 - Same version, still current on `main`: use GitHub's "Re-run failed jobs" on the original
-  `release.yml` run (Actions tab). It re-runs just the failed job(s) against that run's own
+  `release.yaml` run (Actions tab). It re-runs just the failed job(s) against that run's own
   commit, no new dispatch needed.
 - Stale version (a newer version has since bumped past it on `main`): run **Prepare release**
   again, this time from the old tag (`--ref v<old-version>` on the CLI, or pick it from the
@@ -191,7 +191,7 @@ steps re-run cleanly against the same tag:
   have the `new_tag` input or the `workflow_call` trigger this retry path depends on.
 
 Tag scheme: standard semver `vMAJOR.MINOR.PATCH(-beta.N)`, e.g. `v3.2.0-beta.5` for a beta or
-`v3.2.0` for a stable cut — `build_addon.yml`'s tag check accepts only these two forms, not other
+`v3.2.0` for a stable cut — `build_addon.yaml`'s tag check accepts only these two forms, not other
 prerelease labels like `-rc.N` or `-alpha.N`. The `-beta.N` portion stays in the git tag only;
 `addon_version` in `buildVars.py` must remain strict three-part semver (e.g. `3.2.0`) per
 `tests/test_buildvars.py`.

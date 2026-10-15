@@ -13,7 +13,7 @@ on:
   workflow_call:
     inputs:
       ref:
-        description: "Tag ref to build and release (set by release.yml; other triggers leave this empty and fall back to github.sha/github.ref)"
+        description: "Tag ref to build and release (set by release.yaml; other triggers leave this empty and fall back to github.sha/github.ref)"
         required: false
         type: string
 
@@ -201,7 +201,7 @@ jobs:
     permissions:
       contents: write
     env:
-      # github.ref points at release.yml's own ref (e.g. refs/heads/main) when this job runs
+      # github.ref points at release.yaml's own ref (e.g. refs/heads/main) when this job runs
       # via workflow_call, not the tag being released -- REF carries the right one either way.
       REF: ${{ inputs.ref || github.ref }}
     steps:
@@ -258,7 +258,7 @@ jobs:
         echo -e "\nSHA256: " >> changelog.md
         sha256sum -- *.nvda-addon >> changelog.md
 
-    # release.yml unconditionally re-dispatches this workflow on a retry, including
+    # release.yaml unconditionally re-dispatches this workflow on a retry, including
     # after a run that already published the release -- `gh release create` on an existing
     # tag fails outright, so branch to edit+upload instead of erroring out on a rerun.
     - name: Create or update release

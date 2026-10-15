@@ -47,7 +47,7 @@ jobs:
           pip install --only-binary :all: -r requirements-test.txt
           pip install --only-binary :all: -r requirements-test-gui.txt
 
-      # Three invocations for the reasons build_addon.yml spells out (each tree
+      # Three invocations for the reasons build_addon.yaml spells out (each tree
       # needs different real-vs-stubbed modules). Each needs its own COVERAGE_FILE:
       # a bare `pytest --cov` erases whatever data files it finds first.
       - name: Run tests with coverage
