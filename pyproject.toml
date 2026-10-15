@@ -54,7 +54,7 @@ vendor = [
     "mureq==0.3.0",
     "protobuf>=7.35.1,<8",
     "psutil==7.2.2",
-    "pycparser==3.0",
+    "pycparser==3.1",
 ]
 codegen = ["grpcio-tools==1.84.*"]
 
