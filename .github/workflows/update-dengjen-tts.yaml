@@ -86,7 +86,7 @@ jobs:
             --title "chore: update dengjen-tts engine to v${VERSION}" \
             --body "## Summary
 
-          Pins [dengjen-tts gRPC ${VERSION}](https://github.com/ZirekHQ/dengjen-tts/releases/tag/grpc-release-v${VERSION}) in \`dengjen-tts.lock\`.
+          Pins [dengjen gRPC ${VERSION}](https://github.com/ZirekHQ/dengjen/releases/tag/grpc-release-v${VERSION}) in \`dengjen-tts.lock\`.
 
           ## Changes
 

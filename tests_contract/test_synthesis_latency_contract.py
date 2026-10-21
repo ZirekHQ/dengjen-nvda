@@ -215,7 +215,7 @@ class TestSynthesisLatencyContract:
     @pytest.mark.xfail(
         reason="dengjen-tts vocoder output carries ~200ms of unrequested "
         "trailing silence baked into standard-voice audio, independent of "
-        "appended_silence_ms -- see ZirekHQ/dengjen-tts#184",
+        "appended_silence_ms -- see ZirekHQ/dengjen#184",
         strict=False,
     )
     def test_no_unrequested_tail_silence_between_requests(self, backend, loaded_voice):

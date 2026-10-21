@@ -10,7 +10,7 @@ import update_grpc_protos as protos
 
 def test_proto_url_points_at_the_source_tag_for_the_version():
     assert protos.proto_url("2.0.3") == (
-        "https://raw.githubusercontent.com/ZirekHQ/dengjen-tts/v2.0.3/"
+        "https://raw.githubusercontent.com/ZirekHQ/dengjen/v2.0.3/"
         "crates/frontends/grpc/proto/dengjen_grpc.proto"
     )
 
