@@ -115,7 +115,7 @@ python vendor_libs.py fetch                  # install the locked libraries into
 uv lock --upgrade-package <name>             # bump one (Renovate does this for you)
 ```
 
-The engine binary `bin/dengjen-tts-grpc.exe` is not committed. It comes from a [dengjen-tts](https://github.com/ZirekHQ/dengjen-tts) release pinned (version and zip sha256) in `dengjen-tts.lock`:
+The engine binary `bin/dengjen-tts-grpc.exe` is not committed. It comes from a [dengjen](https://github.com/ZirekHQ/dengjen) release pinned (version and zip sha256) in `dengjen-tts.lock`:
 
 ```bash
 python update_dengjen_tts.py fetch          # install the pinned release; run before scons or tests_contract/

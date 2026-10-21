@@ -15,7 +15,7 @@ import urllib.request
 import zipfile
 from pathlib import Path
 
-REPO = "ZirekHQ/dengjen-tts"
+REPO = "ZirekHQ/dengjen"
 TAG_PREFIX = "grpc-release-v"
 LOCK = Path("dengjen-tts.lock")
 BIN_DIR = Path("addon/synthDrivers/dengjen_neural_voices/bin")
