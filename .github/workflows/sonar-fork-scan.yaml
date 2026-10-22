@@ -4,7 +4,7 @@ name: Sonar fork scan
 # sonar-fork-coverage.yaml's artifact, and overwrites the scan config from main because
 # the fork controls every extracted file.
 
-on: # zizmor: ignore[dangerous-triggers] only tar-extracts the secretless coverage artifact; see the header
+on:
   workflow_run:
     workflows: ["Sonar fork coverage"]
     types: [completed]

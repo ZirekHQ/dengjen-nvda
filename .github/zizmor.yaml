@@ -5,6 +5,11 @@ rules:
       # fail_on_unmatched_files, which is what keeps a release from publishing
       # without the .nvda-addon attached.
       - build_addon.yaml
+  dangerous-triggers:
+    ignore:
+      # The SONAR_TOKEN job only tar-extracts the secretless coverage artifact; see the
+      # header of sonar-fork-scan.yaml.
+      - sonar-fork-scan.yaml
   self-repository:
     ignore:
       # actionlint rejects the `$/` form (rhysd/actionlint#711); drop these
