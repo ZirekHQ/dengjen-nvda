@@ -156,3 +156,17 @@ class ProsodyControls(_message.Message):
     pitch: int
     appended_silence_ms: int
     def __init__(self, rate: _Optional[int] = ..., volume: _Optional[int] = ..., pitch: _Optional[int] = ..., appended_silence_ms: _Optional[int] = ...) -> None: ...
+
+class RecognizeRequest(_message.Message):
+    __slots__ = ("pcm_s16le", "sample_rate")
+    PCM_S16LE_FIELD_NUMBER: _ClassVar[int]
+    SAMPLE_RATE_FIELD_NUMBER: _ClassVar[int]
+    pcm_s16le: bytes
+    sample_rate: int
+    def __init__(self, pcm_s16le: _Optional[bytes] = ..., sample_rate: _Optional[int] = ...) -> None: ...
+
+class RecognizeResponse(_message.Message):
+    __slots__ = ("text",)
+    TEXT_FIELD_NUMBER: _ClassVar[int]
+    text: str
+    def __init__(self, text: _Optional[str] = ...) -> None: ...

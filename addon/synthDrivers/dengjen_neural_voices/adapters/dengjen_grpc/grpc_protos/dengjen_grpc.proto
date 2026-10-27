@@ -25,6 +25,8 @@ service DengjenGrpc {
 
   
   rpc SynthesizeUtteranceRealtime(SynthesisRequest) returns (stream RealtimeAudioChunk) {}
+
+  rpc Recognize(RecognizeRequest) returns (RecognizeResponse) {}
 }
 
 enum SynthesisMode {
@@ -125,4 +127,14 @@ message ProsodyControls {
     optional uint32 volume =2;
     optional uint32 pitch =3;
     optional uint32 appended_silence_ms =4;
+}
+
+message RecognizeRequest {
+  // Mono 16-bit little-endian PCM.
+  bytes pcm_s16le = 1;
+  uint32 sample_rate = 2;
+}
+
+message RecognizeResponse {
+  string text = 1;
 }

@@ -69,6 +69,11 @@ class DengjenGrpcStub:
                 request_serializer=dengjen__grpc__pb2.SynthesisRequest.SerializeToString,
                 response_deserializer=dengjen__grpc__pb2.RealtimeAudioChunk.FromString,
                 _registered_method=True)
+        self.Recognize = channel.unary_unary(
+                '/dengjen_grpc.DengjenGrpc/Recognize',
+                request_serializer=dengjen__grpc__pb2.RecognizeRequest.SerializeToString,
+                response_deserializer=dengjen__grpc__pb2.RecognizeResponse.FromString,
+                _registered_method=True)
 
 
 class DengjenGrpcServicer:
@@ -116,6 +121,12 @@ class DengjenGrpcServicer:
         context.set_details('Method not implemented!')
         raise NotImplementedError('Method not implemented!')
 
+    def Recognize(self, request, context):
+        """Missing associated documentation comment in .proto file."""
+        context.set_code(grpc.StatusCode.UNIMPLEMENTED)
+        context.set_details('Method not implemented!')
+        raise NotImplementedError('Method not implemented!')
+
 
 def add_DengjenGrpcServicer_to_server(servicer, server):
     rpc_method_handlers = {
@@ -153,6 +164,11 @@ def add_DengjenGrpcServicer_to_server(servicer, server):
                     servicer.SynthesizeUtteranceRealtime,
                     request_deserializer=dengjen__grpc__pb2.SynthesisRequest.FromString,
                     response_serializer=dengjen__grpc__pb2.RealtimeAudioChunk.SerializeToString,
+            ),
+            'Recognize': grpc.unary_unary_rpc_method_handler(
+                    servicer.Recognize,
+                    request_deserializer=dengjen__grpc__pb2.RecognizeRequest.FromString,
+                    response_serializer=dengjen__grpc__pb2.RecognizeResponse.SerializeToString,
             ),
     }
     generic_handler = grpc.method_handlers_generic_handler(
@@ -344,6 +360,33 @@ class DengjenGrpc:
             '/dengjen_grpc.DengjenGrpc/SynthesizeUtteranceRealtime',
             dengjen__grpc__pb2.SynthesisRequest.SerializeToString,
             dengjen__grpc__pb2.RealtimeAudioChunk.FromString,
+            options,
+            channel_credentials,
+            insecure,
+            call_credentials,
+            compression,
+            wait_for_ready,
+            timeout,
+            metadata,
+            _registered_method=True)
+
+    @staticmethod
+    def Recognize(request,
+            target,
+            options=(),
+            channel_credentials=None,
+            call_credentials=None,
+            insecure=False,
+            compression=None,
+            wait_for_ready=None,
+            timeout=None,
+            metadata=None):
+        return grpc.experimental.unary_unary(
+            request,
+            target,
+            '/dengjen_grpc.DengjenGrpc/Recognize',
+            dengjen__grpc__pb2.RecognizeRequest.SerializeToString,
+            dengjen__grpc__pb2.RecognizeResponse.FromString,
             options,
             channel_credentials,
             insecure,

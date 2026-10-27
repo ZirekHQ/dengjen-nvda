@@ -71,6 +71,24 @@ class TestFetch:
         ).read_bytes() == b"notice"
         assert marker.exists()
 
+    def test_installs_top_level_dlls_shipped_beside_the_binary(
+        self, tmp_path, monkeypatch
+    ):
+        payload = _zip(
+            {
+                "dengjen-tts-grpc.exe": b"exe",
+                "NOTICE": b"n",
+                "onnxruntime.dll": b"ort",
+                "nested/skipped.dll": b"no",
+                "..\\escaped.dll": b"no",
+            }
+        )
+        monkeypatch.setattr(updater, "_get", lambda _url: payload)
+        lock, bin_dir, marker = self._setup(tmp_path, payload)
+        updater.fetch(lock, bin_dir, marker)
+        assert (bin_dir / "onnxruntime.dll").read_bytes() == b"ort"
+        assert not (bin_dir / "nested").exists()
+
     def test_second_fetch_skips_download(self, tmp_path, monkeypatch):
         payload = _zip({"dengjen-tts-grpc.exe": b"exe", "NOTICE": b"n"})
         calls = []
