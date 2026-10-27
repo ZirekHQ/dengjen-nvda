@@ -67,7 +67,9 @@ def install(zip_bytes, bin_dir=BIN_DIR):
 def fetch(lock=LOCK, bin_dir=BIN_DIR, marker=MARKER):
     version, digest = read_lock(lock)
     stamp = f"{version} {digest}"
-    installed = (bin_dir / "dengjen-tts-grpc.exe").exists()
+    installed = (bin_dir / "dengjen-tts-grpc.exe").exists() and any(
+        bin_dir.glob("*.dll")
+    )
     if installed and marker.exists() and marker.read_text() == stamp:
         print(f"dengjen-tts-grpc {version} already installed.")
         return
