@@ -71,8 +71,29 @@ class TestFetch:
         ).read_bytes() == b"notice"
         assert marker.exists()
 
+    def test_installs_top_level_dlls_shipped_beside_the_binary(
+        self, tmp_path, monkeypatch
+    ):
+        payload = _zip(
+            {
+                "dengjen-tts-grpc.exe": b"exe",
+                "NOTICE": b"n",
+                "onnxruntime.dll": b"ort",
+                "nested/skipped.dll": b"no",
+                "..\\escaped.dll": b"no",
+            }
+        )
+        monkeypatch.setattr(updater, "_get", lambda _url: payload)
+        lock, bin_dir, marker = self._setup(tmp_path, payload)
+        updater.fetch(lock, bin_dir, marker)
+        assert (bin_dir / "onnxruntime.dll").read_bytes() == b"ort"
+        assert not (bin_dir / "nested").exists()
+        assert not (tmp_path.parent / "escaped.dll").exists()
+
     def test_second_fetch_skips_download(self, tmp_path, monkeypatch):
-        payload = _zip({"dengjen-tts-grpc.exe": b"exe", "NOTICE": b"n"})
+        payload = _zip(
+            {"dengjen-tts-grpc.exe": b"exe", "NOTICE": b"n", "ort.dll": b"ort"}
+        )
         calls = []
         monkeypatch.setattr(updater, "_get", lambda url: calls.append(url) or payload)
         lock, bin_dir, marker = self._setup(tmp_path, payload)
@@ -193,6 +214,24 @@ class TestMain:
 
 
 class TestFetchReinstall:
+    def test_missing_dlls_are_refetched_despite_binary_and_marker(
+        self, tmp_path, monkeypatch
+    ):
+        payload = _zip(
+            {"dengjen-tts-grpc.exe": b"exe", "NOTICE": b"n", "ort.dll": b"ort"}
+        )
+        calls = []
+        monkeypatch.setattr(updater, "_get", lambda url: calls.append(url) or payload)
+        (tmp_path / "NOTICES").mkdir()
+        lock = tmp_path / "x.lock"
+        updater.write_lock("2.0.3", hashlib.sha256(payload).hexdigest(), lock)
+        marker = tmp_path / ".marker"
+        updater.fetch(lock, tmp_path, marker)
+        (tmp_path / "ort.dll").unlink()
+        updater.fetch(lock, tmp_path, marker)
+        assert len(calls) == 2
+        assert (tmp_path / "ort.dll").read_bytes() == b"ort"
+
     def test_missing_binary_is_refetched_despite_marker(self, tmp_path, monkeypatch):
         payload = _zip({"dengjen-tts-grpc.exe": b"exe", "NOTICE": b"n"})
         monkeypatch.setattr(updater, "_get", lambda _url: payload)

@@ -57,6 +57,9 @@ def asset_url(version):
 def install(zip_bytes, bin_dir=BIN_DIR):
     with zipfile.ZipFile(io.BytesIO(zip_bytes)) as z:
         (bin_dir / "dengjen-tts-grpc.exe").write_bytes(z.read("dengjen-tts-grpc.exe"))
+        for name in z.namelist():
+            if name.lower().endswith(".dll") and not {"/", "\\"} & set(name):
+                (bin_dir / name).write_bytes(z.read(name))
         notice = bin_dir / "NOTICES" / "COPYING - dengjen-tts-grpc"
         notice.write_bytes(z.read("NOTICE"))
 
@@ -64,7 +67,9 @@ def install(zip_bytes, bin_dir=BIN_DIR):
 def fetch(lock=LOCK, bin_dir=BIN_DIR, marker=MARKER):
     version, digest = read_lock(lock)
     stamp = f"{version} {digest}"
-    installed = (bin_dir / "dengjen-tts-grpc.exe").exists()
+    installed = (bin_dir / "dengjen-tts-grpc.exe").exists() and any(
+        bin_dir.glob("*.dll")
+    )
     if installed and marker.exists() and marker.read_text() == stamp:
         print(f"dengjen-tts-grpc {version} already installed.")
         return
