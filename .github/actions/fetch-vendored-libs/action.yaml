@@ -6,7 +6,7 @@ runs:
   steps:
     - uses: astral-sh/setup-uv@18d369b23da25a81e9458561248e1aafff6a70fa # v10.3.1
       with:
-        version: 0.13.4
+        version: 0.13.5
     - uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
       with:
         path: addon/synthDrivers/dengjen_neural_voices/lib
