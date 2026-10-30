@@ -120,7 +120,7 @@ jobs:
     needs: [resolve, build-and-release]
     if: ${{ !cancelled() && inputs.dry_run != true && needs.build-and-release.result == 'success' }}
     permissions: {}
-    uses: ZirekHQ/.github/.github/workflows/announce-release.yaml@aeeb653e77286d2bc445c6a34c0125acc6c60b6c # main
+    uses: ZirekHQ/.github/.github/workflows/announce-release.yaml@cc393527c7adba59e8d4b4450e5f8ae2de1a6f76 # main
     with:
       tag: v${{ needs.resolve.outputs.version }}
     secrets:
