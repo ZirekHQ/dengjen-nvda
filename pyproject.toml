@@ -56,7 +56,7 @@ vendor = [
     "psutil==7.2.2",
     "pycparser==3.12",
 ]
-codegen = ["grpcio-tools==1.84.*"]
+codegen = ["grpcio-tools==1.85.*"]
 
 [tool.uv]
 package = false
