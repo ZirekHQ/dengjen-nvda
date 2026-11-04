@@ -44,7 +44,7 @@ C4Component
     Container_Boundary(addon, "dengjen_neural_voices") {
         Component(domain, "domain/tts_system.py", "Python module", "Pure domain logic: voices, speech options. No gRPC, no NVDA imports.")
         Component(port, "ports/tts_backend.py", "Python Protocol", "TTSBackend -- the one interface a TTS engine adapter must satisfy")
-        Component(grpcadapter, "adapters/sonata_grpc", "Python package", "Implements TTSBackend by launching and talking to dengjen-tts-grpc.exe")
+        Component(grpcadapter, "adapters/dengjen_grpc", "Python package", "Implements TTSBackend by launching and talking to dengjen-tts-grpc.exe")
         Component(nvdaadapter, "adapters/nvda/synth_driver.py", "Python module", "Exposes the domain layer to NVDA's own SynthDriver API")
     }
 
@@ -74,7 +74,7 @@ MeloTTS directory constant is registered.
 
 == Code
 
-`TTSBackend` is a `Protocol`, not a base class -- the `sonata_grpc` adapter
+`TTSBackend` is a `Protocol`, not a base class -- the `dengjen_grpc` adapter
 satisfies it structurally. Its methods are split deliberately: everything NVDA
 calls synchronously from its main thread has to stay blocking; only
 `synthesize()` is a true async generator.
@@ -98,10 +98,10 @@ classDiagram
     class LoadedVoice {
         <<frozen dataclass>>
     }
-    class SonataGrpcBackend
+    class DengjenGrpcBackend
 
-    TTSBackend <|.. SonataGrpcBackend
+    TTSBackend <|.. DengjenGrpcBackend
     TTSBackend ..> SynthOptions : passes
     TTSBackend ..> LoadedVoice : returns
-    note for SonataGrpcBackend "Implements TTSBackend by launching and calling dengjen-tts-grpc.exe"
+    note for DengjenGrpcBackend "Implements TTSBackend by launching and calling dengjen-tts-grpc.exe"
 ----
