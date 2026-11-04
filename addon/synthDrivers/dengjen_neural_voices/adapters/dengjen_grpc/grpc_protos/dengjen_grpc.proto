@@ -27,6 +27,23 @@ service DengjenGrpc {
   rpc SynthesizeUtteranceRealtime(SynthesisRequest) returns (stream RealtimeAudioChunk) {}
 
   rpc Recognize(RecognizeRequest) returns (RecognizeResponse) {}
+
+  // The voice manager RPCs fail with FAILED_PRECONDITION until the server is
+  // configured with a catalogue (see the DENGJEN_GRPC_VOICES_* variables).
+  // Downloads the catalogue and caches it for offline use.
+  rpc FetchCatalogue(Empty) returns (CatalogueInfo) {}
+
+  // Lists catalogue voices; fails with FAILED_PRECONDITION before the first
+  // successful FetchCatalogue.
+  rpc ListVoices(ListVoicesRequest) returns (VoiceList) {}
+
+  rpc ListInstalledVoices(Empty) returns (InstalledVoiceList) {}
+
+  // Downloads, verifies and installs a voice. Cancelled when the caller drops
+  // the stream; a partial download is kept and resumed by the next call.
+  rpc InstallVoice(InstallVoiceRequest) returns (stream InstallProgress) {}
+
+  rpc RemoveVoice(RemoveVoiceRequest) returns (Empty) {}
 }
 
 enum SynthesisMode {
@@ -137,4 +154,52 @@ message RecognizeRequest {
 
 message RecognizeResponse {
   string text = 1;
+}
+
+message CatalogueInfo {
+  uint32 voice_count = 1;
+}
+
+message ListVoicesRequest {
+  // Language code or family such as "ku" or "ku_TR"; unset lists every voice.
+  optional string language = 1;
+}
+
+message CatalogueVoice {
+  string key = 1;
+  string name = 2;
+  string language_code = 3;
+  string language_family = 4;
+  string quality = 5;
+  uint32 num_speakers = 6;
+  uint64 total_bytes = 7;
+}
+
+message VoiceList {
+  repeated CatalogueVoice voices = 1;
+}
+
+message InstalledVoiceInfo {
+  string key = 1;
+  string model_type = 2;
+  string name = 3;
+  string language = 4;
+  string description = 5;
+}
+
+message InstalledVoiceList {
+  repeated InstalledVoiceInfo voices = 1;
+}
+
+message InstallVoiceRequest {
+  string key = 1;
+}
+
+message InstallProgress {
+  uint64 done_bytes = 1;
+  uint64 total_bytes = 2;
+}
+
+message RemoveVoiceRequest {
+  string key = 1;
 }
