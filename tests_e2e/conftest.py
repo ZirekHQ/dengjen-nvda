@@ -83,13 +83,19 @@ def voice_manager_state(nvda, expr: str) -> Any:
     )
 
 
-def _holds(predicate: Callable[[], Any]) -> bool:
-    try:
-        return bool(predicate())
-    except AuthError:
-        raise
-    except RpcError:
-        return False
+def _holds(predicate: Callable[[], Any], *, retries: int = 5) -> bool:
+    last: RpcError | None = None
+    for _ in range(retries):
+        try:
+            return bool(predicate())
+        except AuthError:
+            raise
+        except RpcError as exc:
+            last = exc
+            time.sleep(0.5)
+    raise AssertionError(
+        f"could not read the state before pressing after {retries} tries"
+    ) from last
 
 
 def press_until(

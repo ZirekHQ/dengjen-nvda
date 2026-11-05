@@ -110,6 +110,37 @@ def test_press_until_does_not_press_when_the_goal_already_holds():
     assert nvda.keys.presses == 0
 
 
+def test_press_until_rereads_the_state_after_a_transient_rpc_error(monkeypatch):
+    monkeypatch.setattr("time.sleep", lambda _seconds: None)
+    states = iter([RpcError("between windows"), True])
+    nvda = _FakeNvda(lambda _n: None)
+
+    def predicate():
+        state = next(states)
+        if isinstance(state, Exception):
+            raise state
+        return state
+
+    press_until(nvda, "control+tab", predicate, attempts=3, timeout=5)
+
+    assert nvda.keys.presses == 0
+
+
+def test_press_until_does_not_press_blind_when_the_state_stays_unreadable(
+    monkeypatch,
+):
+    monkeypatch.setattr("time.sleep", lambda _seconds: None)
+    nvda = _FakeNvda(lambda _n: None)
+
+    def predicate():
+        raise RpcError("between windows")
+
+    with pytest.raises(AssertionError, match="could not read the state"):
+        press_until(nvda, "control+tab", predicate, attempts=3, timeout=5)
+
+    assert nvda.keys.presses == 0
+
+
 def test_press_until_retries_a_press_that_was_swallowed(monkeypatch):
     monkeypatch.setattr("time.sleep", lambda _seconds: None)
     clock = iter([0, 10, 10, 20, 20])
