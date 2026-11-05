@@ -72,7 +72,8 @@ exit at once with a dialog nobody sees from inside NVDA, and the add-on would lo
 `False`.
 . Launches the executable with `DENGJEN_GRPC_SERVER_PORT=0` so the OS assigns a port,
 `DENGJEN_ESPEAKNG_DATA_DIRECTORY` pointing at NVDA's `synthDrivers` directory (the engine reuses
-NVDA's bundled eSpeak NG data), and `DENGJEN_GRPC=info`. Creation flags are `DETACHED_PROCESS`,
+NVDA's bundled eSpeak NG data for every language except Kurmanji, which the engine phonemizes
+itself), and `DENGJEN_GRPC=info`. Creation flags are `DETACHED_PROCESS`,
 `CREATE_NEW_PROCESS_GROUP` and `ABOVE_NORMAL_PRIORITY_CLASS`. Output goes to
 `logs/dengjen-tts-grpc.log` under the voices base directory.
 . Waits up to `PORT_HANDSHAKE_TIMEOUT` (10 s) for the log to contain the line
