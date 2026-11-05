@@ -288,8 +288,9 @@ def _nvda_espeak_data_dir():
 def _with_espeak_hint(message):
     if ESPEAK_INIT_FAILURE not in message:
         return message
+    data_dir = os.path.join(_nvda_espeak_data_dir(), "espeak-ng-data")
     return (
-        f"{message} NVDA's eSpeak data at {_nvda_espeak_data_dir()} may not match "
+        f"{message} NVDA's eSpeak data at {data_dir} may not match "
         "the engine's eSpeak library; update NVDA and this add-on together."
     )
 

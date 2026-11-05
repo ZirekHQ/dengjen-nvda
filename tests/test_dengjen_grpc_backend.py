@@ -233,7 +233,7 @@ def test_espeak_init_failure_names_the_data_directory(monkeypatch):
     hinted = dengjen_grpc._with_espeak_hint(message)
 
     assert hinted.startswith(message)
-    assert "C:/nvda/sd" in hinted
+    assert os.path.join("C:/nvda/sd", "espeak-ng-data") in hinted
 
 
 def test_other_failures_pass_through_unchanged():
@@ -257,9 +257,10 @@ def test_synthesize_adds_the_espeak_hint_to_an_init_failure(monkeypatch):
 
     orig = mod.speak
     mod.speak = _boom
+    coroutine = _run()
     try:
         with pytest.raises(SynthesisError, match="may not match the engine"):
-            asyncio.run(_run())
+            asyncio.run(coroutine)
     finally:
         mod.speak = orig
 
