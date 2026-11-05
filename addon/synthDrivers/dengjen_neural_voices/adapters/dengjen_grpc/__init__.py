@@ -99,6 +99,20 @@ PROCESS_EXIT_TIMEOUT = 3
 
 _LISTENING_LINE_RE = re.compile(r"DENGJEN_GRPC_LISTENING port=(\d+)\r?\n")
 
+STATUS_ILLEGAL_INSTRUCTION = 0xC000001D
+_EXIT_CODE_HINTS = {
+    STATUS_ILLEGAL_INSTRUCTION: (
+        "the CPU lacks an instruction set the engine requires"
+        " (STATUS_ILLEGAL_INSTRUCTION)"
+    ),
+}
+
+
+def _describe_exit_code(exit_code):
+    """Return the exit code, with a cause when it maps to a known NT status."""
+    hint = _EXIT_CODE_HINTS.get(exit_code & 0xFFFFFFFF)
+    return f"{exit_code}; {hint}" if hint else str(exit_code)
+
 
 def _wait_for_listening_port(process, log_path, timeout=None, poll_interval=0.05):
     """Poll the server's log file for its handshake line and return the port.
@@ -122,7 +136,7 @@ def _wait_for_listening_port(process, log_path, timeout=None, poll_interval=0.05
         if exit_code is not None:
             raise RuntimeError(
                 "dengjen-tts-grpc.exe exited before reporting its listening "
-                f"port (exit code: {exit_code})"
+                f"port (exit code: {_describe_exit_code(exit_code)})"
             )
         if time.monotonic() >= deadline:
             raise TimeoutError(

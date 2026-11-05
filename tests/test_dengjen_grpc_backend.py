@@ -498,6 +498,19 @@ class TestWaitForListeningPort:
         with pytest.raises(RuntimeError, match="exit code: 1"):
             dengjen_grpc._wait_for_listening_port(process, str(log_path), timeout=1)
 
+    @pytest.mark.parametrize("exit_code", [3221225501, -1073741795])
+    def test_names_the_cause_when_the_process_hits_an_illegal_instruction(
+        self, tmp_path, exit_code
+    ):
+        import types
+
+        log_path = tmp_path / "server.log"
+        log_path.write_bytes(b"")
+        process = types.SimpleNamespace(poll=lambda: exit_code)
+
+        with pytest.raises(RuntimeError, match="STATUS_ILLEGAL_INSTRUCTION"):
+            dengjen_grpc._wait_for_listening_port(process, str(log_path), timeout=1)
+
     def test_raises_runtime_error_immediately_without_waiting_out_the_timeout(
         self, tmp_path
     ):

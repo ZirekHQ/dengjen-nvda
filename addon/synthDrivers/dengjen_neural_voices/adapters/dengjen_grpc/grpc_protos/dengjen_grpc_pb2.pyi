@@ -2,7 +2,7 @@ from google.protobuf.internal import containers as _containers
 from google.protobuf.internal import enum_type_wrapper as _enum_type_wrapper
 from google.protobuf import descriptor as _descriptor
 from google.protobuf import message as _message
-from collections.abc import Mapping as _Mapping
+from collections.abc import Iterable as _Iterable, Mapping as _Mapping
 from typing import ClassVar as _ClassVar, Optional as _Optional, Union as _Union
 
 DESCRIPTOR: _descriptor.FileDescriptor
@@ -170,3 +170,79 @@ class RecognizeResponse(_message.Message):
     TEXT_FIELD_NUMBER: _ClassVar[int]
     text: str
     def __init__(self, text: _Optional[str] = ...) -> None: ...
+
+class CatalogueInfo(_message.Message):
+    __slots__ = ("voice_count",)
+    VOICE_COUNT_FIELD_NUMBER: _ClassVar[int]
+    voice_count: int
+    def __init__(self, voice_count: _Optional[int] = ...) -> None: ...
+
+class ListVoicesRequest(_message.Message):
+    __slots__ = ("language",)
+    LANGUAGE_FIELD_NUMBER: _ClassVar[int]
+    language: str
+    def __init__(self, language: _Optional[str] = ...) -> None: ...
+
+class CatalogueVoice(_message.Message):
+    __slots__ = ("key", "name", "language_code", "language_family", "quality", "num_speakers", "total_bytes")
+    KEY_FIELD_NUMBER: _ClassVar[int]
+    NAME_FIELD_NUMBER: _ClassVar[int]
+    LANGUAGE_CODE_FIELD_NUMBER: _ClassVar[int]
+    LANGUAGE_FAMILY_FIELD_NUMBER: _ClassVar[int]
+    QUALITY_FIELD_NUMBER: _ClassVar[int]
+    NUM_SPEAKERS_FIELD_NUMBER: _ClassVar[int]
+    TOTAL_BYTES_FIELD_NUMBER: _ClassVar[int]
+    key: str
+    name: str
+    language_code: str
+    language_family: str
+    quality: str
+    num_speakers: int
+    total_bytes: int
+    def __init__(self, key: _Optional[str] = ..., name: _Optional[str] = ..., language_code: _Optional[str] = ..., language_family: _Optional[str] = ..., quality: _Optional[str] = ..., num_speakers: _Optional[int] = ..., total_bytes: _Optional[int] = ...) -> None: ...
+
+class VoiceList(_message.Message):
+    __slots__ = ("voices",)
+    VOICES_FIELD_NUMBER: _ClassVar[int]
+    voices: _containers.RepeatedCompositeFieldContainer[CatalogueVoice]
+    def __init__(self, voices: _Optional[_Iterable[_Union[CatalogueVoice, _Mapping]]] = ...) -> None: ...
+
+class InstalledVoiceInfo(_message.Message):
+    __slots__ = ("key", "model_type", "name", "language", "description")
+    KEY_FIELD_NUMBER: _ClassVar[int]
+    MODEL_TYPE_FIELD_NUMBER: _ClassVar[int]
+    NAME_FIELD_NUMBER: _ClassVar[int]
+    LANGUAGE_FIELD_NUMBER: _ClassVar[int]
+    DESCRIPTION_FIELD_NUMBER: _ClassVar[int]
+    key: str
+    model_type: str
+    name: str
+    language: str
+    description: str
+    def __init__(self, key: _Optional[str] = ..., model_type: _Optional[str] = ..., name: _Optional[str] = ..., language: _Optional[str] = ..., description: _Optional[str] = ...) -> None: ...
+
+class InstalledVoiceList(_message.Message):
+    __slots__ = ("voices",)
+    VOICES_FIELD_NUMBER: _ClassVar[int]
+    voices: _containers.RepeatedCompositeFieldContainer[InstalledVoiceInfo]
+    def __init__(self, voices: _Optional[_Iterable[_Union[InstalledVoiceInfo, _Mapping]]] = ...) -> None: ...
+
+class InstallVoiceRequest(_message.Message):
+    __slots__ = ("key",)
+    KEY_FIELD_NUMBER: _ClassVar[int]
+    key: str
+    def __init__(self, key: _Optional[str] = ...) -> None: ...
+
+class InstallProgress(_message.Message):
+    __slots__ = ("done_bytes", "total_bytes")
+    DONE_BYTES_FIELD_NUMBER: _ClassVar[int]
+    TOTAL_BYTES_FIELD_NUMBER: _ClassVar[int]
+    done_bytes: int
+    total_bytes: int
+    def __init__(self, done_bytes: _Optional[int] = ..., total_bytes: _Optional[int] = ...) -> None: ...
+
+class RemoveVoiceRequest(_message.Message):
+    __slots__ = ("key",)
+    KEY_FIELD_NUMBER: _ClassVar[int]
+    key: str
+    def __init__(self, key: _Optional[str] = ...) -> None: ...

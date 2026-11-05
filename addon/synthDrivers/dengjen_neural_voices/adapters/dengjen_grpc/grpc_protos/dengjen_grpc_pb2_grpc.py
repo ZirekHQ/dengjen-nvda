@@ -5,7 +5,7 @@ import warnings
 
 from . import dengjen_grpc_pb2 as dengjen__grpc__pb2
 
-GRPC_GENERATED_VERSION = '1.84.0'
+GRPC_GENERATED_VERSION = '1.85.1'
 GRPC_VERSION = grpc.__version__
 _version_not_supported = False
 
@@ -74,6 +74,31 @@ class DengjenGrpcStub:
                 request_serializer=dengjen__grpc__pb2.RecognizeRequest.SerializeToString,
                 response_deserializer=dengjen__grpc__pb2.RecognizeResponse.FromString,
                 _registered_method=True)
+        self.FetchCatalogue = channel.unary_unary(
+                '/dengjen_grpc.DengjenGrpc/FetchCatalogue',
+                request_serializer=dengjen__grpc__pb2.Empty.SerializeToString,
+                response_deserializer=dengjen__grpc__pb2.CatalogueInfo.FromString,
+                _registered_method=True)
+        self.ListVoices = channel.unary_unary(
+                '/dengjen_grpc.DengjenGrpc/ListVoices',
+                request_serializer=dengjen__grpc__pb2.ListVoicesRequest.SerializeToString,
+                response_deserializer=dengjen__grpc__pb2.VoiceList.FromString,
+                _registered_method=True)
+        self.ListInstalledVoices = channel.unary_unary(
+                '/dengjen_grpc.DengjenGrpc/ListInstalledVoices',
+                request_serializer=dengjen__grpc__pb2.Empty.SerializeToString,
+                response_deserializer=dengjen__grpc__pb2.InstalledVoiceList.FromString,
+                _registered_method=True)
+        self.InstallVoice = channel.unary_stream(
+                '/dengjen_grpc.DengjenGrpc/InstallVoice',
+                request_serializer=dengjen__grpc__pb2.InstallVoiceRequest.SerializeToString,
+                response_deserializer=dengjen__grpc__pb2.InstallProgress.FromString,
+                _registered_method=True)
+        self.RemoveVoice = channel.unary_unary(
+                '/dengjen_grpc.DengjenGrpc/RemoveVoice',
+                request_serializer=dengjen__grpc__pb2.RemoveVoiceRequest.SerializeToString,
+                response_deserializer=dengjen__grpc__pb2.Empty.FromString,
+                _registered_method=True)
 
 
 class DengjenGrpcServicer:
@@ -127,6 +152,43 @@ class DengjenGrpcServicer:
         context.set_details('Method not implemented!')
         raise NotImplementedError('Method not implemented!')
 
+    def FetchCatalogue(self, request, context):
+        """The voice manager RPCs fail with FAILED_PRECONDITION until the server is
+        configured with a catalogue (see the DENGJEN_GRPC_VOICES_* variables).
+        Downloads the catalogue and caches it for offline use.
+        """
+        context.set_code(grpc.StatusCode.UNIMPLEMENTED)
+        context.set_details('Method not implemented!')
+        raise NotImplementedError('Method not implemented!')
+
+    def ListVoices(self, request, context):
+        """Lists catalogue voices; fails with FAILED_PRECONDITION before the first
+        successful FetchCatalogue.
+        """
+        context.set_code(grpc.StatusCode.UNIMPLEMENTED)
+        context.set_details('Method not implemented!')
+        raise NotImplementedError('Method not implemented!')
+
+    def ListInstalledVoices(self, request, context):
+        """Missing associated documentation comment in .proto file."""
+        context.set_code(grpc.StatusCode.UNIMPLEMENTED)
+        context.set_details('Method not implemented!')
+        raise NotImplementedError('Method not implemented!')
+
+    def InstallVoice(self, request, context):
+        """Downloads, verifies and installs a voice. Cancelled when the caller drops
+        the stream; a partial download is kept and resumed by the next call.
+        """
+        context.set_code(grpc.StatusCode.UNIMPLEMENTED)
+        context.set_details('Method not implemented!')
+        raise NotImplementedError('Method not implemented!')
+
+    def RemoveVoice(self, request, context):
+        """Missing associated documentation comment in .proto file."""
+        context.set_code(grpc.StatusCode.UNIMPLEMENTED)
+        context.set_details('Method not implemented!')
+        raise NotImplementedError('Method not implemented!')
+
 
 def add_DengjenGrpcServicer_to_server(servicer, server):
     rpc_method_handlers = {
@@ -169,6 +231,31 @@ def add_DengjenGrpcServicer_to_server(servicer, server):
                     servicer.Recognize,
                     request_deserializer=dengjen__grpc__pb2.RecognizeRequest.FromString,
                     response_serializer=dengjen__grpc__pb2.RecognizeResponse.SerializeToString,
+            ),
+            'FetchCatalogue': grpc.unary_unary_rpc_method_handler(
+                    servicer.FetchCatalogue,
+                    request_deserializer=dengjen__grpc__pb2.Empty.FromString,
+                    response_serializer=dengjen__grpc__pb2.CatalogueInfo.SerializeToString,
+            ),
+            'ListVoices': grpc.unary_unary_rpc_method_handler(
+                    servicer.ListVoices,
+                    request_deserializer=dengjen__grpc__pb2.ListVoicesRequest.FromString,
+                    response_serializer=dengjen__grpc__pb2.VoiceList.SerializeToString,
+            ),
+            'ListInstalledVoices': grpc.unary_unary_rpc_method_handler(
+                    servicer.ListInstalledVoices,
+                    request_deserializer=dengjen__grpc__pb2.Empty.FromString,
+                    response_serializer=dengjen__grpc__pb2.InstalledVoiceList.SerializeToString,
+            ),
+            'InstallVoice': grpc.unary_stream_rpc_method_handler(
+                    servicer.InstallVoice,
+                    request_deserializer=dengjen__grpc__pb2.InstallVoiceRequest.FromString,
+                    response_serializer=dengjen__grpc__pb2.InstallProgress.SerializeToString,
+            ),
+            'RemoveVoice': grpc.unary_unary_rpc_method_handler(
+                    servicer.RemoveVoice,
+                    request_deserializer=dengjen__grpc__pb2.RemoveVoiceRequest.FromString,
+                    response_serializer=dengjen__grpc__pb2.Empty.SerializeToString,
             ),
     }
     generic_handler = grpc.method_handlers_generic_handler(
@@ -387,6 +474,141 @@ class DengjenGrpc:
             '/dengjen_grpc.DengjenGrpc/Recognize',
             dengjen__grpc__pb2.RecognizeRequest.SerializeToString,
             dengjen__grpc__pb2.RecognizeResponse.FromString,
+            options,
+            channel_credentials,
+            insecure,
+            call_credentials,
+            compression,
+            wait_for_ready,
+            timeout,
+            metadata,
+            _registered_method=True)
+
+    @staticmethod
+    def FetchCatalogue(request,
+            target,
+            options=(),
+            channel_credentials=None,
+            call_credentials=None,
+            insecure=False,
+            compression=None,
+            wait_for_ready=None,
+            timeout=None,
+            metadata=None):
+        return grpc.experimental.unary_unary(
+            request,
+            target,
+            '/dengjen_grpc.DengjenGrpc/FetchCatalogue',
+            dengjen__grpc__pb2.Empty.SerializeToString,
+            dengjen__grpc__pb2.CatalogueInfo.FromString,
+            options,
+            channel_credentials,
+            insecure,
+            call_credentials,
+            compression,
+            wait_for_ready,
+            timeout,
+            metadata,
+            _registered_method=True)
+
+    @staticmethod
+    def ListVoices(request,
+            target,
+            options=(),
+            channel_credentials=None,
+            call_credentials=None,
+            insecure=False,
+            compression=None,
+            wait_for_ready=None,
+            timeout=None,
+            metadata=None):
+        return grpc.experimental.unary_unary(
+            request,
+            target,
+            '/dengjen_grpc.DengjenGrpc/ListVoices',
+            dengjen__grpc__pb2.ListVoicesRequest.SerializeToString,
+            dengjen__grpc__pb2.VoiceList.FromString,
+            options,
+            channel_credentials,
+            insecure,
+            call_credentials,
+            compression,
+            wait_for_ready,
+            timeout,
+            metadata,
+            _registered_method=True)
+
+    @staticmethod
+    def ListInstalledVoices(request,
+            target,
+            options=(),
+            channel_credentials=None,
+            call_credentials=None,
+            insecure=False,
+            compression=None,
+            wait_for_ready=None,
+            timeout=None,
+            metadata=None):
+        return grpc.experimental.unary_unary(
+            request,
+            target,
+            '/dengjen_grpc.DengjenGrpc/ListInstalledVoices',
+            dengjen__grpc__pb2.Empty.SerializeToString,
+            dengjen__grpc__pb2.InstalledVoiceList.FromString,
+            options,
+            channel_credentials,
+            insecure,
+            call_credentials,
+            compression,
+            wait_for_ready,
+            timeout,
+            metadata,
+            _registered_method=True)
+
+    @staticmethod
+    def InstallVoice(request,
+            target,
+            options=(),
+            channel_credentials=None,
+            call_credentials=None,
+            insecure=False,
+            compression=None,
+            wait_for_ready=None,
+            timeout=None,
+            metadata=None):
+        return grpc.experimental.unary_stream(
+            request,
+            target,
+            '/dengjen_grpc.DengjenGrpc/InstallVoice',
+            dengjen__grpc__pb2.InstallVoiceRequest.SerializeToString,
+            dengjen__grpc__pb2.InstallProgress.FromString,
+            options,
+            channel_credentials,
+            insecure,
+            call_credentials,
+            compression,
+            wait_for_ready,
+            timeout,
+            metadata,
+            _registered_method=True)
+
+    @staticmethod
+    def RemoveVoice(request,
+            target,
+            options=(),
+            channel_credentials=None,
+            call_credentials=None,
+            insecure=False,
+            compression=None,
+            wait_for_ready=None,
+            timeout=None,
+            metadata=None):
+        return grpc.experimental.unary_unary(
+            request,
+            target,
+            '/dengjen_grpc.DengjenGrpc/RemoveVoice',
+            dengjen__grpc__pb2.RemoveVoiceRequest.SerializeToString,
+            dengjen__grpc__pb2.Empty.FromString,
             options,
             channel_credentials,
             insecure,
