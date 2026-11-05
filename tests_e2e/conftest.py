@@ -83,6 +83,15 @@ def voice_manager_state(nvda, expr: str) -> Any:
     )
 
 
+def _holds(predicate: Callable[[], Any]) -> bool:
+    try:
+        return bool(predicate())
+    except AuthError:
+        raise
+    except RpcError:
+        return False
+
+
 def press_until(
     nvda,
     gesture: str,
@@ -95,8 +104,14 @@ def press_until(
     """Retry a keystroke whose effect can be silently swallowed by a UI-focus
     race, polling `predicate` (a read-only check, e.g. via voice_manager_state)
     after each press. Re-raises the last timeout if every attempt fails.
+
+    `predicate` is checked before every press, so a goal that already holds,
+    or a press that landed after its own poll timed out, is never pressed
+    again (control+tab would otherwise move past the target tab).
     """
     for attempt in range(attempts):
+        if _holds(predicate):
+            return
         nvda.keys.press(gesture)
         try:
             wait_until(
