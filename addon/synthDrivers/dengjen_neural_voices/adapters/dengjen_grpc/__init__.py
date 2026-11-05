@@ -278,6 +278,22 @@ def _release_previous_server():
         GRPC_SERVER_PROCESS = None
 
 
+ESPEAK_INIT_FAILURE = "Failed to initialize eSpeak-ng"
+
+
+def _nvda_espeak_data_dir():
+    return os.path.join(globalVars.appDir, "synthDrivers")
+
+
+def _with_espeak_hint(message):
+    if ESPEAK_INIT_FAILURE not in message:
+        return message
+    return (
+        f"{message} NVDA's eSpeak data at {_nvda_espeak_data_dir()} may not match "
+        "the engine's eSpeak library; update NVDA and this add-on together."
+    )
+
+
 def start_grpc_server():
     global GRPC_SERVER_PROCESS, DENGJEN_GRPC_SERVER_PORT, SERVER_LOG_HANDLE
     if _saved_server_is_alive():
@@ -295,7 +311,7 @@ def start_grpc_server():
         _show_vcruntime_warning()
         return False
     grpc_server_exe = os.path.join(BIN_DIRECTORY, "dengjen-tts-grpc.exe")
-    nvda_espeak_dir = os.path.join(globalVars.appDir, "synthDrivers")
+    nvda_espeak_dir = _nvda_espeak_data_dir()
     env = os.environ.copy()
     env.update(
         {
@@ -696,4 +712,4 @@ class DengjenGrpcBackend:
             ):
                 yield ret.audio_bytes
         except Exception as exc:
-            raise SynthesisError(str(exc)) from exc
+            raise SynthesisError(_with_espeak_hint(str(exc))) from exc

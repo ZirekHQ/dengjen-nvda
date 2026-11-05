@@ -226,6 +226,44 @@ def test_synthesize_wraps_a_failure_as_synthesis_error():
         mod.speak = orig
 
 
+def test_espeak_init_failure_names_the_data_directory(monkeypatch):
+    monkeypatch.setattr(dengjen_grpc, "_nvda_espeak_data_dir", lambda: "C:/nvda/sd")
+    message = "phonemize failed: Failed to initialize eSpeak-ng, error code `0`."
+
+    hinted = dengjen_grpc._with_espeak_hint(message)
+
+    assert hinted.startswith(message)
+    assert "C:/nvda/sd" in hinted
+
+
+def test_other_failures_pass_through_unchanged():
+    assert dengjen_grpc._with_espeak_hint("stream broke") == "stream broke"
+
+
+def test_synthesize_adds_the_espeak_hint_to_an_init_failure(monkeypatch):
+    import asyncio
+
+    import dengjen_neural_voices.adapters.dengjen_grpc as mod
+
+    monkeypatch.setattr(mod, "_nvda_espeak_data_dir", lambda: "C:/nvda/sd")
+
+    async def _boom(**kwargs):
+        raise RuntimeError("Failed to initialize eSpeak-ng")
+        yield b""
+
+    async def _run():
+        async for _ in backend.synthesize("v1", "hi", None, None, None, None, False):
+            pass
+
+    orig = mod.speak
+    mod.speak = _boom
+    try:
+        with pytest.raises(SynthesisError, match="may not match the engine"):
+            asyncio.run(_run())
+    finally:
+        mod.speak = orig
+
+
 def test_synthesize_yields_audio_bytes_not_the_raw_message():
     """Regression test: synthesize() briefly re-yielded the raw protobuf
     message instead of unwrapping .audio_bytes (caught and fixed during this
