@@ -315,6 +315,9 @@ jobs:
           echo ""
           echo "Fill in by hand: **Publisher** = \`Ali Ustek\`, **Channel** = \`${CHANNEL}\`."
           echo "Submit through the web form so GitHub applies the \`autoSubmissionFromIssue\` label."
+          if [[ "$CHANNEL" == beta ]]; then
+            echo "The Store needs a distinct manifest version per submission. Successive beta tags can share one, so bump \`addon_version\` before submitting another beta."
+          fi
           echo ""
           echo "| Field | Value |"
           echo "|---|---|"
@@ -323,7 +326,7 @@ jobs:
           echo ""
           echo "## Announcement email (nvda-addons@groups.io)"
           echo ""
-          echo "Send after the store issue closes as completed."
+          echo "Send once the version shows in the NVDA Add-on Store. The submission issue can close before it does."
           echo "Sign in to the subscribed Gmail account first."
           echo ""
           echo "[Open Gmail compose with the email]($MAIL_URL)"
