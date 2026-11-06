@@ -289,15 +289,55 @@ jobs:
         SHA256=$(sha256sum "$ADDON_FILE" | awk '{print $1}')
         TAG=${REF#refs/tags/}
         REPO="${GITHUB_REPOSITORY}"
+        VERSION=${TAG#v}
+        CHANNEL=stable
+        if [[ "$TAG" == *-* ]]; then
+          CHANNEL=beta
+        fi
         DOWNLOAD_URL="https://github.com/${REPO}/releases/download/${TAG}/${ADDON_FILE}"
+        SOURCE_URL="https://github.com/${REPO}"
+        RELEASE_URL="https://github.com/${REPO}/releases/tag/${TAG}"
+        TITLE="[Submit add-on]: Dengjen Neural Voices ${VERSION}"
+        SUBJECT="Dengjen Neural Voices ${VERSION} #addonrelease"
+        EMAIL_BODY=$(printf '%s\n\n%s\n\n%s\n\n%s\n%s' \
+          "Hi all," \
+          "Dengjen Neural Voices ${VERSION} is now available from the NV Access add-on store." \
+          "Changelog: ${RELEASE_URL}" \
+          "Cheers," \
+          "Ali")
+        enc() { jq -rn --arg v "$1" '$v|@uri'; }
+        FORM_URL="https://github.com/nvaccess/addon-datastore/issues/new?template=registerAddon.yml&title=$(enc "$TITLE")&download-url=$(enc "$DOWNLOAD_URL")&source-url=$(enc "$SOURCE_URL")"
+        MAIL_URL="https://mail.google.com/mail/?view=cm&fs=1&to=nvda-addons%40groups.io&su=$(enc "$SUBJECT")&body=$(enc "$EMAIL_BODY")"
         {
-          echo "## NVDA Add-on Store submission values"
+          echo "## NVDA Add-on Store submission"
+          echo ""
+          echo "[Open the prefilled registration form]($FORM_URL)"
+          echo ""
+          echo "Fill in by hand: **Publisher** = \`Ali Ustek\`, **Channel** = \`${CHANNEL}\`."
+          echo "Submit through the web form so GitHub applies the \`autoSubmissionFromIssue\` label."
           echo ""
           echo "| Field | Value |"
           echo "|---|---|"
           echo "| **Download URL** | \`${DOWNLOAD_URL}\` |"
           echo "| **SHA256** | \`${SHA256}\` |"
           echo ""
-          echo "Use these values when filling in the [Add-on Store registration form](https://github.com/nvaccess/addon-datastore/issues/new?template=registerAddon.yml)."
+          echo "## Announcement email (nvda-addons@groups.io)"
+          echo ""
+          echo "Send after the store issue closes as completed."
+          echo "Sign in to the subscribed Gmail account first."
+          echo ""
+          echo "[Open Gmail compose with the email]($MAIL_URL)"
+          echo ""
+          echo "**Subject**"
+          echo ""
+          echo '````text'
+          echo "$SUBJECT"
+          echo '````'
+          echo ""
+          echo "**Body**"
+          echo ""
+          echo '````text'
+          echo "$EMAIL_BODY"
+          echo '````'
         } >> "$GITHUB_STEP_SUMMARY"
 
