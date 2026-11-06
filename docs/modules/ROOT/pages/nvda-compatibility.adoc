@@ -51,4 +51,4 @@ isn't meant to be reproduced on a personal machine.
 
 xref:troubleshooting.adoc[Troubleshooting] covers the symptoms of an
 incompatible NVDA/runtime pairing -- the driver missing from NVDA's
-synthesizer list, or failing to load.
+synthesiser list, or failing to load.

@@ -1,4 +1,4 @@
-= Voice catalog and model format
+= Voice catalogue and model format
 
 This add-on ships two model backends today -- Piper and Kokoro -- selected
 through a common `ModelCatalog` protocol
@@ -31,9 +31,9 @@ skip the fallback.
 Fields: `model_type`, `name`, `language`, and an optional `description`
 (defaults to an empty string).
 
-== Piper voice catalog (`piper-voices.json`)
+== Piper voice catalogue (`piper-voices.json`)
 
-The catalog of downloadable Piper voices comes from
+The catalogue of downloadable Piper voices comes from
 https://huggingface.co/rhasspy/piper-voices[rhasspy/piper-voices]' own
 `voices.json`, merged with the fast/RT variant list from
 https://huggingface.co/datasets/mush42/piper-rt[mush42/piper-rt]: a voice
@@ -44,7 +44,7 @@ is flagged `has_rt_variant` when its base name appears in the RT dataset.
 each release; at runtime the add-on caches its own copy under
 `DENGJEN_VOICES_DIR/piper-voices-<revision>.json` (named after the pinned `rhasspy/piper-voices` commit, so a new pin invalidates older caches) and falls back to the bundled
 snapshot if a refresh fails, so `get_available_voices()` can serve a
-catalog offline on first run.
+catalogue offline on first run.
 
 Per-voice fields consumed by `PiperVoice.from_list_of_dicts()`
 (`voice_download.py`):
@@ -72,7 +72,7 @@ extracted too and is what `Voice model card...`
 == Kokoro voice format
 
 Unlike Piper's many independent per-voice downloads, Kokoro installs as a
-single shared unit: one `model.onnx` (full precision only -- quantized
+single shared unit: one `model.onnx` (full precision only -- quantised
 variants crash `dengjen-tts-grpc.exe`), one `tokenizer.json`, and one
 `voices/<preset>.bin` per preset (510 tokens x 256 dims x 4 bytes =
 522240 bytes each), sourced from
