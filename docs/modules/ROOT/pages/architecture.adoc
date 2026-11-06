@@ -21,7 +21,7 @@ C4Container
     System_Ext(nvda, "NVDA", "The screen reader host process")
 
     System_Boundary(addon, "dengjen-nvda") {
-        Container(synthdriver, "dengjen_neural_voices", "Python 3.13 add-on", "Loaded in-process by NVDA as a synthesizer driver")
+        Container(synthdriver, "dengjen_neural_voices", "Python 3.13 add-on", "Loaded in-process by NVDA as a synthesiser driver")
         Container(grpcbin, "dengjen-tts-grpc.exe", "Fetched Rust binary (pinned in dengjen-tts.lock)", "Launched via subprocess.Popen; a gRPC-frontend build of dengjen-tts")
     }
 
@@ -60,7 +60,7 @@ Piper -- it already ships Kokoro and MeloTTS. Wiring a new one into this
 add-on needs:
 
 1. A `ModelCatalog` implementation (`addon/globalPlugins/dengjen_tts_global_plugin/model_catalog.py`'s `Protocol`) with `model_type`, `is_installed()`, and `install()`, following `kokoro_download.py`'s `KokoroCatalog` as a template.
-2. That catalog's installer writes two files per voice directory: the model backend's own `config.json` (whatever shape `dengjen-tts`'s loader for that `model_type` expects -- check `crates/dengjen/models/<type>/src/config.rs` in `zirekhq/dengjen-tts`), and a `voice.json` sidecar via `domain/voice_metadata.write()` carrying `{model_type, name, language, description}` -- the only fields `DengjenVoice.from_path()` reads.
+2. That catalogue's installer writes two files per voice directory: the model backend's own `config.json` (whatever shape `dengjen-tts`'s loader for that `model_type` expects -- check `crates/dengjen/models/<type>/src/config.rs` in `zirekhq/dengjen-tts`), and a `voice.json` sidecar via `domain/voice_metadata.write()` carrying `{model_type, name, language, description}` -- the only fields `DengjenVoice.from_path()` reads.
 3. If the new model type has per-utterance parameters the existing gRPC `ProsodyControls` message doesn't carry, that needs a change in `zirekhq/dengjen-tts` first (a different repo) -- not an addon-side concern.
 4. If the new model type's tuning parameters map onto the `noise_scale`/`length_scale`/`noise_w` sliders, add a `ModelProfile` entry to `_PROFILES` in `domain/model_profiles.py`, listing which sliders apply and, where the engine's key differs from the slider name, the `parameters` key (MeloTTS maps `noise_w` to `noise_scale_w`).
 5. Add a `DENGJEN_<TYPE>_VOICES_DIR` constant to `const.py` and register it in `DengjenTextToSpeechSystem.load_all_voices_from_nvda_config_dir()` (`domain/tts_system.py`) -- that method iterates a fixed tuple of directories, not a dynamic scan of `voices/*`, so a new backend's directory has to be added there explicitly or its installed voices are invisible to NVDA.

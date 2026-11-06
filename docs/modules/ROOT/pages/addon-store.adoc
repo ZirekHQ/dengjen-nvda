@@ -51,7 +51,7 @@ Releases are tag-driven from `main`:
 
 The tag scheme accepts only `vMAJOR.MINOR.PATCH` or
 `vMAJOR.MINOR.PATCH-beta.N` -- other prerelease labels such as `-rc.N`
-aren't recognized by the release workflow's tag check. Historical tags
+aren't recognised by the release workflow's tag check. Historical tags
 `v3.2-beta.1` through `v3.2-beta.4` used a non-standard two-part scheme
 and are left as published rather than renamed.
 
