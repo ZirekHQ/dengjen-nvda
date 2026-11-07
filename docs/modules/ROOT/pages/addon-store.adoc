@@ -58,21 +58,16 @@ and are left as published rather than renamed.
 == Submitting to the Add-on Store
 
 After a release publishes, `build_addon.yaml`'s "Store submission
-summary" step writes two values to the workflow run's job summary:
+summary" step writes three things to the workflow run's job summary:
 
-[cols="1,2"]
-|===
-| Field | Value
-
-| Download URL
-| `https://github.com/<repo>/releases/download/<tag>/<file>.nvda-addon`
-
-| SHA256
-| the checksum of the published `.nvda-addon` file
-|===
-
-Use those two values to fill in NVAccess's registration form:
-https://github.com/nvaccess/addon-datastore/issues/new?template=registerAddon.yml.
+* A link to NVAccess's registration form with the title, Download URL and
+  Source URL prefilled. Set Publisher and Channel by hand, then submit
+  through the web form; issues created through the API lack the
+  `autoSubmissionFromIssue` label and the datastore ignores them.
+* The Download URL and the SHA256 of the published `.nvda-addon` file.
+* The subject and body of the announcement email for the
+  `nvda-addons@groups.io` list, tagged `#addonrelease`. Send it once the
+  version shows in the store; the submission issue can close before it does.
 
 This step runs identically on every release -- there's no separate
 "update" workflow in this repo. Re-submitting that same form with the new
