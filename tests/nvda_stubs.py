@@ -35,6 +35,20 @@ from concurrent.futures import Future as _Future
 from unittest.mock import MagicMock
 
 
+class _StickyMock(MagicMock):
+    """MagicMock whose auto-created children become real instance attributes.
+
+    pytest 9.2's monkeypatch undo deletes attributes missing from the target's
+    __dict__; on a plain MagicMock that leaves the attribute reported as absent.
+    """
+
+    def __getattr__(self, name):
+        child = super().__getattr__(name)
+        if not name.startswith("_"):
+            self.__dict__[name] = child
+        return child
+
+
 def _stub_module(name: str, **attrs) -> types.ModuleType:
     """Create a plain module stub and register it in sys.modules."""
     mod = types.ModuleType(name)
@@ -118,7 +132,7 @@ def install(*, stub_wx: bool = True) -> None:
         "grpc.experimental",
         "grpc.aio",
     ]:
-        sys.modules.setdefault(_grpc_name, MagicMock())
+        sys.modules.setdefault(_grpc_name, _StickyMock())
     if isinstance(sys.modules["grpc"], MagicMock):
         # The generated pb2_grpc stubs read grpc.__version__ and compare it through
         # grpc._utilities at import time.
@@ -180,7 +194,7 @@ def install(*, stub_wx: bool = True) -> None:
 
     _stub_module("configobj", ConfigObj=MagicMock())
 
-    _stub_module("logHandler", log=MagicMock())
+    _stub_module("logHandler", log=_StickyMock())
 
     class _AutoPropertyMeta(type):
         """Stand-in for NVDA's baseObject.AutoPropertyObject: turns `_get_x`/
@@ -269,7 +283,7 @@ def install(*, stub_wx: bool = True) -> None:
 
     _stub_module("nvwave", WavePlayer=_FakeWavePlayer)
 
-    _say_all = MagicMock()
+    _say_all = _StickyMock()
     _say_all.isRunning.return_value = False
     _speech_mod = _stub_module("speech")
     _speech_mod.sayAll = MagicMock()
