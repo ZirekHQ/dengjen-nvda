@@ -56,11 +56,23 @@ def test_pcm_chunk_holds_chunk_ms_of_16_bit_samples():
 
 def test_case_ids_are_unique_and_cover_the_matrix():
     ids = [c.case_id for c in driver_bench.all_cases()]
-    assert len(ids) == len(set(ids)) == 24 + 3 + 6
+    assert len(ids) == len(set(ids)) == 24 + 3 + 6 + 2
+    assert {"grpc/startup", "grpc/first_audio"} <= set(ids)
 
 
 def test_processor_cases_report_chunk_duration():
     assert {c.audio_ms for c in driver_bench.processor_cases()} == {100}
+
+
+def test_grpc_cases_measure_startup_and_first_audio():
+    target = driver_bench.load_target(REPO_ROOT)
+    try:
+        results = driver_bench.run_cases(driver_bench.grpc_cases(), target, repeats=1)
+        assert set(results) == {"grpc/startup", "grpc/first_audio"}
+        assert results["grpc/startup"]["median_ms"] > 0
+        assert results["grpc/first_audio"]["median_ms"] > 0
+    finally:
+        target.module("aio").terminate()
 
 
 def test_smoke_run_measures_every_case_on_the_head_tree(tmp_path):

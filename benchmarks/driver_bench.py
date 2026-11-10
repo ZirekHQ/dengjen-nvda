@@ -15,7 +15,9 @@ import json
 import math
 import os
 import statistics
+import subprocess
 import sys
+import tempfile
 import time
 import types
 from array import array
@@ -232,8 +234,111 @@ def first_audio_cases():
     ]
 
 
+class _FakeGrpcChannel:
+    async def close(self):
+        pass
+
+
+class _FakeGrpcService:
+    def __init__(self, chunk):
+        self._chunk = chunk
+
+    async def GetDengjenVersion(self, _request):
+        return types.SimpleNamespace(version="bench")
+
+    async def SynthesizeUtterance(self, _request):
+        for _ in range(3):
+            await asyncio.sleep(0)
+            yield types.SimpleNamespace(audio_bytes=self._chunk)
+
+
+def _fake_grpc_popen(**kwargs):
+    stdout = kwargs.get("stdout")
+    if hasattr(stdout, "write"):
+        stdout.write(b"DENGJEN_GRPC_LISTENING port=50051\n")
+        stdout.flush()
+    return types.SimpleNamespace(
+        poll=lambda: None,
+        kill=lambda: None,
+        terminate=lambda: None,
+        wait=lambda timeout=None: 0,
+    )
+
+
+def _configure_grpc(target):
+    grpc_mod = target.module("adapters.dengjen_grpc")
+    chunk = pcm_chunk(22050)
+    grpc_mod.globalVars.appDir = ""
+    grpc_mod._vcruntime_missing = lambda: False
+    grpc_mod._reap_stale_grpc_servers = lambda _exe: None
+    grpc_mod.DENGJEN_VOICES_BASE_DIR = tempfile.mkdtemp(prefix="dengjen-bench-")
+    grpc_mod.subprocess = types.SimpleNamespace(
+        Popen=_fake_grpc_popen,
+        STDOUT=subprocess.STDOUT,
+        TimeoutExpired=subprocess.TimeoutExpired,
+        DETACHED_PROCESS=0,
+        CREATE_NEW_PROCESS_GROUP=0,
+        ABOVE_NORMAL_PRIORITY_CLASS=0,
+    )
+    grpc_mod.grpc.aio.insecure_channel = lambda _target: _FakeGrpcChannel()
+    grpc_mod.DengjenGrpcStub = lambda _channel: _FakeGrpcService(chunk)
+    return grpc_mod
+
+
+def _reset_grpc_state(grpc_mod):
+    if grpc_mod.SERVER_LOG_HANDLE is not None:
+        grpc_mod.SERVER_LOG_HANDLE.close()
+        grpc_mod.SERVER_LOG_HANDLE = None
+    grpc_mod._clear_saved_server_state()
+    grpc_mod.GRPC_SERVER_PROCESS = None
+    grpc_mod.DENGJEN_GRPC_SERVER_PORT = None
+    grpc_mod.CHANNEL = None
+    grpc_mod.CHANNEL_PORT = None
+    grpc_mod.DENGJEN_GRPC_SERVICE = None
+
+
+def _grpc_startup_make(target):
+    grpc_mod = _configure_grpc(target)
+    backend = grpc_mod.DengjenGrpcBackend()
+
+    def run():
+        _reset_grpc_state(grpc_mod)
+        start = time.perf_counter()
+        backend.initialize()
+        backend.check_version()
+        return (time.perf_counter() - start) * 1000
+
+    return run
+
+
+def _grpc_first_audio_make(target):
+    grpc_mod = _configure_grpc(target)
+    backend = grpc_mod.DengjenGrpcBackend()
+    backend.initialize()
+    tts = target.module("domain.tts_system")
+    voice = tts.DengjenVoice(
+        key="bench",
+        name="bench",
+        language="en_US",
+        description="bench",
+        location="",
+        backend=backend,
+        remote_id="bench",
+    )
+    voice.is_multi_speaker = False
+    task = tts.SpeechProvider("hello", tts.SpeechOptions(voice=voice))
+    return _make_speak(target, task, False)
+
+
+def grpc_cases():
+    return [
+        Case("grpc/startup", _grpc_startup_make),
+        Case("grpc/first_audio", _grpc_first_audio_make),
+    ]
+
+
 def all_cases():
-    return processor_cases() + cache_cases() + first_audio_cases()
+    return processor_cases() + cache_cases() + first_audio_cases() + grpc_cases()
 
 
 def _parser():
