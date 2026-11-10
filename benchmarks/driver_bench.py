@@ -313,6 +313,7 @@ def _grpc_startup_make(target):
 
 def _grpc_first_audio_make(target):
     grpc_mod = _configure_grpc(target)
+    _reset_grpc_state(grpc_mod)
     backend = grpc_mod.DengjenGrpcBackend()
     backend.initialize()
     tts = target.module("domain.tts_system")

@@ -65,6 +65,10 @@ def test_processor_cases_report_chunk_duration():
 
 
 def test_grpc_cases_measure_startup_and_first_audio():
+    saved_modules = dict(sys.modules)
+    saved_pkg_dict = dict(sys.modules[driver_bench.PACKAGE].__dict__)
+    global_vars = sys.modules["globalVars"]
+    saved_app_dir = getattr(global_vars, "appDir", None)
     target = driver_bench.load_target(REPO_ROOT)
     try:
         results = driver_bench.run_cases(driver_bench.grpc_cases(), target, repeats=1)
@@ -72,7 +76,16 @@ def test_grpc_cases_measure_startup_and_first_audio():
         assert results["grpc/startup"]["median_ms"] > 0
         assert results["grpc/first_audio"]["median_ms"] > 0
     finally:
+        driver_bench._reset_grpc_state(target.module("adapters.dengjen_grpc"))
         target.module("aio").terminate()
+        if saved_app_dir is None:
+            vars(global_vars).pop("appDir", None)
+        else:
+            global_vars.appDir = saved_app_dir
+        sys.modules.clear()
+        sys.modules.update(saved_modules)
+        sys.modules[driver_bench.PACKAGE].__dict__.clear()
+        sys.modules[driver_bench.PACKAGE].__dict__.update(saved_pkg_dict)
 
 
 def test_smoke_run_measures_every_case_on_the_head_tree(tmp_path):
