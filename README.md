@@ -76,6 +76,8 @@ With `Dengjen Neural Voices` selected as your synthesiser, the following appear 
 
 `Rate`, `Volume` and `Pitch` behave as they do for any NVDA synthesiser. With `Rate boost` turned off, the rate slider only covers the lower part of the engine's speed range; turning it on spreads the slider across the whole range, which allows much faster speech.
 
+`Sentence pause` adds silence between sentences, from 0 (off) up to 500 ms at normal speed (scaled by the current rate). When left at 0, Say All still adds a short 50 ms pause between sentences.
+
 ## Fine-tuning how a voice sounds
 
 `Length scale`, `Noise scale` and `Noise w` expose the Piper model's own inference parameters. All three work the same way: the slider runs from 0 to 100, and 50 means the voice's trained default, so returning a slider to 50 undoes your changes to it. Of the three, only `Length scale` is offered in the synth settings ring.
