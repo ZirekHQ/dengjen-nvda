@@ -76,7 +76,7 @@ With `Dengjen Neural Voices` selected as your synthesiser, the following appear 
 
 `Rate`, `Volume` and `Pitch` behave as they do for any NVDA synthesiser. With `Rate boost` turned off, the rate slider only covers the lower part of the engine's speed range; turning it on spreads the slider across the whole range, which allows much faster speech.
 
-`Sentence pause` adds silence between sentences, from 0 (off) up to 500 ms at normal speed (scaled by the current rate). When left at 0, Say All still adds a short 50 ms pause between sentences.
+`Sentence pause (5 ms per step at normal speed)` adds silence between sentences, mapping the 0–100 slider to 0–500 ms at normal speed (scaled by the current rate). During Say All, pauses default to at least 50 ms unless a longer pause is configured.
 
 ## Fine-tuning how a voice sounds
 

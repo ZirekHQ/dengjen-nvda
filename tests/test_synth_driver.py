@@ -1585,6 +1585,8 @@ class TestFailedStartupSwitch:
 
 
 class TestSentencePause:
+    """Tests for the configurable sentence pause driver setting."""
+
     def test_defaults_to_zero_with_no_sentence_silence_outside_say_all(self, driver):
         assert driver.sentence_pause == 0
         assert driver.tts.speech_options.sentence_silence_ms is None
@@ -1594,6 +1596,9 @@ class TestSentencePause:
         assert driver.sentence_pause == 40
         assert driver.tts.speech_options.sentence_silence_ms == 200
 
+    def test_forwards_sentence_silence_ms_to_built_speech_tasks(self, driver):
+        """Ensure built speech tasks carry the configured sentence_silence_ms."""
+        driver.sentence_pause = 40
         tasks = driver._build_speech_tasks(["First sentence. Second sentence."])
         speech_task = next(t for t in tasks if isinstance(t, SpeechTask))
         assert speech_task.task.speech_options.sentence_silence_ms == 200
@@ -1613,7 +1618,19 @@ class TestSentencePause:
         driver.sentence_pause = 20
         assert phrase_cache.get("hello", VOICE_KEY, 50, 100, 50) is None
 
-    def test_say_all_preserves_custom_sentence_pause_when_configured(self, monkeypatch):
+    @pytest.mark.parametrize(
+        ("configured_ms", "expected_ms"),
+        [
+            (None, 50),
+            (0, 50),
+            (25, 50),
+            (200, 200),
+        ],
+    )
+    def test_say_all_enforces_50ms_floor_and_preserves_longer_pauses(
+        self, monkeypatch, configured_ms, expected_ms
+    ):
+        """Ensure Say All enforces at least 50 ms while keeping longer custom pauses."""
         from speech import sayAll
 
         monkeypatch.setattr(sayAll.SayAllHandler, "isRunning", lambda: True)
@@ -1631,7 +1648,7 @@ class TestSentencePause:
             rate=50,
             volume=100,
             pitch=50,
-            sentence_silence_ms=200,
+            sentence_silence_ms=configured_ms,
         )
         mock_task = SimpleNamespace(
             text="line 1\nline 2", speech_options=options, generate_audio=_gen
@@ -1641,11 +1658,12 @@ class TestSentencePause:
         asyncio.run(SpeechTask(mock_task, player)())
 
         assert mock_task.text == "line 1 line 2"
-        assert mock_task.speech_options.sentence_silence_ms == 200
+        assert mock_task.speech_options.sentence_silence_ms == expected_ms
 
     def test_setting_before_tts_is_created_applies_on_init(
         self, monkeypatch, configured_voice, fake_backend
     ):
+        """Ensure a setting loaded during super().__init__() applies once tts is created."""
         import synthDriverHandler
 
         orig_init = synthDriverHandler.SynthDriver.__init__
