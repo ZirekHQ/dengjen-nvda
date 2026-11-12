@@ -9,6 +9,7 @@ which tree's addon code is measured. The output maps each case id to
 
 import argparse
 import asyncio
+import contextlib
 import importlib
 import itertools
 import json
@@ -55,10 +56,17 @@ def median_ms(fn, repeats):
 
 
 def run_case(case, target, repeats):
+    """Execute `case` for `repeats` timed iterations and ensure teardown runs."""
+    fn = None
     try:
-        entry = {"median_ms": median_ms(case.make(target), repeats)}
+        fn = case.make(target)
+        entry = {"median_ms": median_ms(fn, repeats)}
     except Exception as exc:
         return {"unavailable": f"{type(exc).__name__}: {exc}"}
+    finally:
+        close = getattr(fn, "close", None)
+        if callable(close):
+            close()
     return {**entry, "audio_ms": case.audio_ms} if case.audio_ms else entry
 
 
@@ -234,25 +242,49 @@ def first_audio_cases():
     ]
 
 
+_MISSING = object()
+_GRPC_PATCHED_ATTRS = (
+    "_vcruntime_missing",
+    "_reap_stale_grpc_servers",
+    "DENGJEN_VOICES_BASE_DIR",
+    "subprocess",
+    "grpc",
+    "DengjenGrpcStub",
+)
+
+
 class _FakeGrpcChannel:
+    """No-op async gRPC channel for add-on overhead benchmarks."""
+
     async def close(self):
         pass
 
 
 class _FakeGrpcService:
+    """In-process stub gRPC service yielding synthetic PCM chunks."""
+
+    chunks_per_utterance = 3
+
     def __init__(self, chunk):
         self._chunk = chunk
+        self.version_checks = 0
+        self.utterances = 0
+        self.chunks_yielded = 0
 
     async def GetDengjenVersion(self, _request):
+        self.version_checks += 1
         return types.SimpleNamespace(version="bench")
 
     async def SynthesizeUtterance(self, _request):
-        for _ in range(3):
+        self.utterances += 1
+        for _ in range(self.chunks_per_utterance):
             await asyncio.sleep(0)
+            self.chunks_yielded += 1
             yield types.SimpleNamespace(audio_bytes=self._chunk)
 
 
 def _fake_grpc_popen(**kwargs):
+    """Write the port-handshake banner immediately and return a stub process."""
     stdout = kwargs.get("stdout")
     if hasattr(stdout, "write"):
         stdout.write(b"DENGJEN_GRPC_LISTENING port=50051\n")
@@ -265,27 +297,8 @@ def _fake_grpc_popen(**kwargs):
     )
 
 
-def _configure_grpc(target):
-    grpc_mod = target.module("adapters.dengjen_grpc")
-    chunk = pcm_chunk(22050)
-    grpc_mod.globalVars.appDir = ""
-    grpc_mod._vcruntime_missing = lambda: False
-    grpc_mod._reap_stale_grpc_servers = lambda _exe: None
-    grpc_mod.DENGJEN_VOICES_BASE_DIR = tempfile.mkdtemp(prefix="dengjen-bench-")
-    grpc_mod.subprocess = types.SimpleNamespace(
-        Popen=_fake_grpc_popen,
-        STDOUT=subprocess.STDOUT,
-        TimeoutExpired=subprocess.TimeoutExpired,
-        DETACHED_PROCESS=0,
-        CREATE_NEW_PROCESS_GROUP=0,
-        ABOVE_NORMAL_PRIORITY_CLASS=0,
-    )
-    grpc_mod.grpc.aio.insecure_channel = lambda _target: _FakeGrpcChannel()
-    grpc_mod.DengjenGrpcStub = lambda _channel: _FakeGrpcService(chunk)
-    return grpc_mod
-
-
 def _reset_grpc_state(grpc_mod):
+    """Close any open server log handle and clear module-level gRPC state."""
     if grpc_mod.SERVER_LOG_HANDLE is not None:
         grpc_mod.SERVER_LOG_HANDLE.close()
         grpc_mod.SERVER_LOG_HANDLE = None
@@ -297,8 +310,68 @@ def _reset_grpc_state(grpc_mod):
     grpc_mod.DENGJEN_GRPC_SERVICE = None
 
 
+@contextlib.contextmanager
+def _patched_grpc(target):
+    """Patch `adapters.dengjen_grpc` with in-process fakes and restore on exit.
+
+    Measures add-on Python/asyncio glue only (no OS process spawn or wire I/O)
+    and keeps fake channel wiring off the shared `sys.modules["grpc"]` module.
+    """
+    grpc_mod = target.module("adapters.dengjen_grpc")
+    saved_attrs = {name: getattr(grpc_mod, name) for name in _GRPC_PATCHED_ATTRS}
+    global_vars = grpc_mod.globalVars
+    saved_app_dir = getattr(global_vars, "appDir", _MISSING)
+    service = _FakeGrpcService(pcm_chunk(22050))
+    with tempfile.TemporaryDirectory(prefix="dengjen-bench-") as voices_dir:
+        try:
+            global_vars.appDir = ""
+            grpc_mod._vcruntime_missing = lambda: False
+            grpc_mod._reap_stale_grpc_servers = lambda _exe: None
+            grpc_mod.DENGJEN_VOICES_BASE_DIR = voices_dir
+            grpc_mod.subprocess = types.SimpleNamespace(
+                Popen=_fake_grpc_popen,
+                STDOUT=subprocess.STDOUT,
+                TimeoutExpired=subprocess.TimeoutExpired,
+                DETACHED_PROCESS=0,
+                CREATE_NEW_PROCESS_GROUP=0,
+                ABOVE_NORMAL_PRIORITY_CLASS=0,
+            )
+            grpc_mod.grpc = types.SimpleNamespace(
+                aio=types.SimpleNamespace(
+                    insecure_channel=lambda _target: _FakeGrpcChannel()
+                )
+            )
+            grpc_mod.DengjenGrpcStub = lambda _channel: service
+            yield grpc_mod, service
+        finally:
+            _reset_grpc_state(grpc_mod)
+            for name, value in saved_attrs.items():
+                setattr(grpc_mod, name, value)
+            if saved_app_dir is _MISSING:
+                vars(global_vars).pop("appDir", None)
+            else:
+                global_vars.appDir = saved_app_dir
+
+
+def _enter_patched_grpc(target):
+    """Enter `_patched_grpc` on an ExitStack so `run_case` can close it cleanly."""
+    stack = contextlib.ExitStack()
+    try:
+        grpc_mod, service = stack.enter_context(_patched_grpc(target))
+    except BaseException:
+        stack.close()
+        raise
+    return stack, grpc_mod, service
+
+
 def _grpc_startup_make(target):
-    grpc_mod = _configure_grpc(target)
+    """Build the add-on gRPC startup benchmark (`initialize` + `check_version`).
+
+    Uses a stub `Popen`, channel, and service, so timings reflect Python adapter
+    initialization, log-port parsing, and version-check glue rather than child
+    process creation or socket transport.
+    """
+    stack, grpc_mod, service = _enter_patched_grpc(target)
     backend = grpc_mod.DengjenGrpcBackend()
 
     def run():
@@ -308,30 +381,50 @@ def _grpc_startup_make(target):
         backend.check_version()
         return (time.perf_counter() - start) * 1000
 
+    run.close = stack.close
+    run.service = service
     return run
 
 
 def _grpc_first_audio_make(target):
-    grpc_mod = _configure_grpc(target)
-    _reset_grpc_state(grpc_mod)
-    backend = grpc_mod.DengjenGrpcBackend()
-    backend.initialize()
-    tts = target.module("domain.tts_system")
-    voice = tts.DengjenVoice(
-        key="bench",
-        name="bench",
-        language="en_US",
-        description="bench",
-        location="",
-        backend=backend,
-        remote_id="bench",
-    )
-    voice.is_multi_speaker = False
-    task = tts.SpeechProvider("hello", tts.SpeechOptions(voice=voice))
-    return _make_speak(target, task, False)
+    """Build the add-on gRPC time-to-first-audio benchmark against an in-process stub.
+
+    Measures the Python/asyncio path from `SpeechTask` through `SpeechProvider`
+    and `DengjenGrpcBackend.synthesize` to the first player feed, excluding real
+    engine inference and wire transport.
+    """
+    stack, grpc_mod, service = _enter_patched_grpc(target)
+    try:
+        _reset_grpc_state(grpc_mod)
+        backend = grpc_mod.DengjenGrpcBackend()
+        backend.initialize()
+        tts = target.module("domain.tts_system")
+        voice = tts.DengjenVoice(
+            key="bench",
+            name="bench",
+            language="en_US",
+            description="bench",
+            location="",
+            backend=backend,
+            remote_id="bench",
+        )
+        voice.is_multi_speaker = False
+        task = tts.SpeechProvider("hello", tts.SpeechOptions(voice=voice))
+        speak_fn = _make_speak(target, task, False)
+    except BaseException:
+        stack.close()
+        raise
+
+    def run():
+        return speak_fn()
+
+    run.close = stack.close
+    run.service = service
+    return run
 
 
 def grpc_cases():
+    """Return add-on gRPC glue benchmark cases (`grpc/startup`, `grpc/first_audio`)."""
     return [
         Case("grpc/startup", _grpc_startup_make),
         Case("grpc/first_audio", _grpc_first_audio_make),
@@ -339,6 +432,7 @@ def grpc_cases():
 
 
 def all_cases():
+    """Return the complete driver benchmark suite."""
     return processor_cases() + cache_cases() + first_audio_cases() + grpc_cases()
 
 
