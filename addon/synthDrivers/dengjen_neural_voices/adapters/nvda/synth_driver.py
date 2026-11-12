@@ -60,6 +60,9 @@ from ...ports.tts_backend import BackendError, BackendUnavailableError
 
 addonHandler.initTranslation()
 
+_DEFAULT_SAY_ALL_SENTENCE_SILENCE_MS = 50
+_MAX_SENTENCE_PAUSE_MS = 500
+
 
 def _bootstrap_backend():  # pragma: no cover
     """Construct and start the production TTS backend.
@@ -161,7 +164,9 @@ class SpeechTask:
         self.pan = pan
         self.speaker = speaker
 
-    def _check_cache(self, voice_key, rate, volume, pitch, speaker):
+    def _check_cache(
+        self, voice_key, rate, volume, pitch, speaker, sentence_silence_ms=None
+    ):
         if self.spatial_audio:
             return None
         return phrase_cache.get(
@@ -173,6 +178,7 @@ class SpeechTask:
             normalize=self.normalize,
             night_mode=self.night_mode,
             speaker=speaker,
+            sentence_silence_ms=sentence_silence_ms,
         )
 
     async def _play_chunks(self, chunks):
@@ -211,9 +217,13 @@ class SpeechTask:
         return collected
 
     async def __call__(self):
+        """Synthesize and feed the task's audio to the output player."""
         if sayAll.SayAllHandler.isRunning():
             self.task.text = self.task.text.replace("\n", " ")
-            self.task.speech_options.sentence_silence_ms = 50
+            self.task.speech_options.sentence_silence_ms = max(
+                self.task.speech_options.sentence_silence_ms or 0,
+                _DEFAULT_SAY_ALL_SENTENCE_SILENCE_MS,
+            )
 
         voice = self.task.speech_options.voice
         voice_key = voice.key
@@ -238,8 +248,11 @@ class SpeechTask:
             rate = self.task.speech_options.rate
             volume = self.task.speech_options.volume
             pitch = self.task.speech_options.pitch
+            sentence_silence_ms = self.task.speech_options.sentence_silence_ms
 
-            cached = self._check_cache(voice_key, rate, volume, pitch, speaker)
+            cached = self._check_cache(
+                voice_key, rate, volume, pitch, speaker, sentence_silence_ms
+            )
             if cached is not None:
                 await self._play_chunks(cached)
                 return
@@ -258,6 +271,7 @@ class SpeechTask:
                     self.night_mode,
                     collected_chunks,
                     speaker=speaker,
+                    sentence_silence_ms=sentence_silence_ms,
                 )
         finally:
             if applied_custom_speaker:
@@ -323,6 +337,12 @@ class SynthDriver(NvdaSynthDriver):
         NumericDriverSetting("noise_scale", _("&Noise scale"), False),
         NumericDriverSetting("length_scale", _("&Length scale"), True),
         NumericDriverSetting("noise_w", _("Noise &w"), False),
+        NumericDriverSetting(
+            "sentence_pause",
+            _("Sentence &pause (5 ms per step at normal speed)"),
+            False,
+            defaultVal=0,
+        ),
         BooleanDriverSetting("night_mode", _("&Night mode"), defaultVal=False),
         BooleanDriverSetting(
             "normalize_audio", _("&Normalize audio volume"), defaultVal=False
@@ -355,11 +375,13 @@ class SynthDriver(NvdaSynthDriver):
         return True
 
     def __init__(self):
+        """Initialize driver state, backend connection, and installed voices."""
+        self._sentence_pause = 0
+        self.tts = None
         super().__init__()
 
         self._current_task = None
         self._rateBoost = False
-        self.tts = None
         self._player = None
         self._players = {}
         self._active_players = set()
@@ -403,6 +425,7 @@ class SynthDriver(NvdaSynthDriver):
         self.tts = DengjenTextToSpeechSystem(
             self.voices, speech_options=init_speech_options
         )
+        self._apply_sentence_pause()
         # WavePlayers are created on first speech: opening one fails on a machine
         # with no audio device, and the synth must still load there.
         self.availableLanguages = {v.language for v in self.voices}
@@ -710,6 +733,27 @@ class SynthDriver(NvdaSynthDriver):
 
     def _set_structural_reading(self, value):
         self._structural_reading_enabled = bool(value)
+
+    def _get_sentence_pause(self):
+        """Return the current sentence pause slider value (0-100)."""
+        return self._sentence_pause
+
+    def _set_sentence_pause(self, value):
+        """Clamp and apply the sentence pause slider value (0-100)."""
+        self._sentence_pause = max(0, min(100, int(value)))
+        self._apply_sentence_pause()
+        phrase_cache.clear()
+
+    def _apply_sentence_pause(self):
+        """Map the 0-100 slider to milliseconds on speech_options."""
+        if self.tts is None:
+            return
+        pause = self._sentence_pause
+        self.tts.speech_options.sentence_silence_ms = (
+            int(self._percentToParam(pause, 0, _MAX_SENTENCE_PAUSE_MS))
+            if pause > 0
+            else None
+        )
 
     def _get_or_create_player(self, sample_rate):
         channels = 2 if self._get_spatial_audio() else 1

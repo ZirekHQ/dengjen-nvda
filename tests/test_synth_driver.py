@@ -281,6 +281,7 @@ class TestSpeechTask:
             rate=50,
             volume=100,
             pitch=50,
+            sentence_silence_ms=None,
         )
         task = SimpleNamespace(text="hi", speech_options=options, generate_audio=_audio)
         driver_module.phrase_cache.clear()
@@ -1582,3 +1583,142 @@ class TestFailedStartupSwitch:
         ui.message.assert_not_called()
         assert d._SynthDriver__voice == VOICE_KEY
         d.terminate()
+
+
+class TestSentencePause:
+    """Tests for the configurable sentence pause driver setting."""
+
+    def test_defaults_to_zero_with_no_sentence_silence_outside_say_all(self, driver):
+        assert driver.sentence_pause == 0
+        assert driver.tts.speech_options.sentence_silence_ms is None
+
+    def test_maps_slider_percentage_to_milliseconds_on_speech_options(self, driver):
+        driver.sentence_pause = 40
+        assert driver.sentence_pause == 40
+        assert driver.tts.speech_options.sentence_silence_ms == 200
+
+    def test_forwards_sentence_silence_ms_to_built_speech_tasks(self, driver):
+        """Ensure built speech tasks carry the configured sentence_silence_ms."""
+        driver.sentence_pause = 40
+        tasks = driver._build_speech_tasks(["First sentence. Second sentence."])
+        speech_task = next(t for t in tasks if isinstance(t, SpeechTask))
+        assert speech_task.task.speech_options.sentence_silence_ms == 200
+
+    def test_returning_to_zero_clears_sentence_silence_ms(self, driver):
+        driver.sentence_pause = 50
+        assert driver.tts.speech_options.sentence_silence_ms == 250
+
+        driver.sentence_pause = 0
+        assert driver.tts.speech_options.sentence_silence_ms is None
+
+    def test_changing_sentence_pause_clears_phrase_cache(self, driver):
+        phrase_cache = driver_module.phrase_cache
+        phrase_cache.put("hello", VOICE_KEY, 50, 100, 50, False, False, [b"\x00\x01"])
+        assert phrase_cache.get("hello", VOICE_KEY, 50, 100, 50) is not None
+
+        driver.sentence_pause = 20
+        assert phrase_cache.get("hello", VOICE_KEY, 50, 100, 50) is None
+
+    @pytest.mark.parametrize(
+        ("configured_ms", "expected_ms"),
+        [
+            (None, 50),
+            (0, 50),
+            (25, 50),
+            (200, 200),
+        ],
+    )
+    def test_say_all_enforces_50ms_floor_and_preserves_longer_pauses(
+        self, monkeypatch, configured_ms, expected_ms
+    ):
+        """Ensure Say All enforces at least 50 ms while keeping longer custom pauses."""
+        from speech import sayAll
+
+        monkeypatch.setattr(sayAll.SayAllHandler, "isRunning", lambda: True)
+
+        async def _run_inline(func, *args, **kwargs):
+            return func(*args, **kwargs)
+
+        monkeypatch.setattr(driver_module, "run_in_executor", _run_inline)
+
+        async def _gen():
+            yield b"\x00\x10"
+
+        options = SimpleNamespace(
+            voice=SimpleNamespace(key="en_US-test-voice", speaker="spk"),
+            rate=50,
+            volume=100,
+            pitch=50,
+            sentence_silence_ms=configured_ms,
+        )
+        mock_task = SimpleNamespace(
+            text="line 1\nline 2", speech_options=options, generate_audio=_gen
+        )
+        player = MagicMock()
+
+        asyncio.run(SpeechTask(mock_task, player)())
+
+        assert mock_task.text == "line 1 line 2"
+        assert mock_task.speech_options.sentence_silence_ms == expected_ms
+
+    def test_setting_before_tts_is_created_applies_on_init(
+        self, monkeypatch, configured_voice, fake_backend
+    ):
+        """Ensure a setting loaded during super().__init__() applies once tts is created."""
+        import synthDriverHandler
+
+        orig_init = synthDriverHandler.SynthDriver.__init__
+
+        def _init_with_load_settings(synth_self):
+            orig_init(synth_self)
+            synth_self._set_sentence_pause(30)
+
+        monkeypatch.setattr(
+            synthDriverHandler.SynthDriver, "__init__", _init_with_load_settings
+        )
+
+        d = SynthDriver()
+        try:
+            assert d.sentence_pause == 30
+            assert d.tts.speech_options.sentence_silence_ms == 150
+        finally:
+            d.terminate()
+
+    def test_say_all_and_normal_reading_do_not_collide_in_phrase_cache(
+        self, monkeypatch
+    ):
+        """Ensure cached 0 ms normal speech is not replayed during 50 ms Say All."""
+        from speech import sayAll
+
+        async def _run_inline(func, *args, **kwargs):
+            return func(*args, **kwargs)
+
+        monkeypatch.setattr(driver_module, "run_in_executor", _run_inline)
+        driver_module.phrase_cache.clear()
+
+        is_say_all = False
+        monkeypatch.setattr(sayAll.SayAllHandler, "isRunning", lambda: is_say_all)
+
+        def _make_task(chunk: bytes):
+            async def _gen():
+                yield chunk
+
+            options = SimpleNamespace(
+                voice=SimpleNamespace(key="en_US-cache-voice", speaker="spk"),
+                rate=50,
+                volume=100,
+                pitch=50,
+                sentence_silence_ms=None,
+            )
+            return SimpleNamespace(
+                text="Hello. World.", speech_options=options, generate_audio=_gen
+            )
+
+        normal_player = MagicMock()
+        asyncio.run(SpeechTask(_make_task(b"\x01\x01"), normal_player)())
+        normal_player.feed.assert_called_once_with(b"\x01\x01")
+
+        is_say_all = True
+        say_all_player = MagicMock()
+        asyncio.run(SpeechTask(_make_task(b"\x02\x02"), say_all_player)())
+        say_all_player.feed.assert_called_once_with(b"\x02\x02")

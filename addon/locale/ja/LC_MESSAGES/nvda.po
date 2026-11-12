@@ -666,3 +666,6 @@ msgstr "日本語プリセット（jf_ および jm_）を使用するには辞�
 msgid "Install &Japanese dictionary"
 msgstr "日本語辞書をインストール(&J)"
 
+#: addon\synthDrivers\dengjen_neural_voices\adapters\nvda\synth_driver.py
+msgid "Sentence &pause (5 ms per step at normal speed)"
+msgstr "文間のポーズ（標準速度で1目盛り5ミリ秒）(&P)"

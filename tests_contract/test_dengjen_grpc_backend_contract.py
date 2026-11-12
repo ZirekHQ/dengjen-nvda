@@ -127,3 +127,40 @@ class TestDengjenGrpcBackendContract:
         chunks = _collect().result(timeout=CALL_TIMEOUT)
         assert chunks, "expected at least one audio chunk from synthesize()"
         assert sum(len(c) for c in chunks) > 0
+
+    def test_sentence_silence_ms_appends_audio_samples(self, backend, downloaded_voice):
+        """Verify non-zero sentence_silence_ms appends PCM silence to synthesized audio."""
+        loaded = backend.load_voice(downloaded_voice)
+        pause_ms = 300
+        backend.set_synth_options(loaded.backend_voice_id, noise_scale=0.0, noise_w=0.0)
+
+        def _total_bytes(silence_ms):
+            @aio.asyncio_coroutine_to_concurrent_future
+            async def _collect():
+                total = 0
+                async for chunk in backend.synthesize(
+                    loaded.backend_voice_id,
+                    "Một. Hai.",
+                    None,
+                    None,
+                    None,
+                    silence_ms,
+                    False,
+                ):
+                    total += len(chunk)
+                return total
+
+            return _collect().result(timeout=CALL_TIMEOUT)
+
+        try:
+            bytes_without_pause = _total_bytes(0)
+            bytes_with_pause = _total_bytes(pause_ms)
+        finally:
+            backend.set_synth_options(
+                loaded.backend_voice_id,
+                noise_scale=loaded.defaults.noise_scale,
+                noise_w=loaded.defaults.noise_w,
+            )
+
+        expected_min_extra_bytes = int(loaded.sample_rate * (pause_ms / 1000.0)) * 2
+        assert bytes_with_pause - bytes_without_pause >= expected_min_extra_bytes

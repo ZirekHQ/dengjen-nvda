@@ -350,3 +350,38 @@ def test_clear():
     assert cache.get("t", "v1", 50, 100, 50, False, False) == [b"data"]
     cache.clear()
     assert cache.get("t", "v1", 50, 100, 50, False, False) is None
+
+
+def test_sentence_silence_ms_separates_cache_entries():
+    cache = PhraseCache()
+    no_pause = [b"\x01\x02"]
+    say_all_pause = [b"\x01\x02\x00\x00"]
+
+    cache.put(
+        "Hello.",
+        "v1",
+        50,
+        100,
+        50,
+        False,
+        False,
+        no_pause,
+        sentence_silence_ms=None,
+    )
+    cache.put(
+        "Hello.",
+        "v1",
+        50,
+        100,
+        50,
+        False,
+        False,
+        say_all_pause,
+        sentence_silence_ms=50,
+    )
+
+    assert cache.get("Hello.", "v1", 50, 100, 50, sentence_silence_ms=0) == no_pause
+    assert cache.get("Hello.", "v1", 50, 100, 50, sentence_silence_ms=None) == no_pause
+    assert (
+        cache.get("Hello.", "v1", 50, 100, 50, sentence_silence_ms=50) == say_all_pause
+    )
