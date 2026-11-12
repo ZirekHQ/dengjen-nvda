@@ -281,6 +281,7 @@ class TestSpeechTask:
             rate=50,
             volume=100,
             pitch=50,
+            sentence_silence_ms=None,
         )
         task = SimpleNamespace(text="hi", speech_options=options, generate_audio=_audio)
         driver_module.phrase_cache.clear()
@@ -1682,3 +1683,42 @@ class TestSentencePause:
             assert d.tts.speech_options.sentence_silence_ms == 150
         finally:
             d.terminate()
+
+    def test_say_all_and_normal_reading_do_not_collide_in_phrase_cache(
+        self, monkeypatch
+    ):
+        """Ensure cached 0 ms normal speech is not replayed during 50 ms Say All."""
+        from speech import sayAll
+
+        async def _run_inline(func, *args, **kwargs):
+            return func(*args, **kwargs)
+
+        monkeypatch.setattr(driver_module, "run_in_executor", _run_inline)
+        driver_module.phrase_cache.clear()
+
+        is_say_all = False
+        monkeypatch.setattr(sayAll.SayAllHandler, "isRunning", lambda: is_say_all)
+
+        def _make_task(chunk: bytes):
+            async def _gen():
+                yield chunk
+
+            options = SimpleNamespace(
+                voice=SimpleNamespace(key="en_US-cache-voice", speaker="spk"),
+                rate=50,
+                volume=100,
+                pitch=50,
+                sentence_silence_ms=None,
+            )
+            return SimpleNamespace(
+                text="Hello. World.", speech_options=options, generate_audio=_gen
+            )
+
+        normal_player = MagicMock()
+        asyncio.run(SpeechTask(_make_task(b"\x01\x01"), normal_player)())
+        normal_player.feed.assert_called_once_with(b"\x01\x01")
+
+        is_say_all = True
+        say_all_player = MagicMock()
+        asyncio.run(SpeechTask(_make_task(b"\x02\x02"), say_all_player)())
+        say_all_player.feed.assert_called_once_with(b"\x02\x02")

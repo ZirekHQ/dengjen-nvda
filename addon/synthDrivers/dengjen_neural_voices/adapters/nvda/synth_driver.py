@@ -164,7 +164,9 @@ class SpeechTask:
         self.pan = pan
         self.speaker = speaker
 
-    def _check_cache(self, voice_key, rate, volume, pitch, speaker):
+    def _check_cache(
+        self, voice_key, rate, volume, pitch, speaker, sentence_silence_ms=None
+    ):
         if self.spatial_audio:
             return None
         return phrase_cache.get(
@@ -176,6 +178,7 @@ class SpeechTask:
             normalize=self.normalize,
             night_mode=self.night_mode,
             speaker=speaker,
+            sentence_silence_ms=sentence_silence_ms,
         )
 
     async def _play_chunks(self, chunks):
@@ -245,8 +248,11 @@ class SpeechTask:
             rate = self.task.speech_options.rate
             volume = self.task.speech_options.volume
             pitch = self.task.speech_options.pitch
+            sentence_silence_ms = self.task.speech_options.sentence_silence_ms
 
-            cached = self._check_cache(voice_key, rate, volume, pitch, speaker)
+            cached = self._check_cache(
+                voice_key, rate, volume, pitch, speaker, sentence_silence_ms
+            )
             if cached is not None:
                 await self._play_chunks(cached)
                 return
@@ -265,6 +271,7 @@ class SpeechTask:
                     self.night_mode,
                     collected_chunks,
                     speaker=speaker,
+                    sentence_silence_ms=sentence_silence_ms,
                 )
         finally:
             if applied_custom_speaker:
