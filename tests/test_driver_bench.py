@@ -100,34 +100,84 @@ def test_processor_cases_report_chunk_duration():
     assert {c.audio_ms for c in driver_bench.processor_cases()} == {100}
 
 
+def _release_target(target):
+    if target is None:
+        return
+    try:
+        driver_bench._reset_grpc_state(target.module("adapters.dengjen_grpc"))
+    finally:
+        target.module("aio").terminate()
+
+
+def _restore_process_state(saved_modules, saved_pkg_dict):
+    for name in set(sys.modules) - set(saved_modules):
+        sys.modules.pop(name, None)
+    sys.modules.update(saved_modules)
+    pkg_dict = sys.modules[driver_bench.PACKAGE].__dict__
+    for attr in set(pkg_dict) - set(saved_pkg_dict):
+        pkg_dict.pop(attr, None)
+    pkg_dict.update(saved_pkg_dict)
+
+
+def _teardown_bench_target(target, saved):
+    """Release `target`, then restore `saved` state even when the release raises."""
+    global_vars, saved_globals, saved_modules, saved_pkg_dict = saved
+    try:
+        _release_target(target)
+    finally:
+        driver_bench._restore_attrs(global_vars, saved_globals)
+        _restore_process_state(saved_modules, saved_pkg_dict)
+
+
 @pytest.fixture
 def bench_target():
     """Load `driver_bench.Target` in-process and restore module state afterward."""
-    saved_modules = dict(sys.modules)
-    saved_pkg_dict = dict(sys.modules[driver_bench.PACKAGE].__dict__)
     global_vars = sys.modules["globalVars"]
-    saved_globals = {
-        name: getattr(global_vars, name, driver_bench._MISSING)
-        for name in driver_bench._GRPC_GLOBAL_ATTRS
-    }
+    saved = (
+        global_vars,
+        {
+            name: getattr(global_vars, name, driver_bench._MISSING)
+            for name in driver_bench._GRPC_GLOBAL_ATTRS
+        },
+        dict(sys.modules),
+        dict(sys.modules[driver_bench.PACKAGE].__dict__),
+    )
     target = None
     try:
         target = driver_bench.load_target(REPO_ROOT)
         yield target
     finally:
-        if target is not None:
-            try:
-                driver_bench._reset_grpc_state(target.module("adapters.dengjen_grpc"))
-            finally:
-                target.module("aio").terminate()
-        driver_bench._restore_attrs(global_vars, saved_globals)
-        for name in set(sys.modules) - set(saved_modules):
-            sys.modules.pop(name, None)
-        sys.modules.update(saved_modules)
-        pkg_dict = sys.modules[driver_bench.PACKAGE].__dict__
-        for attr in set(pkg_dict) - set(saved_pkg_dict):
-            pkg_dict.pop(attr, None)
-        pkg_dict.update(saved_pkg_dict)
+        _teardown_bench_target(target, saved)
+
+
+def test_teardown_restores_shared_state_when_terminate_raises(bench_target):
+    """Ensure a failing `aio.terminate()` cannot skip the shared-state restore."""
+    global_vars = sys.modules["globalVars"]
+    saved = (
+        global_vars,
+        {"appDir": "original-app-dir"},
+        dict(sys.modules),
+        dict(sys.modules[driver_bench.PACKAGE].__dict__),
+    )
+    global_vars.appDir = "modified-app-dir"
+    sys.modules["bench_leaked_module"] = types.ModuleType("bench_leaked_module")
+
+    class _FailingTarget:
+        def module(self, name):
+            if name == "aio":
+                return types.SimpleNamespace(terminate=_raise_terminate)
+            return types.SimpleNamespace(
+                SERVER_LOG_HANDLE=None, _clear_saved_server_state=lambda: None
+            )
+
+    def _raise_terminate():
+        raise OSError("terminate failed")
+
+    with pytest.raises(OSError, match="terminate failed"):
+        _teardown_bench_target(_FailingTarget(), saved)
+
+    assert global_vars.appDir == "original-app-dir"
+    assert "bench_leaked_module" not in sys.modules
 
 
 def test_patched_grpc_restores_patches_and_globals_when_log_close_fails(bench_target):
