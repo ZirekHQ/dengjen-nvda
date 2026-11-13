@@ -55,18 +55,33 @@ def median_ms(fn, repeats):
     return statistics.median(samples)
 
 
+def _close_case_fn(fn):
+    close = getattr(fn, "close", None)
+    if not callable(close):
+        return None
+    try:
+        close()
+    except Exception as exc:
+        return f"{type(exc).__name__}: {exc}"
+    return None
+
+
 def run_case(case, target, repeats):
     """Execute `case` for `repeats` timed iterations and ensure teardown runs."""
     fn = None
+    entry = None
+    run_err = None
     try:
         fn = case.make(target)
         entry = {"median_ms": median_ms(fn, repeats)}
     except Exception as exc:
-        return {"unavailable": f"{type(exc).__name__}: {exc}"}
+        run_err = f"{type(exc).__name__}: {exc}"
     finally:
-        close = getattr(fn, "close", None)
-        if callable(close):
-            close()
+        close_err = _close_case_fn(fn)
+    if run_err and close_err:
+        return {"unavailable": f"{run_err}; cleanup failed ({close_err})"}
+    if run_err or close_err:
+        return {"unavailable": run_err or close_err}
     return {**entry, "audio_ms": case.audio_ms} if case.audio_ms else entry
 
 
@@ -243,6 +258,7 @@ def first_audio_cases():
 
 
 _MISSING = object()
+_GRPC_GLOBAL_ATTRS = ("appDir", "DENGJEN_GRPC_SERVER_PORT", "GRPC_SERVER_PROCESS")
 _GRPC_PATCHED_ATTRS = (
     "_vcruntime_missing",
     "_reap_stale_grpc_servers",
@@ -251,6 +267,14 @@ _GRPC_PATCHED_ATTRS = (
     "grpc",
     "DengjenGrpcStub",
 )
+
+
+def _restore_attrs(obj, saved):
+    for name, value in saved.items():
+        if value is _MISSING:
+            vars(obj).pop(name, None)
+        else:
+            setattr(obj, name, value)
 
 
 class _FakeGrpcChannel:
@@ -299,15 +323,18 @@ def _fake_grpc_popen(**kwargs):
 
 def _reset_grpc_state(grpc_mod):
     """Close any open server log handle and clear module-level gRPC state."""
-    if grpc_mod.SERVER_LOG_HANDLE is not None:
-        grpc_mod.SERVER_LOG_HANDLE.close()
-        grpc_mod.SERVER_LOG_HANDLE = None
-    grpc_mod._clear_saved_server_state()
-    grpc_mod.GRPC_SERVER_PROCESS = None
-    grpc_mod.DENGJEN_GRPC_SERVER_PORT = None
-    grpc_mod.CHANNEL = None
-    grpc_mod.CHANNEL_PORT = None
-    grpc_mod.DENGJEN_GRPC_SERVICE = None
+    handle = grpc_mod.SERVER_LOG_HANDLE
+    grpc_mod.SERVER_LOG_HANDLE = None
+    try:
+        if handle is not None:
+            handle.close()
+    finally:
+        grpc_mod._clear_saved_server_state()
+        grpc_mod.GRPC_SERVER_PROCESS = None
+        grpc_mod.DENGJEN_GRPC_SERVER_PORT = None
+        grpc_mod.CHANNEL = None
+        grpc_mod.CHANNEL_PORT = None
+        grpc_mod.DENGJEN_GRPC_SERVICE = None
 
 
 @contextlib.contextmanager
@@ -320,7 +347,9 @@ def _patched_grpc(target):
     grpc_mod = target.module("adapters.dengjen_grpc")
     saved_attrs = {name: getattr(grpc_mod, name) for name in _GRPC_PATCHED_ATTRS}
     global_vars = grpc_mod.globalVars
-    saved_app_dir = getattr(global_vars, "appDir", _MISSING)
+    saved_globals = {
+        name: getattr(global_vars, name, _MISSING) for name in _GRPC_GLOBAL_ATTRS
+    }
     service = _FakeGrpcService(pcm_chunk(22050))
     with tempfile.TemporaryDirectory(prefix="dengjen-bench-") as voices_dir:
         try:
@@ -344,13 +373,12 @@ def _patched_grpc(target):
             grpc_mod.DengjenGrpcStub = lambda _channel: service
             yield grpc_mod, service
         finally:
-            _reset_grpc_state(grpc_mod)
-            for name, value in saved_attrs.items():
-                setattr(grpc_mod, name, value)
-            if saved_app_dir is _MISSING:
-                vars(global_vars).pop("appDir", None)
-            else:
-                global_vars.appDir = saved_app_dir
+            try:
+                _reset_grpc_state(grpc_mod)
+            finally:
+                for name, value in saved_attrs.items():
+                    setattr(grpc_mod, name, value)
+                _restore_attrs(global_vars, saved_globals)
 
 
 def _enter_patched_grpc(target):

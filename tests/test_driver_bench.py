@@ -43,6 +43,38 @@ def test_run_case_records_unavailable_when_the_run_fails():
     assert entry["unavailable"].startswith("TypeError")
 
 
+def test_run_case_records_unavailable_when_cleanup_fails():
+    def make(_target):
+        def run():
+            return 1.5
+
+        def close():
+            raise OSError("handle busy")
+
+        run.close = close
+        return run
+
+    entry = driver_bench.run_case(Case("x", make), None, repeats=1)
+    assert entry == {"unavailable": "OSError: handle busy"}
+
+
+def test_run_case_preserves_timing_error_when_cleanup_also_fails():
+    def make(_target):
+        def run():
+            raise RuntimeError("timing boom")
+
+        def close():
+            raise OSError("cleanup boom")
+
+        run.close = close
+        return run
+
+    entry = driver_bench.run_case(Case("x", make), None, repeats=1)
+    assert entry == {
+        "unavailable": "RuntimeError: timing boom; cleanup failed (OSError: cleanup boom)"
+    }
+
+
 def test_run_case_includes_audio_ms_when_given():
     entry = driver_bench.run_case(Case("x", lambda _t: lambda: 2.0, 100.0), None, 1)
     assert entry == {"median_ms": 2.0, "audio_ms": 100.0}
@@ -74,19 +106,21 @@ def bench_target():
     saved_modules = dict(sys.modules)
     saved_pkg_dict = dict(sys.modules[driver_bench.PACKAGE].__dict__)
     global_vars = sys.modules["globalVars"]
-    saved_app_dir = getattr(global_vars, "appDir", driver_bench._MISSING)
+    saved_globals = {
+        name: getattr(global_vars, name, driver_bench._MISSING)
+        for name in driver_bench._GRPC_GLOBAL_ATTRS
+    }
     target = None
     try:
         target = driver_bench.load_target(REPO_ROOT)
         yield target
     finally:
         if target is not None:
-            driver_bench._reset_grpc_state(target.module("adapters.dengjen_grpc"))
-            target.module("aio").terminate()
-        if saved_app_dir is driver_bench._MISSING:
-            vars(global_vars).pop("appDir", None)
-        else:
-            global_vars.appDir = saved_app_dir
+            try:
+                driver_bench._reset_grpc_state(target.module("adapters.dengjen_grpc"))
+            finally:
+                target.module("aio").terminate()
+        driver_bench._restore_attrs(global_vars, saved_globals)
         for name in set(sys.modules) - set(saved_modules):
             sys.modules.pop(name, None)
         sys.modules.update(saved_modules)
@@ -94,6 +128,33 @@ def bench_target():
         for attr in set(pkg_dict) - set(saved_pkg_dict):
             pkg_dict.pop(attr, None)
         pkg_dict.update(saved_pkg_dict)
+
+
+def test_patched_grpc_restores_patches_and_globals_when_log_close_fails(bench_target):
+    """Ensure patch and globalVars state are restored even if log handle close raises."""
+    grpc_mod = bench_target.module("adapters.dengjen_grpc")
+    orig_grpc = grpc_mod.grpc
+    orig_voices_dir = grpc_mod.DENGJEN_VOICES_BASE_DIR
+    global_vars = grpc_mod.globalVars
+    sentinel_proc = object()
+    global_vars.DENGJEN_GRPC_SERVER_PORT = 51234
+    global_vars.GRPC_SERVER_PROCESS = sentinel_proc
+
+    class _BrokenHandle:
+        def close(self):
+            raise OSError("close failed")
+
+    with (
+        pytest.raises(OSError, match="close failed"),
+        driver_bench._patched_grpc(bench_target),
+    ):
+        grpc_mod.SERVER_LOG_HANDLE = _BrokenHandle()
+
+    assert grpc_mod.SERVER_LOG_HANDLE is None
+    assert grpc_mod.grpc is orig_grpc
+    assert grpc_mod.DENGJEN_VOICES_BASE_DIR == orig_voices_dir
+    assert global_vars.DENGJEN_GRPC_SERVER_PORT == 51234
+    assert global_vars.GRPC_SERVER_PROCESS is sentinel_proc
 
 
 def test_grpc_cases_measure_startup_and_first_audio(bench_target):
