@@ -12,6 +12,7 @@ NVDA report a message instead of an error chime.
 
 import asyncio
 import os
+import struct
 import threading
 import time
 from types import SimpleNamespace
@@ -29,7 +30,12 @@ from dengjen_neural_voices.ports.tts_backend import (
     VoiceLoadError,
 )
 from logHandler import log
-from speech.commands import BreakCommand, IndexCommand, LangChangeCommand
+from speech.commands import (
+    BreakCommand,
+    IndexCommand,
+    LangChangeCommand,
+    RateCommand,
+)
 
 from tests.conftest import SYNTH_PKG_DIR, load_module_from_path
 from tests.fake_tts_backend import FakeTTSBackend
@@ -1722,3 +1728,656 @@ class TestSentencePause:
         say_all_player = MagicMock()
         asyncio.run(SpeechTask(_make_task(b"\x02\x02"), say_all_player)())
         say_all_player.feed.assert_called_once_with(b"\x02\x02")
+
+
+def _rate_command(new_value=50, *, is_default=False):
+    """Build a stub NVDA RateCommand with the requested value or default flag."""
+    cmd = RateCommand()
+    cmd.newValue = new_value
+    cmd.isDefault = is_default
+    return cmd
+
+
+class TestRateLengthScaleSplit:
+    """Tests for routing part of NVDA speech rate through model length_scale."""
+
+    def test_speeds_above_normal_split_between_length_scale_and_sonic(self, driver):
+        driver.rate = 100  # raw engine rate 40 -> 2.5x total speed
+        assert driver.rate == 100
+        # Model takes up to 1 / 0.75 = 1.333x speed-up (length_scale = 0.75)
+        assert driver.tts.speech_options.voice.length_scale == pytest.approx(0.75)
+        # Sonic receives the remaining 2.5 / 1.333 = 1.875x -> engine rate 28 (1.90x)
+        assert driver.tts.rate == 28
+
+    def test_speeds_at_or_below_normal_leave_length_scale_at_user_setting(self, driver):
+        driver.rate = 100
+        assert driver.tts.speech_options.voice.length_scale == pytest.approx(0.75)
+
+        driver.rate = 25  # raw engine rate 10 -> 1.0x speed
+        assert driver.rate == 25
+        assert driver.tts.rate == 10
+        assert driver.tts.speech_options.voice.length_scale == pytest.approx(1.0)
+
+        driver.rate = 0  # raw engine rate 0 -> 0.5x speed
+        assert driver.rate == 0
+        assert driver.tts.rate == 0
+        assert driver.tts.speech_options.voice.length_scale == pytest.approx(1.0)
+
+    def test_rate_split_multiplies_the_user_length_scale_slider(self, driver):
+        driver.length_scale = 75  # 1.5x default length_scale
+        assert driver.tts.speech_options.voice.length_scale == pytest.approx(1.5)
+
+        driver.rate = 100  # 1.333x model speed-up -> 1.5 / 1.333 = 1.125 -> 1.12
+        assert driver.tts.speech_options.voice.length_scale == pytest.approx(1.12)
+        assert driver.length_scale == 75
+
+    @pytest.mark.parametrize(
+        ("rate_boost", "slider_rate", "expected_target"),
+        [
+            (False, 0, 0.5),
+            (False, 25, 1.0),
+            (False, 50, 1.5),
+            (False, 75, 2.0),
+            (False, 100, 2.5),
+            (True, 60, 3.5),
+            (True, 100, 5.5),
+        ],
+    )
+    def test_product_of_sonic_and_model_speedup_tracks_target_speed(
+        self, driver, rate_boost, slider_rate, expected_target
+    ):
+        """Ensure Sonic multiplier * model multiplier matches target within quantization."""
+        driver.rateBoost = rate_boost
+        driver.rate = slider_rate
+        sonic_mul = driver_module._rate_to_speed(driver.tts.rate)
+        model_mul = 1.0 / driver.tts.speech_options.voice.length_scale
+        assert sonic_mul * model_mul == pytest.approx(expected_target, abs=0.05)
+
+    def test_rate_boost_splits_up_to_5_5x_target_and_round_trips_raw_rate(self, driver):
+        """Ensure rateBoost reaches 5.5x and round-trips the user rate cleanly."""
+        driver.rate = 50  # raw 20 -> 1.5x
+        assert driver._raw_engine_rate == 20
+
+        driver.rateBoost = True
+        assert driver.rate == 50
+        assert driver._raw_engine_rate == 50  # 3.0x target -> sonic 2.25x (rate 35)
+        assert driver.tts.speech_options.voice.length_scale == pytest.approx(0.75)
+        assert driver.tts.rate == 35
+
+        driver.rate = 100  # raw 100 -> 5.5x target -> sonic 4.125x (rate 72)
+        assert driver.rate == 100
+        assert driver.tts.speech_options.voice.length_scale == pytest.approx(0.75)
+        assert driver.tts.rate == 72
+
+        driver.rateBoost = False
+        assert driver.rate == 100
+        assert driver._raw_engine_rate == 40
+        assert driver.tts.rate == 28
+
+    def test_rate_command_in_speech_sequence_applies_split_and_restores_rate(
+        self, monkeypatch, driver, fake_backend
+    ):
+        """Ensure inline RateCommand splits rate per segment and restores base rate."""
+        driver.rate = 25  # raw 10 -> 1.0x (length_scale=1.0, tts.rate=10)
+
+        with driver.tts.create_synthesis_context():
+            tasks = driver._build_speech_tasks(
+                [
+                    "normal start",
+                    _rate_command(100),
+                    "fast middle",
+                    _rate_command(is_default=True),
+                    "back to default",
+                    _rate_command(75),
+                    "unclosed fast tail",
+                ]
+            )
+
+        assert driver._raw_engine_rate == 10
+        assert driver.rate == 25
+        assert driver.tts.rate == 10
+        assert driver.tts.speech_options.voice.length_scale == pytest.approx(1.0)
+
+        speech_tasks = [t for t in tasks if isinstance(t, SpeechTask)]
+        assert [t.task.speech_options.rate for t in speech_tasks] == [10, 28, 10, 20]
+        assert speech_tasks[0].length_scale == pytest.approx(1.0)
+        assert speech_tasks[1].length_scale == pytest.approx(0.75)
+        assert speech_tasks[2].length_scale == pytest.approx(1.0)
+        assert speech_tasks[3].length_scale == pytest.approx(0.75)
+
+        async def _run_inline(func, *args, **kwargs):
+            return func(*args, **kwargs)
+
+        monkeypatch.setattr(driver_module, "run_in_executor", _run_inline)
+        observed_length_scales = []
+        orig_synthesize = fake_backend.synthesize
+
+        async def _recording_synthesize(backend_voice_id, *args, **kwargs):
+            opts = fake_backend.get_synth_options(backend_voice_id)
+            observed_length_scales.append(opts.length_scale)
+            async for chunk in orig_synthesize(backend_voice_id, *args, **kwargs):
+                yield chunk
+
+        monkeypatch.setattr(fake_backend, "synthesize", _recording_synthesize)
+
+        asyncio.run(speech_tasks[1]())
+        assert observed_length_scales == [pytest.approx(0.75)]
+        assert driver.tts.speech_options.voice.length_scale == pytest.approx(1.0)
+
+    def test_non_tunable_voice_passes_full_rate_to_sonic(
+        self, configured_voice, kokoro_voice_dir, fake_backend
+    ):
+        """Ensure starting on a non-tunable voice sends full speed to Sonic."""
+        config.conf["speech"][SECTION]["voice"] = "kokoro-multilingual"
+        d = SynthDriver()
+        wait_ready(d)
+        try:
+            d.rate = 100
+            assert d.rate == 100
+            assert d.tts.rate == 40
+        finally:
+            d.terminate()
+
+    def test_voice_switch_between_tunable_and_non_tunable_preserves_raw_rate(
+        self, configured_voice, kokoro_voice_dir, fake_backend
+    ):
+        """Ensure switching Piper <-> Kokoro keeps _raw_engine_rate and adapts tts.rate."""
+        config.conf["speech"][SECTION]["voice"] = VOICE_KEY
+        d = SynthDriver()
+        wait_ready(d)
+        try:
+            d.rate = 100
+            assert d._raw_engine_rate == 40
+            assert d.tts.rate == 28
+            assert d.tts.speech_options.voice.length_scale == pytest.approx(0.75)
+
+            d.voice = "kokoro-multilingual"
+            wait_ready(d)
+            assert d._raw_engine_rate == 40
+            assert d.rate == 100
+            assert d.tts.rate == 40
+
+            d.voice = VOICE_KEY
+            wait_ready(d)
+            assert d._raw_engine_rate == 40
+            assert d.rate == 100
+            assert d.tts.rate == 28
+            assert d.tts.speech_options.voice.length_scale == pytest.approx(0.75)
+        finally:
+            d.terminate()
+
+    def test_unchanged_effective_length_scale_and_inline_commands_keep_phrase_cache(
+        self, driver
+    ):
+        """Ensure inline RateCommands and unchanged effective length_scale preserve PhraseCache."""
+        cache = driver_module.phrase_cache
+        cache.put("ok", VOICE_KEY, 50, 100, 50, False, False, [b"\x01\x02"])
+
+        driver.rate = 10
+        driver.rate = 25
+        assert cache.get("ok", VOICE_KEY, 50, 100, 50) == [b"\x01\x02"]
+
+        driver.rate = 80
+        assert cache.get("ok", VOICE_KEY, 50, 100, 50) is None
+        cache.put("ok", VOICE_KEY, 50, 100, 50, False, False, [b"\x01\x02"])
+
+        driver.rate = 100
+        assert cache.get("ok", VOICE_KEY, 50, 100, 50) == [b"\x01\x02"]
+
+        with driver.tts.create_synthesis_context():
+            driver._build_speech_tasks(
+                [
+                    "normal",
+                    _rate_command(25),
+                    "slow",
+                    _rate_command(is_default=True),
+                    "fast again",
+                ]
+            )
+        assert cache.get("ok", VOICE_KEY, 50, 100, 50) == [b"\x01\x02"]
+
+    def test_failed_length_scale_write_fails_task_and_restores_speaker(
+        self, monkeypatch
+    ):
+        """Ensure a rejected task length_scale fails without synthesizing or leaking speaker."""
+
+        async def _run_inline(func, *args, **kwargs):
+            return func(*args, **kwargs)
+
+        monkeypatch.setattr(driver_module, "run_in_executor", _run_inline)
+        driver_module.phrase_cache.clear()
+
+        class _RejectingScaleVoice:
+            key = "en_US-reject-ls"
+
+            def __init__(self):
+                self.speaker = "default_spk"
+
+            @property
+            def length_scale(self):
+                return 1.0
+
+            @length_scale.setter
+            def length_scale(self, _value):
+                raise RuntimeError("scale write rejected")
+
+        voice = _RejectingScaleVoice()
+        synthesized = False
+
+        async def _gen():
+            nonlocal synthesized
+            synthesized = True
+            yield b"\x01\x02"
+
+        options = SimpleNamespace(
+            voice=voice,
+            rate=28,
+            volume=100,
+            pitch=50,
+            sentence_silence_ms=None,
+        )
+        provider = SimpleNamespace(
+            text="should fail", speech_options=options, generate_audio=_gen
+        )
+        player = MagicMock()
+
+        task = SpeechTask(
+            provider,
+            player,
+            speaker="alt_spk",
+            length_scale=0.75,
+        )
+        coro = task()
+        with pytest.raises(RuntimeError, match="scale write rejected"):
+            asyncio.run(coro)
+
+        assert not synthesized
+        player.feed.assert_not_called()
+        assert voice.speaker == "default_spk"
+        assert (
+            driver_module.phrase_cache.get(
+                "should fail", voice.key, 28, 100, 50, speaker="alt_spk"
+            )
+            is None
+        )
+
+    def test_failed_length_scale_restore_logs_and_resyncs_before_next_task(
+        self, monkeypatch, driver, fake_backend
+    ):
+        """Ensure a failed restore invalidates _pushed_length_scale so the next task resyncs."""
+
+        async def _run_inline(func, *args, **kwargs):
+            return func(*args, **kwargs)
+
+        monkeypatch.setattr(driver_module, "run_in_executor", _run_inline)
+        driver.rate = 25  # base length_scale = 1.0
+
+        with driver.tts.create_synthesis_context():
+            tasks = driver._build_speech_tasks([_rate_command(100), "fast segment"])
+        fast_task = next(t for t in tasks if isinstance(t, SpeechTask))
+
+        orig_set = fake_backend.set_synth_options
+        fail_restore = False
+
+        def _flaky_set(backend_voice_id, **kwargs):
+            if fail_restore and kwargs.get("length_scale") == pytest.approx(1.0):
+                raise RuntimeError("transient restore failure")
+            return orig_set(backend_voice_id, **kwargs)
+
+        orig_synth = fake_backend.synthesize
+
+        async def _arm_restore_failure(backend_voice_id, *args, **kwargs):
+            nonlocal fail_restore
+            async for chunk in orig_synth(backend_voice_id, *args, **kwargs):
+                yield chunk
+            fail_restore = True
+
+        monkeypatch.setattr(fake_backend, "set_synth_options", _flaky_set)
+        monkeypatch.setattr(fake_backend, "synthesize", _arm_restore_failure)
+
+        log.warning.reset_mock()
+        asyncio.run(fast_task())
+
+        assert log.warning.called
+        assert driver._pushed_length_scale is None
+        assert driver.tts.speech_options.voice.length_scale == pytest.approx(0.75)
+
+        # Next ordinary speech resynchronizes length_scale back to 1.0 automatically.
+        fail_restore = False
+        with driver.tts.create_synthesis_context():
+            driver._build_speech_tasks(["ordinary speech"])
+        voice = driver.tts.speech_options.voice
+        assert voice.length_scale == pytest.approx(1.0)
+        assert driver._pushed_length_scale == (
+            voice,
+            voice.default_scales,
+            pytest.approx(1.0),
+        )
+
+    def test_clamped_length_scale_slider_preserves_full_sonic_speedup(self, driver):
+        """Ensure Sonic receives full speedup when length_scale is already clamped at 0.10."""
+        driver.length_scale = 5  # base scale = 0.10 (lower clamp)
+        driver.rate = 100  # 2.50x target speedup; model stays at 0.10 (1.0x additional)
+
+        voice = driver.tts.speech_options.voice
+        assert voice.length_scale == pytest.approx(0.10)
+        assert driver.tts.rate == 40
+
+        # Restoring slider to 50 while rate=100 re-splits speedup across model and Sonic.
+        driver.length_scale = 50
+        assert voice.length_scale == pytest.approx(0.75)
+        assert driver.tts.rate == 28
+
+    def test_persistent_scale_update_during_task_override_is_preserved_after_restore(
+        self, monkeypatch, driver, fake_backend
+    ):
+        """Ensure a driver scale/rate update mid-task is not overwritten by task restore."""
+        driver.rate = 25  # persistent length_scale = 1.0
+        with driver.tts.create_synthesis_context():
+            tasks = driver._build_speech_tasks([_rate_command(100), "inline fast"])
+        fast_task = next(t for t in tasks if isinstance(t, SpeechTask))
+
+        voice = driver.tts.speech_options.voice
+        observed_in_synth = []
+
+        async def _scenario():
+            in_synth = asyncio.Event()
+            resume_synth = asyncio.Event()
+
+            async def _fake_executor(func, *args, **kwargs):
+                return func(*args, **kwargs)
+
+            monkeypatch.setattr(driver_module, "run_in_executor", _fake_executor)
+            orig_synth = fake_backend.synthesize
+
+            async def _pausing_synth(backend_voice_id, *args, **kwargs):
+                observed_in_synth.append(voice.length_scale)
+                in_synth.set()
+                await resume_synth.wait()
+                async for chunk in orig_synth(backend_voice_id, *args, **kwargs):
+                    yield chunk
+
+            monkeypatch.setattr(fake_backend, "synthesize", _pausing_synth)
+
+            running = asyncio.create_task(fast_task())
+            await in_synth.wait()
+
+            # User sets Length scale slider to 60 (effective = 1.20) while task runs.
+            driver.length_scale = 60
+            assert voice.length_scale == pytest.approx(0.75)
+
+            resume_synth.set()
+            await running
+
+        asyncio.run(_scenario())
+
+        assert observed_in_synth == [pytest.approx(0.75)]
+        assert voice.length_scale == pytest.approx(1.20)
+        assert driver._pushed_length_scale == (
+            voice,
+            voice.default_scales,
+            pytest.approx(1.20),
+        )
+
+    def test_float32_backend_length_scale_matches_without_redundant_override(
+        self, monkeypatch
+    ):
+        """Ensure proto float32 round-trip (e.g. 0.67f) skips override and caches audio."""
+
+        async def _run_inline(func, *args, **kwargs):
+            return func(*args, **kwargs)
+
+        monkeypatch.setattr(driver_module, "run_in_executor", _run_inline)
+        driver_module.phrase_cache.clear()
+
+        float32_067 = struct.unpack("f", struct.pack("f", 0.67))[0]
+        assert float32_067 != 0.67
+        writes = []
+
+        class _Float32Voice:
+            key = "en_US-float32-voice"
+            speaker = "base"
+
+            @property
+            def length_scale(self):
+                return float32_067
+
+            @length_scale.setter
+            def length_scale(self, value):
+                writes.append(value)
+
+        voice = _Float32Voice()
+
+        async def _gen():
+            yield b"\x11\x22"
+
+        provider = SimpleNamespace(
+            text="float32 test",
+            speech_options=SimpleNamespace(
+                voice=voice,
+                rate=20,
+                volume=100,
+                pitch=50,
+                sentence_silence_ms=None,
+            ),
+            generate_audio=_gen,
+        )
+        asyncio.run(SpeechTask(provider, MagicMock(), length_scale=0.67)())
+
+        assert writes == []
+        assert driver_module.phrase_cache.get(
+            "float32 test", voice.key, 20, 100, 50, speaker="base"
+        ) == [b"\x11\x22"]
+
+    def test_cancel_during_temporary_length_scale_write_still_restores(
+        self, monkeypatch
+    ):
+        """Ensure cancel() landing during _apply_temporary_length_scale restores state."""
+        events = []
+
+        class _Voice:
+            key = "en_US-cancel-mid-apply"
+
+            def __init__(self):
+                self._ls = 1.0
+                self._spk = "base"
+
+            @property
+            def speaker(self):
+                return self._spk
+
+            @speaker.setter
+            def speaker(self, value):
+                self._spk = value
+                events.append(("set_spk", value))
+
+            @property
+            def length_scale(self):
+                return self._ls
+
+            @length_scale.setter
+            def length_scale(self, value):
+                self._ls = value
+                events.append(("set_ls", value))
+
+        voice = _Voice()
+
+        async def _scenario():
+            apply_started = asyncio.Event()
+            finish_apply = asyncio.Event()
+
+            async def _fake_executor(func, *args, **kwargs):
+                if getattr(func, "__name__", "") == "_apply_ls":
+                    res = func(*args, **kwargs)
+                    apply_started.set()
+                    await finish_apply.wait()
+                    return res
+                return func(*args, **kwargs)
+
+            monkeypatch.setattr(driver_module, "run_in_executor", _fake_executor)
+
+            async def _gen():
+                yield b"\x00\x00"
+
+            task = SpeechTask(
+                SimpleNamespace(
+                    text="cancel me",
+                    speech_options=SimpleNamespace(
+                        voice=voice,
+                        rate=28,
+                        volume=100,
+                        pitch=50,
+                        sentence_silence_ms=None,
+                    ),
+                    generate_audio=_gen,
+                ),
+                MagicMock(),
+                speaker="alt",
+                length_scale=0.75,
+            )
+
+            running = asyncio.create_task(task())
+            await apply_started.wait()
+            running.cancel()
+            await asyncio.sleep(0)
+            finish_apply.set()
+            with pytest.raises(asyncio.CancelledError):
+                await running
+
+        asyncio.run(_scenario())
+        assert voice.length_scale == pytest.approx(1.0)
+        assert voice.speaker == "base"
+        assert ("set_ls", 0.75) in events
+        assert ("set_ls", 1.0) in events
+
+    def test_reloaded_voice_generation_triggers_fresh_length_scale_push(
+        self, driver, fake_backend
+    ):
+        """Ensure _sync_rate_length_scale re-pushes if a voice reloads (even with same remote_id)."""
+        driver.rate = 100
+        voice = driver.tts.speech_options.voice
+        assert voice.length_scale == pytest.approx(0.75)
+        old_scales = voice.default_scales
+
+        # Simulate reloading the same voice object onto a fresh backend session.
+        reloaded = fake_backend.load_voice(str(voice.config_path))
+        fake_backend.set_synth_options(reloaded.backend_voice_id, length_scale=1.0)
+        voice._apply_loaded(reloaded)
+        assert voice.default_scales is not old_scales
+        assert voice.length_scale == pytest.approx(1.0)
+
+        with driver.tts.create_synthesis_context():
+            driver._build_speech_tasks(["after reload"])
+        assert voice.length_scale == pytest.approx(0.75)
+        assert driver._pushed_length_scale == (
+            voice,
+            voice.default_scales,
+            pytest.approx(0.75),
+        )
+
+    def test_cancelled_task_finishes_scale_restore_before_next_task_runs(
+        self, monkeypatch
+    ):
+        """Ensure per-voice lock serializes cancel restore before a subsequent task starts."""
+        events = []
+
+        class _TrackedVoice:
+            key = "en_US-serialized-voice"
+            speaker = "base"
+
+            def __init__(self):
+                self._ls = 1.0
+
+            @property
+            def length_scale(self):
+                return self._ls
+
+            @length_scale.setter
+            def length_scale(self, value):
+                self._ls = value
+                events.append(("set_ls", value))
+
+        voice = _TrackedVoice()
+        in_synth = None
+
+        async def _scenario():
+            nonlocal in_synth
+            in_synth = asyncio.Event()
+            restore_gate = asyncio.Event()
+
+            async def _fake_executor(func, *args, **kwargs):
+                if func is setattr and args == (voice, "length_scale", 0.75):
+                    return func(*args, **kwargs)
+                if getattr(func, "__name__", "") == "_set_ls":
+                    events.append("restore_waiting")
+                    await restore_gate.wait()
+                    res = func(*args, **kwargs)
+                    events.append("restore_done")
+                    return res
+                return func(*args, **kwargs)
+
+            monkeypatch.setattr(driver_module, "run_in_executor", _fake_executor)
+
+            async def _blocking_gen():
+                events.append(("synth_task1", voice.length_scale))
+                in_synth.set()
+                await asyncio.sleep(10)
+                yield b"\x00\x00"
+
+            observed_task2 = []
+
+            async def _task2_gen():
+                observed_task2.append(voice.length_scale)
+                yield b"\x01\x01"
+
+            t1 = SpeechTask(
+                SimpleNamespace(
+                    text="one",
+                    speech_options=SimpleNamespace(
+                        voice=voice,
+                        rate=28,
+                        volume=100,
+                        pitch=50,
+                        sentence_silence_ms=None,
+                    ),
+                    generate_audio=_blocking_gen,
+                ),
+                MagicMock(),
+                length_scale=0.75,
+            )
+            t2 = SpeechTask(
+                SimpleNamespace(
+                    text="two",
+                    speech_options=SimpleNamespace(
+                        voice=voice,
+                        rate=10,
+                        volume=100,
+                        pitch=50,
+                        sentence_silence_ms=None,
+                    ),
+                    generate_audio=_task2_gen,
+                ),
+                MagicMock(),
+                length_scale=None,
+            )
+
+            running1 = asyncio.create_task(t1())
+            await in_synth.wait()
+            running1.cancel()
+            await asyncio.sleep(0)
+
+            # Start task 2 while task 1's restore is still blocked in executor.
+            running2 = asyncio.create_task(t2())
+            await asyncio.sleep(0)
+            assert observed_task2 == []
+
+            restore_gate.set()
+            with pytest.raises(asyncio.CancelledError):
+                await running1
+            await running2
+            assert observed_task2 == [pytest.approx(1.0)]
+            assert voice.length_scale == pytest.approx(1.0)
+
+        asyncio.run(_scenario())
+        assert "restore_waiting" in events
+        assert "restore_done" in events

@@ -1,8 +1,12 @@
+import asyncio as _std_asyncio
+import math
+import threading
 import typing
 from asyncio.exceptions import CancelledError as AsyncioCancelledError
 from collections import OrderedDict
 from contextlib import suppress
 from functools import partial
+from weakref import WeakKeyDictionary
 
 import addonHandler
 import config
@@ -47,6 +51,7 @@ from ...aio import (
 )
 from ...const import FALLBACK_SPEAKER_NAME
 from ...domain.audio_processing import AudioStreamProcessor
+from ...domain.model_profiles import profile_for
 from ...domain.phrase_cache import phrase_cache
 from ...domain.structural_reading import split_into_segments
 from ...domain.tts_system import (
@@ -62,6 +67,92 @@ addonHandler.initTranslation()
 
 _DEFAULT_SAY_ALL_SENTENCE_SILENCE_MS = 50
 _MAX_SENTENCE_PAUSE_MS = 500
+_RATE_LENGTH_SCALE_FLOOR = 0.75
+_MAX_MODEL_RATE_SPEEDUP = 1.0 / _RATE_LENGTH_SCALE_FLOOR
+
+
+class _VoiceScaleState:
+    """Per-voice synchronization state shared by persistent pushes and task overrides."""
+
+    __slots__ = (
+        "active_override",
+        "async_locks",
+        "io_lock",
+        "meta_lock",
+        "persistent_length_scale",
+        "version",
+    )
+
+    def __init__(self):
+        self.io_lock = threading.Lock()
+        self.meta_lock = threading.Lock()
+        self.async_locks: WeakKeyDictionary = WeakKeyDictionary()
+        self.active_override = False
+        self.version = 0
+        self.persistent_length_scale = None
+
+
+_FALLBACK_SCALE_STATES: dict[int, _VoiceScaleState] = {}
+_FALLBACK_SCALE_STATES_LOCK = threading.Lock()
+
+
+def _rate_to_speed(engine_rate):
+    """Convert an engine rate step (0-100) to its Sonic speed multiplier."""
+    return 0.5 + 0.05 * engine_rate
+
+
+def _speed_to_rate(speed):
+    """Convert a Sonic speed multiplier back to an integer engine rate step."""
+    return round((speed - 0.5) / 0.05)
+
+
+def _get_voice_scale_state(voice) -> _VoiceScaleState:
+    """Return the `_VoiceScaleState` attached to `voice`."""
+    state = getattr(voice, "_nvda_scale_state", None)
+    if isinstance(state, _VoiceScaleState):
+        return state
+    with _FALLBACK_SCALE_STATES_LOCK:
+        state = getattr(voice, "_nvda_scale_state", None)
+        if isinstance(state, _VoiceScaleState):
+            return state
+        state = _FALLBACK_SCALE_STATES.get(id(voice))
+        if state is None:
+            state = _VoiceScaleState()
+            try:
+                voice._nvda_scale_state = state
+            except (AttributeError, TypeError):
+                _FALLBACK_SCALE_STATES[id(voice)] = state
+        return state
+
+
+def _get_voice_lock(voice) -> _std_asyncio.Lock:
+    """Return the per-loop `asyncio.Lock` serializing temporary overrides on `voice`."""
+    state = _get_voice_scale_state(voice)
+    loop = _std_asyncio.get_running_loop()
+    with state.meta_lock:
+        lock = state.async_locks.get(loop)
+        if lock is None:
+            lock = _std_asyncio.Lock()
+            state.async_locks[loop] = lock
+        return lock
+
+
+async def _await_uncancellable(aw):
+    """Await `aw` to completion before propagating any pending task cancellation."""
+    fut = _std_asyncio.ensure_future(aw)
+    cancelled = False
+    while not fut.done():
+        try:
+            await _std_asyncio.shield(fut)
+        except AsyncioCancelledError:
+            if fut.done() and fut.cancelled():
+                raise
+            cancelled = True
+    if cancelled:
+        if not fut.cancelled():
+            _ = fut.exception()
+        raise AsyncioCancelledError
+    return fut.result()
 
 
 def _bootstrap_backend():  # pragma: no cover
@@ -137,8 +228,10 @@ def _get_focus_pan() -> float:
 
 class SpeechTask:
     __slots__ = [
+        "length_scale",
         "night_mode",
         "normalize",
+        "on_scale_restore_error",
         "pan",
         "player",
         "spatial_audio",
@@ -155,6 +248,8 @@ class SpeechTask:
         night_mode=False,
         pan=0.0,
         speaker=None,
+        length_scale=None,
+        on_scale_restore_error=None,
     ):
         self.task = task
         self.player = player
@@ -163,6 +258,8 @@ class SpeechTask:
         self.night_mode = night_mode
         self.pan = pan
         self.speaker = speaker
+        self.length_scale = length_scale
+        self.on_scale_restore_error = on_scale_restore_error
 
     def _check_cache(
         self, voice_key, rate, volume, pitch, speaker, sentence_silence_ms=None
@@ -216,6 +313,99 @@ class SpeechTask:
         await run_in_executor(self.player.sync)
         return collected
 
+    async def _apply_temporary_length_scale(self, voice, restore_box):
+        """Temporarily override `voice.length_scale` when requested for this task.
+
+        Populates `restore_box` with `[orig, start_version]` atomically under
+        `state.io_lock` as soon as the override write succeeds so a concurrent
+        cancellation cannot skip restoration.
+        """
+        if self.length_scale is None:
+            return False
+
+        def _apply_ls():
+            state = _get_voice_scale_state(voice)
+            with state.io_lock:
+                start_version = state.version
+                orig = voice.length_scale
+                if orig is not None and math.isclose(
+                    orig, self.length_scale, rel_tol=1e-4, abs_tol=1e-4
+                ):
+                    return False
+                voice.length_scale = self.length_scale
+                state.active_override = True
+                restore_box[:] = [orig, start_version]
+                return True
+
+        return await _await_uncancellable(run_in_executor(_apply_ls))
+
+    async def _restore_length_scale(self, voice, orig, start_version):
+        """Restore `voice.length_scale` (or apply a newer persistent setting)."""
+
+        def _set_ls():
+            state = _get_voice_scale_state(voice)
+            with state.io_lock:
+                target = (
+                    state.persistent_length_scale
+                    if state.version != start_version
+                    else orig
+                )
+                state.active_override = False
+                try:
+                    voice.length_scale = target
+                    return True
+                except Exception:
+                    log.warning(
+                        "Failed restoring voice length_scale after task override",
+                        exc_info=True,
+                    )
+                    return False
+
+        restored = await _await_uncancellable(run_in_executor(_set_ls))
+        if not restored and self.on_scale_restore_error is not None:
+            self.on_scale_restore_error()
+
+    async def _apply_temporary_speaker(self, voice, restore_box):
+        """Temporarily override `voice.speaker` when requested for this task."""
+
+        def _apply_spk():
+            orig = getattr(voice, "speaker", None)
+            speaker = self.speaker if self.speaker is not None else orig
+            if self.speaker is None or self.speaker == orig:
+                return speaker, True
+            try:
+                voice.speaker = self.speaker
+            except Exception:
+                log.debug("Failed setting task speaker", exc_info=True)
+                return speaker, False
+            restore_box[:] = [orig]
+            return speaker, True
+
+        return await _await_uncancellable(run_in_executor(_apply_spk))
+
+    @staticmethod
+    async def _restore_speaker(voice, orig):
+        """Restore `voice.speaker` after a per-task override."""
+
+        def _set_spk():
+            try:
+                voice.speaker = orig
+            except Exception:
+                log.warning(
+                    "Failed restoring voice speaker after task override",
+                    exc_info=True,
+                )
+
+        await _await_uncancellable(run_in_executor(_set_spk))
+
+    def _should_cache(self, collected_chunks, applied_custom_ls, speaker_applied):
+        return (
+            not self.spatial_audio
+            and not applied_custom_ls
+            and bool(collected_chunks)
+            and speaker_applied
+        )
+
     async def __call__(self):
         """Synthesize and feed the task's audio to the output player."""
         if sayAll.SayAllHandler.isRunning():
@@ -227,55 +417,56 @@ class SpeechTask:
 
         voice = self.task.speech_options.voice
         voice_key = voice.key
-        orig_speaker = await run_in_executor(getattr, voice, "speaker", None)
-        speaker = self.speaker if self.speaker is not None else orig_speaker
-
-        def _apply_speaker(spk):
+        async with _get_voice_lock(voice):
+            speaker_restore_box = []
+            ls_restore_box = []
             try:
-                voice.speaker = spk
-                return True
-            except Exception:
-                log.debug("Failed setting task speaker", exc_info=True)
-                return False
-
-        applied_custom_speaker = False
-        speaker_applied = True
-        if self.speaker is not None and self.speaker != orig_speaker:
-            applied_custom_speaker = await run_in_executor(_apply_speaker, self.speaker)
-            speaker_applied = applied_custom_speaker
-
-        try:
-            rate = self.task.speech_options.rate
-            volume = self.task.speech_options.volume
-            pitch = self.task.speech_options.pitch
-            sentence_silence_ms = self.task.speech_options.sentence_silence_ms
-
-            cached = self._check_cache(
-                voice_key, rate, volume, pitch, speaker, sentence_silence_ms
-            )
-            if cached is not None:
-                await self._play_chunks(cached)
-                return
-
-            processor = self._create_processor()
-            collected_chunks = await self._synthesize_and_stream(processor)
-
-            if not self.spatial_audio and collected_chunks and speaker_applied:
-                phrase_cache.put(
-                    self.task.text,
-                    voice_key,
-                    rate,
-                    volume,
-                    pitch,
-                    self.normalize,
-                    self.night_mode,
-                    collected_chunks,
-                    speaker=speaker,
-                    sentence_silence_ms=sentence_silence_ms,
+                speaker, speaker_applied = await self._apply_temporary_speaker(
+                    voice, speaker_restore_box
                 )
-        finally:
-            if applied_custom_speaker:
-                await run_in_executor(_apply_speaker, orig_speaker)
+                applied_custom_ls = await self._apply_temporary_length_scale(
+                    voice, ls_restore_box
+                )
+                rate = self.task.speech_options.rate
+                volume = self.task.speech_options.volume
+                pitch = self.task.speech_options.pitch
+                sentence_silence_ms = self.task.speech_options.sentence_silence_ms
+
+                if not applied_custom_ls:
+                    cached = self._check_cache(
+                        voice_key, rate, volume, pitch, speaker, sentence_silence_ms
+                    )
+                    if cached is not None:
+                        await self._play_chunks(cached)
+                        return
+
+                processor = self._create_processor()
+                collected_chunks = await self._synthesize_and_stream(processor)
+
+                if self._should_cache(
+                    collected_chunks, applied_custom_ls, speaker_applied
+                ):
+                    phrase_cache.put(
+                        self.task.text,
+                        voice_key,
+                        rate,
+                        volume,
+                        pitch,
+                        self.normalize,
+                        self.night_mode,
+                        collected_chunks,
+                        speaker=speaker,
+                        sentence_silence_ms=sentence_silence_ms,
+                    )
+            finally:
+                try:
+                    if ls_restore_box:
+                        await self._restore_length_scale(
+                            voice, ls_restore_box[0], ls_restore_box[1]
+                        )
+                finally:
+                    if speaker_restore_box:
+                        await self._restore_speaker(voice, speaker_restore_box[0])
 
 
 class BreakTask:
@@ -377,11 +568,13 @@ class SynthDriver(NvdaSynthDriver):
     def __init__(self):
         """Initialize driver state, backend connection, and installed voices."""
         self._sentence_pause = 0
+        self._rateBoost = False
+        self._raw_engine_rate = None
+        self._pushed_length_scale = None
         self.tts = None
         super().__init__()
 
         self._current_task = None
-        self._rateBoost = False
         self._player = None
         self._players = {}
         self._active_players = set()
@@ -447,6 +640,7 @@ class SynthDriver(NvdaSynthDriver):
         self._players.clear()
         self._player = None
         self._active_players = set()
+        self._pushed_length_scale = None
 
     def speak(self, speechSequence):
         if self.tts is None:
@@ -562,33 +756,58 @@ class SynthDriver(NvdaSynthDriver):
             self._build_speech_tasks(speech_sequence)
         ).result()
 
+    def _invalidate_pushed_length_scale(self):
+        """Mark the cached backend `length_scale` dirty so the next task resynchronizes."""
+        self._pushed_length_scale = None
+        phrase_cache.clear()
+
     def _build_speech_tasks(self, speech_sequence):
+        """Convert an NVDA speech sequence into executable speech and break tasks."""
+        self._sync_rate_length_scale()
         speech_seq = []
         text_list = []
         index_command_list = []
         default_lang = self.tts.language
+        default_raw_rate = self._raw_engine_rate
+        capture_length_scale = any(
+            type(item) in (RateCommand, LangChangeCommand) for item in speech_sequence
+        )
         self._player = self._get_or_create_player(
             self.tts.speech_options.voice.sample_rate
         )
         players_used = {self._player}
-        for item in speech_sequence:
-            item_type = type(item)
-            if item_type is IndexCommand:
-                index_command_list.append(item.index)
-                continue
-            if item_type is str:
-                text_list.append(item)
-                continue
+        try:
+            for item in speech_sequence:
+                item_type = type(item)
+                if item_type is IndexCommand:
+                    index_command_list.append(item.index)
+                    continue
+                if item_type is str:
+                    text_list.append(item)
+                    continue
 
+                if text_list:
+                    speech_seq.extend(
+                        self._create_speech_tasks(
+                            text_list, capture_length_scale=capture_length_scale
+                        )
+                    )
+                    text_list.clear()
+                break_task = self._apply_speech_command(
+                    item, default_lang, default_raw_rate
+                )
+                if break_task is not None:
+                    speech_seq.append(break_task)
+                players_used.add(self._player)
             if text_list:
-                speech_seq.extend(self._create_speech_tasks(text_list))
-                text_list.clear()
-            break_task = self._apply_speech_command(item, default_lang)
-            if break_task is not None:
-                speech_seq.append(break_task)
-            players_used.add(self._player)
-        if text_list:
-            speech_seq.extend(self._create_speech_tasks(text_list))
+                speech_seq.extend(
+                    self._create_speech_tasks(
+                        text_list, capture_length_scale=capture_length_scale
+                    )
+                )
+        finally:
+            if self._raw_engine_rate != default_raw_rate:
+                self._restore_raw_engine_rate(default_raw_rate, push_scale=False)
         if index_command_list:
             speech_seq.append(
                 IndexReachedTask(self._on_index_reached, index_command_list)
@@ -597,7 +816,18 @@ class SynthDriver(NvdaSynthDriver):
         self._active_players = players_used
         return speech_seq
 
-    def _create_speech_tasks(self, text_list):
+    def _task_length_scale(self, voice):
+        """Return the current effective `length_scale` for `voice`, or None."""
+        if not voice.is_loaded or not self._voice_supports_length_scale(voice):
+            return None
+        return self._effective_scale(
+            voice,
+            "length_scale",
+            self._get_scale_factor("length_scale"),
+            self._SCALE_SETTINGS["length_scale"],
+        )
+
+    def _create_speech_tasks(self, text_list, *, capture_length_scale=False):
         joined_text = "\n".join(text_list)
         do_norm = self._get_normalize_audio()
         do_spatial = self._get_spatial_audio()
@@ -606,6 +836,10 @@ class SynthDriver(NvdaSynthDriver):
         pan = _get_focus_pan() if do_spatial else 0.0
 
         voice = self.tts.speech_options.voice
+        task_ls = self._task_length_scale(voice) if capture_length_scale else None
+        on_restore_err = (
+            self._invalidate_pushed_length_scale if task_ls is not None else None
+        )
         if (
             do_struct
             and getattr(voice, "is_multi_speaker", False)
@@ -628,6 +862,8 @@ class SynthDriver(NvdaSynthDriver):
                         night_mode=do_night,
                         pan=pan,
                         speaker=seg.speaker_name,
+                        length_scale=task_ls,
+                        on_scale_restore_error=on_restore_err,
                     )
                 )
             return tasks
@@ -641,6 +877,8 @@ class SynthDriver(NvdaSynthDriver):
                 night_mode=do_night,
                 pan=pan,
                 speaker=self._active_speaker(voice),
+                length_scale=task_ls,
+                on_scale_restore_error=on_restore_err,
             )
         ]
 
@@ -669,7 +907,8 @@ class SynthDriver(NvdaSynthDriver):
         self._current_speaker = spk
         return spk
 
-    def _apply_speech_command(self, item, default_lang):
+    def _apply_speech_command(self, item, default_lang, default_raw_rate=None):
+        """Apply an inline NVDA speech command to the active synthesis context."""
         item_type = type(item)
         if item_type is BreakCommand:
             return BreakTask(
@@ -681,8 +920,13 @@ class SynthDriver(NvdaSynthDriver):
                 self.tts.language = default_lang if item.isDefault else item.lang
             voice = self.tts.speech_options.voice
             self._player = self._get_or_create_player(voice.sample_rate)
+            self._apply_rate_split(push_scale=False)
         elif item_type is RateCommand:
-            self.tts.rate = item.newValue
+            if getattr(item, "isDefault", False):
+                self._restore_raw_engine_rate(default_raw_rate, push_scale=False)
+            else:
+                self._raw_engine_rate = self._slider_to_raw_rate(item.newValue)
+                self._apply_rate_split(push_scale=False)
         elif item_type is VolumeCommand:
             self.tts.volume = item.newValue
         elif item_type is PitchCommand:
@@ -788,18 +1032,109 @@ class SynthDriver(NvdaSynthDriver):
             self._rateBoost = enable
             self.rate = rate
 
-    def _get_rate(self):
-        if self._rateBoost:
-            return self.tts.rate
+    def _voice_supports_length_scale(self, voice=None):
+        """Return True when `voice`'s model profile exposes `length_scale`."""
+        if voice is None:
+            voice = getattr(getattr(self.tts, "speech_options", None), "voice", None)
+        if voice is None or voice.model_type is None:
+            return False
+        return "length_scale" in profile_for(voice.model_type).tunable
+
+    def _model_rate_speedup(self, voice=None):
+        """Return the ideal model-side speed multiplier (1.0..1/floor) for the active rate."""
+        if self._raw_engine_rate is None or not self._voice_supports_length_scale(
+            voice
+        ):
+            return 1.0
+        target_speed = _rate_to_speed(self._raw_engine_rate)
+        if target_speed <= 1.0:
+            return 1.0
+        return min(target_speed, _MAX_MODEL_RATE_SPEEDUP)
+
+    def _applied_model_rate_speedup(self, voice=None):
+        """Return the actual model speedup applied to `voice` after rounding and clamping."""
+        if voice is None:
+            voice = getattr(getattr(self.tts, "speech_options", None), "voice", None)
+        ideal_speedup = self._model_rate_speedup(voice)
+        if ideal_speedup <= 1.0:
+            return 1.0
+        if voice is None or not voice.is_loaded:
+            return ideal_speedup
+        value = self._get_scale_factor("length_scale")
+        spec = self._SCALE_SETTINGS["length_scale"]
+        base_scale = self._unsplit_scale(voice, "length_scale", value, spec)
+        effective_scale = self._effective_scale(voice, "length_scale", value, spec)
+        if effective_scale <= 0 or base_scale <= effective_scale:
+            return 1.0
+        return base_scale / effective_scale
+
+    def _slider_to_raw_rate(self, value):
+        """Convert an NVDA 0-100 rate value into a raw engine rate step."""
+        return value if self._rateBoost else int(self._percentToParam(value, 0, 40))
+
+    def _is_pushed_length_scale(self, voice, effective):
+        pushed = self._pushed_length_scale
+        return (
+            pushed is not None
+            and pushed[0] is voice
+            and pushed[1] is voice.default_scales
+            and pushed[2] == effective
+        )
+
+    def _sync_rate_length_scale(self):
+        """Push effective `length_scale` only when it differs from the last pushed value."""
+        voice = self.tts.speech_options.voice
+        if not voice.is_loaded or not self._voice_supports_length_scale(voice):
+            return
+        value = self._get_scale_factor("length_scale")
+        effective = self._effective_scale(
+            voice, "length_scale", value, self._SCALE_SETTINGS["length_scale"]
+        )
+        if self._is_pushed_length_scale(voice, effective):
+            return
+        self._set_scale_factor("length_scale", value, force=True)
+
+    def _restore_raw_engine_rate(self, raw_rate, push_scale=True):
+        """Restore `_raw_engine_rate` and resync Sonic rate and `length_scale`."""
+        self._raw_engine_rate = raw_rate
+        if self.tts is None:
+            return
+        if raw_rate is None:
+            self.tts.speech_options.rate = None
+            if push_scale:
+                self._sync_rate_length_scale()
+            return
+        self._apply_rate_split(push_scale=push_scale)
+
+    def _apply_rate_split(self, push_scale=True):
+        """Split `_raw_engine_rate` between `voice.length_scale` and Sonic `tts.rate`."""
+        if self._raw_engine_rate is None or self.tts is None:
+            return
+        speedup = self._applied_model_rate_speedup()
+        if speedup <= 1.0:
+            self.tts.rate = self._raw_engine_rate
         else:
-            self.tts.rate = min(40, self.tts.rate)
-            return int(self.tts.rate * 2.5)
+            target_speed = _rate_to_speed(self._raw_engine_rate)
+            self.tts.rate = _speed_to_rate(target_speed / speedup)
+        if push_scale:
+            self._sync_rate_length_scale()
+
+    def _get_rate(self):
+        """Return the user-facing NVDA rate percentage (0-100)."""
+        raw = (
+            self._raw_engine_rate
+            if self._raw_engine_rate is not None
+            else self.tts.rate
+        )
+        if self._rateBoost:
+            return raw
+        raw = min(40, raw)
+        return int(raw * 2.5)
 
     def _set_rate(self, value):
-        if self._rateBoost:
-            self.tts.rate = value
-        else:
-            self.tts.rate = int(self._percentToParam(value, 0, 40))
+        """Store the raw engine rate for `value` and apply the model/Sonic split."""
+        self._raw_engine_rate = self._slider_to_raw_rate(value)
+        self._apply_rate_split()
 
     def _get_volume(self):
         return self.tts.volume
@@ -856,36 +1191,65 @@ class SynthDriver(NvdaSynthDriver):
             and getattr(self, factor_attr, None) == value
         ):
             return
+        setattr(self, factor_attr, value)
+        if name == "length_scale":
+            self._apply_rate_split(push_scale=False)
         voice = self.tts.speech_options.voice
         if voice.is_loaded:
             try:
                 self._push_scale(voice, name, value, spec)
             except BackendError:
+                if name == "length_scale":
+                    self._pushed_length_scale = None
                 log.exception(
                     f"Could not apply {name}: the speech engine is unreachable"
                 )
-        setattr(self, factor_attr, value)
         phrase_cache.clear()
 
-    def _push_scale(self, voice, name, value, spec):
+    def _unsplit_scale(self, voice, name, value, spec):
+        """Compute the scale value for slider `value` without rate speedup."""
         default = getattr(voice.default_scales, name)
         if value == 50:
-            setattr(voice, name, default)
-        else:
-            setattr(
+            return default
+        base = self._percentToParam(value, 0.0, default * spec["multiplier"])
+        return max(0.1, round(base, 2))
+
+    def _effective_scale(self, voice, name, value, spec):
+        """Compute the scale value to push to `voice` for slider `value`."""
+        default = getattr(voice.default_scales, name)
+        speedup = self._model_rate_speedup(voice) if name == "length_scale" else 1.0
+        if value == 50 and speedup <= 1.0:
+            return default
+        base = (
+            default
+            if value == 50
+            else self._percentToParam(value, 0.0, default * spec["multiplier"])
+        )
+        if speedup > 1.0:
+            base /= speedup
+        return max(0.1, round(base, 2))
+
+    def _push_scale(self, voice, name, value, spec):
+        """Push the effective scale setting to `voice`."""
+        effective = self._effective_scale(voice, name, value, spec)
+        if name != "length_scale":
+            setattr(voice, name, effective)
+            return
+        state = _get_voice_scale_state(voice)
+        with state.io_lock:
+            state.version += 1
+            state.persistent_length_scale = effective
+            if not state.active_override:
+                setattr(voice, name, effective)
+            self._pushed_length_scale = (
                 voice,
-                name,
-                max(
-                    0.1,
-                    round(
-                        self._percentToParam(value, 0.0, default * spec["multiplier"]),
-                        2,
-                    ),
-                ),
+                voice.default_scales,
+                effective,
             )
 
     def _reapply_scale_settings(self):
-
+        """Reapply rate split and model scale sliders after a voice finishes loading."""
+        self._apply_rate_split(push_scale=False)
         for name in self._SCALE_SETTINGS:
             self._set_scale_factor(name, self._get_scale_factor(name), force=True)
         voice = self.tts.speech_options.voice
