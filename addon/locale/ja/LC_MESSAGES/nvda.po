@@ -669,3 +669,28 @@ msgstr "日本語辞書をインストール(&J)"
 #: addon\synthDrivers\dengjen_neural_voices\adapters\nvda\synth_driver.py
 msgid "Sentence &pause (5 ms per step at normal speed)"
 msgstr "文間のポーズ（標準速度で1目盛り5ミリ秒）(&P)"
+
+#: addon\globalPlugins\dengjen_tts_global_plugin\piper_plus_download.py
+#, python-brace-format
+msgid "Downloading Piper-Plus voice {voice}"
+msgstr "Piper-Plus 音声 {voice} をダウンロード中"
+
+#: addon\globalPlugins\dengjen_tts_global_plugin\piper_plus_download.py
+#, python-brace-format
+msgid ""
+"Successfully downloaded Piper-Plus voice {voice}.\n"
+"To use this voice, you need to restart NVDA.\n"
+"Do you want to restart NVDA now?"
+msgstr ""
+"Piper-Plus 音声 {voice} のダウンロードに成功しました。\n"
+"この音声を使用するには NVDA を再起動する必要があります。\n"
+"今すぐ NVDA を再起動しますか？"
+
+#: addon\globalPlugins\dengjen_tts_global_plugin\piper_plus_download.py
+#, python-brace-format
+msgid ""
+"Cannot download Piper-Plus voice {voice}.\n"
+"Please check your connection and try again."
+msgstr ""
+"Piper-Plus 音声 {voice} をダウンロードできませんでした。\n"
+"インターネット接続を確認して再試行してください。"

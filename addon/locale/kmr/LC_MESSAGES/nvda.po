@@ -578,3 +578,23 @@ msgstr ""
 #: addon\synthDrivers\dengjen_neural_voices\adapters\nvda\synth_driver.py
 msgid "Sentence &pause (5 ms per step at normal speed)"
 msgstr ""
+
+#: addon\globalPlugins\dengjen_tts_global_plugin\piper_plus_download.py
+#, python-brace-format
+msgid "Downloading Piper-Plus voice {voice}"
+msgstr ""
+
+#: addon\globalPlugins\dengjen_tts_global_plugin\piper_plus_download.py
+#, python-brace-format
+msgid ""
+"Successfully downloaded Piper-Plus voice {voice}.\n"
+"To use this voice, you need to restart NVDA.\n"
+"Do you want to restart NVDA now?"
+msgstr ""
+
+#: addon\globalPlugins\dengjen_tts_global_plugin\piper_plus_download.py
+#, python-brace-format
+msgid ""
+"Cannot download Piper-Plus voice {voice}.\n"
+"Please check your connection and try again."
+msgstr ""
