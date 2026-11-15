@@ -16,13 +16,13 @@ jobs:
         with:
           # Everything else (active bugs, feature requests, etc.) stays open
           # until someone explicitly acts on it.
-          only-issue-labels: needs-reproducer
+          only-issue-labels: needs/repro
           days-before-issue-stale: 30
           days-before-issue-close: 14
           # PRs are not subject to this workflow.
           days-before-pr-stale: -1
           days-before-pr-close: -1
-          stale-issue-label: stale
+          stale-issue-label: status/stale
           remove-stale-when-updated: true
           close-issue-reason: not_planned
           stale-issue-message: |
@@ -33,7 +33,7 @@ jobs:
             - A minimal reproducer (steps, expected vs. actual behavior)
             - The relevant NVDA log slice
 
-            …and the `stale` and `needs-reproducer` labels will be removed.
+            …and the `status/stale` and `needs/repro` labels will be removed.
 
             Otherwise this issue will close in 14 days. Closing isn't a verdict — it just means we don't have enough information to act on it.
           close-issue-message: |
