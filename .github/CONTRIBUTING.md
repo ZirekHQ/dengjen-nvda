@@ -6,7 +6,7 @@ Contributions are welcome.
 
 ## Reporting a bug
 
-Use the **Bug report** template at <https://github.com/ZirekHQ/dengjen-nvda/issues/new/choose>. The template asks for NVDA version, add-on version, OS, voice tested, steps to reproduce, and an NVDA log slice — please fill in as much as you can. Bugs filed without that info almost always end up labelled `needs-reproducer` until they have it.
+Use the **Bug report** template at <https://github.com/ZirekHQ/dengjen-nvda/issues/new/choose>. The template asks for NVDA version, add-on version, OS, voice tested, steps to reproduce, and an NVDA log slice — please fill in as much as you can. Bugs filed without that info almost always end up labelled `needs/repro` until they have it.
 
 For installation questions or general usage help, check the [readme](../README.md) first and then ask on the [NVDA add-ons community list](https://nvda-addons.groups.io/g/nvda-addons).
 
