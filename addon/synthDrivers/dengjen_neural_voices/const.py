@@ -8,6 +8,7 @@ __all__ = [
     "DEFAULT_VOLUME",
     "DENGJEN_JAPANESE_DICTIONARY_DIR",
     "DENGJEN_KOKORO_VOICES_DIR",
+    "DENGJEN_PIPER_PLUS_VOICES_DIR",
     "DENGJEN_VOICES_BASE_DIR",
     "DENGJEN_VOICES_DIR",
     "FALLBACK_SPEAKER_NAME",
@@ -25,6 +26,9 @@ PIPER_VOICES_VERSION = "v1.0"
 DENGJEN_VOICES_BASE_DIR = os.path.join(globalVars.appArgs.configPath, "dengjen")
 DENGJEN_VOICES_DIR = os.path.join(DENGJEN_VOICES_BASE_DIR, "voices", "piper")
 DENGJEN_KOKORO_VOICES_DIR = os.path.join(DENGJEN_VOICES_BASE_DIR, "voices", "kokoro")
+DENGJEN_PIPER_PLUS_VOICES_DIR = os.path.join(
+    DENGJEN_VOICES_BASE_DIR, "voices", "piper-plus"
+)
 DENGJEN_JAPANESE_DICTIONARY_DIR = os.path.join(
     DENGJEN_VOICES_BASE_DIR, "dictionaries", "naist-jdic"
 )
