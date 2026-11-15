@@ -33,7 +33,7 @@ jobs:
             - A minimal reproducer (steps, expected vs. actual behavior)
             - The relevant NVDA log slice
 
-            …and the `status/stale` and `needs/repro` labels will be removed.
+            …and the `status/stale` label will be removed. The `needs/repro` label stays until a maintainer removes it.
 
             Otherwise this issue will close in 14 days. Closing isn't a verdict — it just means we don't have enough information to act on it.
           close-issue-message: |
