@@ -27,7 +27,7 @@ jobs:
           remove-stale-when-updated: true
           close-issue-reason: not_planned
           stale-issue-message: |
-            This issue has been waiting on a reproducer for 30 days with no activity, so it's been marked as `stale`.
+            This issue has been waiting on a reproducer for 30 days with no activity, so it's been marked as `status/stale`.
 
             If you can still reproduce on the latest [release](https://github.com/zirekhq/dengjen-nvda/releases/latest), please reply with:
             - The exact NVDA version and add-on version
