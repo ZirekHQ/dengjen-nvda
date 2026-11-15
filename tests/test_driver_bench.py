@@ -173,8 +173,9 @@ def test_teardown_restores_shared_state_when_terminate_raises(bench_target):
     def _raise_terminate():
         raise OSError("terminate failed")
 
+    failing_target = _FailingTarget()
     with pytest.raises(OSError, match="terminate failed"):
-        _teardown_bench_target(_FailingTarget(), saved)
+        _teardown_bench_target(failing_target, saved)
 
     assert global_vars.appDir == "original-app-dir"
     assert "bench_leaked_module" not in sys.modules
