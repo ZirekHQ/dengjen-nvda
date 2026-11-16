@@ -1,6 +1,6 @@
 <?xml version="1.0"?>
 <xliff xmlns="urn:oasis:names:tc:xliff:document:2.0" version="2.0" srcLang="en">
-<file id="README.md" original="https://raw.githubusercontent.com/ZirekHQ/dengjen-nvda/5890df4ff01d1dd9c2f8690ff4d1072d243b56fa/README.md">
+<file id="README.md" original="https://raw.githubusercontent.com/ZirekHQ/dengjen-nvda/b8f23772bb8cd6c833da049254185fab57b82e18/README.md">
 <skeleton>
 # $(ID:a70e048f-26ec-46c6-a8d9-bfca77844d8a)
 
@@ -8,15 +8,15 @@ $(ID:baea1d33-7426-40c2-b67a-f48fc77c34c7)
 
 $(ID:32e6548a-edb0-4372-b595-19b77d6e7b78)
 $(ID:848c887d-d0fd-4ac5-8695-e496166b3f52)
-$(ID:931380c3-1ffc-4741-99c8-8114baba8825)
+$(ID:f8c8ccb5-9da8-4609-9512-596db633a510)
 $(ID:d4b7c324-c9ec-443c-b4fa-73b357314ada)
 $(ID:4278a602-513a-4e84-b4f5-a39d4a538af1)
 $(ID:feea13f2-f0fc-450e-8113-b91a7aa485cf)
 $(ID:2dad090b-adc8-422c-8ae7-1d712e88a94f)
 
-$(ID:fe417da9-b5de-435f-91f9-e8297eadffb9)
+$(ID:69c89518-9573-46e1-8444-8a8e29dab4b9)
 
-$(ID:37e69d91-6f05-405b-b10a-11550ef42ca2)
+$(ID:ac89dc61-671d-4def-8873-b12e30f3d0b7)
 
 
 # $(ID:56e50757-1717-41fc-97da-f5b83bafc693)
@@ -36,13 +36,13 @@ $(ID:b221a2a7-ed30-4223-9fe0-24a96a044631)
 
 $(ID:9d81856c-4c8d-434c-a6c8-0a31435b5295)
 
-$(ID:543fbed0-586a-40ac-aa32-0e8f017b876f)
+$(ID:3075c2a4-21aa-49e6-82d4-48fbbb4d3ad9)
 
 $(ID:b4feac45-8e20-451c-ac90-a015c421d794)
 
 $(ID:89c4f05f-092a-46b6-a42c-d5d7c0a7e9f5)
 
-$(ID:84fd51ad-bbf9-4f18-b1f7-98c1dfd79b31)
+$(ID:eb156b4b-45a0-45c9-a14b-5cdc2ac481c6)
 
 # $(ID:3e90a651-62de-4c7e-af63-5588f168aa85)
 
@@ -66,11 +66,11 @@ $(ID:490fdca5-59f5-45f1-9af5-800bd321bf3d)
 $(ID:9edf1736-6daa-43b6-a554-207f0d823ca7)
 $(ID:4e0f9030-0202-44e9-8661-ba5a01112377)
 
-$(ID:3b292291-4973-4e6e-a24a-489a60188208)
+$(ID:28046535-de67-4899-948a-30c0b6f4e409)
 
 # $(ID:e923252f-a20b-4862-85d9-2d2e017df4eb)
 
-$(ID:d345386c-973b-4277-bac7-063dbfde3184)
+$(ID:a2128023-b387-4bb2-a249-bddd6cc8ad3f)
 
 $(ID:c686740f-88c8-4d01-8235-06c0e21bc0e0)
 
@@ -78,7 +78,9 @@ $(ID:b6183878-57db-4fa3-ba35-143f1bc70147)
 
 $(ID:87702357-d34f-4012-9342-c368281e3e64)
 
-$(ID:f0f196fd-545f-4ab7-9aba-8f64166c64ad)
+$(ID:38b1a7bb-381b-481d-b9ce-0e8c909743ad)
+
+$(ID:a2d7a800-9c92-45be-a945-85d02980b37d)
 
 ## $(ID:7d3b2f12-2cea-4733-8453-7cd9e870cf68)
 
@@ -138,13 +140,13 @@ $(ID:b61833b6-dcfa-4d21-8c6d-6fdc10a4f7fd)
 
 # $(ID:f009673f-78b6-4b80-8623-84a776e47fc0)
 
-$(ID:38567948-6324-4b36-ae62-28bef17128bc)
+$(ID:4b00a308-ccf7-49b8-981d-eccf256cf2ee)
 
 $(ID:07c9150d-4d3d-4512-b6b6-fea3fee87977)
 
 $(ID:af507eb5-e347-4189-9cf1-849a97053e67)
 
-$(ID:cd3817de-feb6-487f-85be-9038729a37bc)
+$(ID:b98d37e6-a9fe-4d48-9f07-86adae9b9f23)
 
 $(ID:a05ab9ce-03a3-429f-aa95-9dc25290df22)
 
@@ -203,12 +205,12 @@ $(ID:a55ebd22-dc4b-44e2-a491-ebf216cc3db7)
 <source>&gt;</source>
 </segment>
 </unit>
-<unit id="931380c3-1ffc-4741-99c8-8114baba8825">
+<unit id="f8c8ccb5-9da8-4609-9512-596db633a510">
 <notes>
 <note appliesTo="source">line: 8</note>
 </notes>
 <segment>
-<source>&gt; Musharraf Omer ([@mush42](https://github.com/mush42)) created the original add-on and [announced on the NVDA Add-ons list](https://nvda-addons.groups.io/g/nvda-addons/message/27636) that commercial contract conflicts prevent him from continuing to maintain it. This project has continued it since, keeping the add-on working on current NVDA releases, with compatibility updates alongside bug fixes to the voice manager and the synthesizer driver. All credit for the original work belongs to Musharraf Omer.</source>
+<source>&gt; Musharraf Omer ([@mush42](https://github.com/mush42)) created the original add-on and [announced on the NVDA Add-ons list](https://nvda-addons.groups.io/g/nvda-addons/message/27636) that commercial contract conflicts prevent him from continuing to maintain it. This project has continued it since, keeping the add-on working on current NVDA releases, with compatibility updates alongside bug fixes to the voice manager and the synthesiser driver. All credit for the original work belongs to Musharraf Omer.</source>
 </segment>
 </unit>
 <unit id="d4b7c324-c9ec-443c-b4fa-73b357314ada">
@@ -243,20 +245,20 @@ $(ID:a55ebd22-dc4b-44e2-a491-ebf216cc3db7)
 <source>&gt; maintainer, same GPL v2 licence.</source>
 </segment>
 </unit>
-<unit id="fe417da9-b5de-435f-91f9-e8297eadffb9">
+<unit id="69c89518-9573-46e1-8444-8a8e29dab4b9">
 <notes>
 <note appliesTo="source">line: 14</note>
 </notes>
 <segment>
-<source>This add-on adds neural text-to-speech voices to NVDA. It provides a synthesizer driver for [Piper](https://github.com/rhasspy/piper) voice models, which run entirely on your own machine, plus a voice manager for downloading and installing voices. An internet connection is needed to download voices, but not to speak with them.</source>
+<source>This add-on adds neural text-to-speech voices to NVDA. It provides a synthesiser driver for [Piper](https://github.com/rhasspy/piper) voice models, which run entirely on your own machine, plus a voice manager for downloading and installing voices. An internet connection is needed to download voices, but not to speak with them.</source>
 </segment>
 </unit>
-<unit id="37e69d91-6f05-405b-b10a-11550ef42ca2">
+<unit id="ac89dc61-671d-4def-8873-b12e30f3d0b7">
 <notes>
 <note appliesTo="source">line: 16</note>
 </notes>
 <segment>
-<source>Piper is a fast, local neural text to speech system that sounds great and is optimized for low-end devices such as the Raspberry Pi. You can hear what the voices sound like on the [Piper voice samples](https://rhasspy.github.io/piper-samples/) page. Speech is generated by [dengjen](https://github.com/ZirekHQ/dengjen-tts), a cross-platform Rust engine for neural TTS models, originally based on [Sonata](https://github.com/mush42/sonata) by Musharraf Omer.</source>
+<source>Piper is a fast, local neural text to speech system that sounds great and is optimised for low-end devices such as the Raspberry Pi. You can hear what the voices sound like on the [Piper voice samples](https://rhasspy.github.io/piper-samples/) page. Speech is generated by [dengjen](https://github.com/ZirekHQ/dengjen-tts), a cross-platform Rust engine for neural TTS models, originally based on [Sonata](https://github.com/mush42/sonata) by Musharraf Omer.</source>
 </segment>
 </unit>
 <unit id="56e50757-1717-41fc-97da-f5b83bafc693">
@@ -335,12 +337,12 @@ $(ID:a55ebd22-dc4b-44e2-a491-ebf216cc3db7)
 <source>Upon installing the add-on and restarting NVDA, the add-on will ask you to download and install at least one voice, and it will give you the option to open the voice manager.</source>
 </segment>
 </unit>
-<unit id="543fbed0-586a-40ac-aa32-0e8f017b876f">
+<unit id="3075c2a4-21aa-49e6-82d4-48fbbb4d3ad9">
 <notes>
 <note appliesTo="source">line: 36</note>
 </notes>
 <segment>
-<source>When you already have a voice installed but none matches NVDA's language, and the voice catalog has one, the add-on offers to open the voice manager on that language at startup. Choose `Don't ask again` to stop the offer for that language.</source>
+<source>When you already have a voice installed but none matches NVDA's language, and the voice catalogue has one, the add-on offers to open the voice manager on that language at startup. Choose `Don't ask again` to stop the offer for that language.</source>
 </segment>
 </unit>
 <unit id="b4feac45-8e20-451c-ac90-a015c421d794">
@@ -359,12 +361,12 @@ $(ID:a55ebd22-dc4b-44e2-a491-ebf216cc3db7)
 <source>Note that we recommend choosing the `low` or `medium` quality voices for your target language(s), because they generally provide better responsiveness. For additional responsiveness, you can choose to download the `fast` variant of a voice at a cost of slightly lower speech quality.</source>
 </segment>
 </unit>
-<unit id="84fd51ad-bbf9-4f18-b1f7-98c1dfd79b31">
+<unit id="eb156b4b-45a0-45c9-a14b-5cdc2ac481c6">
 <notes>
 <note appliesTo="source">line: 42</note>
 </notes>
 <segment>
-<source>You can also install voices from local archives. After obtaining the voice's file, open the voice manager, in the installed tab, click the button labeled `Install from local file`. Choose the voice file and wait for the voice to install.</source>
+<source>You can also install voices from local archives. After obtaining the voice's file, open the voice manager, in the installed tab, click the button labelled `Install from local file`. Choose the voice file and wait for the voice to install.</source>
 </segment>
 </unit>
 <unit id="3e90a651-62de-4c7e-af63-5588f168aa85">
@@ -482,12 +484,12 @@ $(ID:a55ebd22-dc4b-44e2-a491-ebf216cc3db7)
 <source>- `Import voices from Sonata` copies voices you downloaded with the older Sonata Neural Voices add-on. It only appears while that add-on's voices are still present and have not been imported yet. The originals are left in place, so Sonata keeps working.</source>
 </segment>
 </unit>
-<unit id="3b292291-4973-4e6e-a24a-489a60188208">
+<unit id="28046535-de67-4899-948a-30c0b6f4e409">
 <notes>
 <note appliesTo="source">line: 66</note>
 </notes>
 <segment>
-<source>After installing from a local archive or removing a voice, the add-on reloads the synthesizer for you, so the change applies immediately. After a download the new voice shows up in the voice manager right away; if NVDA's own voice list has not picked it up, restart NVDA.</source>
+<source>After installing from a local archive or removing a voice, the add-on reloads the synthesiser for you, so the change applies immediately. After a download the new voice shows up in the voice manager right away; if NVDA's own voice list has not picked it up, restart NVDA.</source>
 </segment>
 </unit>
 <unit id="e923252f-a20b-4862-85d9-2d2e017df4eb">
@@ -499,12 +501,12 @@ $(ID:a55ebd22-dc4b-44e2-a491-ebf216cc3db7)
 <source>Voice settings</source>
 </segment>
 </unit>
-<unit id="d345386c-973b-4277-bac7-063dbfde3184">
+<unit id="a2128023-b387-4bb2-a249-bddd6cc8ad3f">
 <notes>
 <note appliesTo="source">line: 70</note>
 </notes>
 <segment>
-<source>With `Dengjen Neural Voices` selected as your synthesizer, the following appear in NVDA's speech settings (`NVDA menu` &gt; `Preferences` &gt; `Settings` &gt; `Speech`).</source>
+<source>With `Dengjen Neural Voices` selected as your synthesiser, the following appear in NVDA's speech settings (`NVDA menu` &gt; `Preferences` &gt; `Settings` &gt; `Speech`).</source>
 </segment>
 </unit>
 <unit id="c686740f-88c8-4d01-8235-06c0e21bc0e0">
@@ -531,17 +533,25 @@ $(ID:a55ebd22-dc4b-44e2-a491-ebf216cc3db7)
 <source>`Speaker` applies to voices trained with several speakers; on a single-speaker voice it has no effect. It is also available in the synth settings ring.</source>
 </segment>
 </unit>
-<unit id="f0f196fd-545f-4ab7-9aba-8f64166c64ad">
+<unit id="38b1a7bb-381b-481d-b9ce-0e8c909743ad">
 <notes>
 <note appliesTo="source">line: 78</note>
 </notes>
 <segment>
-<source>`Rate`, `Volume` and `Pitch` behave as they do for any NVDA synthesizer. With `Rate boost` turned off, the rate slider only covers the lower part of the engine's speed range; turning it on spreads the slider across the whole range, which allows much faster speech.</source>
+<source>`Rate`, `Volume` and `Pitch` behave as they do for any NVDA synthesiser. With `Rate boost` turned off, the rate slider only covers the lower part of the engine's speed range; turning it on spreads the slider across the whole range, which allows much faster speech.</source>
+</segment>
+</unit>
+<unit id="a2d7a800-9c92-45be-a945-85d02980b37d">
+<notes>
+<note appliesTo="source">line: 80</note>
+</notes>
+<segment>
+<source>`Sentence pause (5 ms per step at normal speed)` adds silence between sentences, mapping the 0–100 slider to 0–500 ms at normal speed (scaled by the current rate). During Say All, pauses default to at least 50 ms unless a longer pause is configured.</source>
 </segment>
 </unit>
 <unit id="7d3b2f12-2cea-4733-8453-7cd9e870cf68">
 <notes>
-<note appliesTo="source">line: 80</note>
+<note appliesTo="source">line: 82</note>
 <note appliesTo="source">prefix: ## </note>
 </notes>
 <segment>
@@ -550,7 +560,7 @@ $(ID:a55ebd22-dc4b-44e2-a491-ebf216cc3db7)
 </unit>
 <unit id="9738ec8b-7bbe-4504-8c6a-b896f1689d28">
 <notes>
-<note appliesTo="source">line: 82</note>
+<note appliesTo="source">line: 84</note>
 </notes>
 <segment>
 <source>`Length scale`, `Noise scale` and `Noise w` expose the Piper model's own inference parameters. All three work the same way: the slider runs from 0 to 100, and 50 means the voice's trained default, so returning a slider to 50 undoes your changes to it. Of the three, only `Length scale` is offered in the synth settings ring.</source>
@@ -558,7 +568,7 @@ $(ID:a55ebd22-dc4b-44e2-a491-ebf216cc3db7)
 </unit>
 <unit id="01d9422b-6778-4312-a68d-a3b453286759">
 <notes>
-<note appliesTo="source">line: 84</note>
+<note appliesTo="source">line: 86</note>
 </notes>
 <segment>
 <source>- `Length scale` sets how long each speech sound is held. Higher values draw speech out, lower values compress it. This is a separate mechanism from `Rate` and the two combine, so it is usually easiest to set your speed with `Rate` and only reach for this if a voice's natural pacing bothers you.</source>
@@ -566,7 +576,7 @@ $(ID:a55ebd22-dc4b-44e2-a491-ebf216cc3db7)
 </unit>
 <unit id="b315c751-95e5-4b56-a4c3-e64c83b9e55f">
 <notes>
-<note appliesTo="source">line: 85</note>
+<note appliesTo="source">line: 87</note>
 </notes>
 <segment>
 <source>- `Noise scale` sets how much variation the model puts into tone and inflection. Higher values sound more expressive but less predictable.</source>
@@ -574,7 +584,7 @@ $(ID:a55ebd22-dc4b-44e2-a491-ebf216cc3db7)
 </unit>
 <unit id="3cdcc9dd-9dd4-4650-909e-4da4a91139c2">
 <notes>
-<note appliesTo="source">line: 86</note>
+<note appliesTo="source">line: 88</note>
 </notes>
 <segment>
 <source>- `Noise w` sets how much the duration of individual speech sounds varies, which comes across as rhythm. Higher values sound less mechanical but can blur articulation.</source>
@@ -582,7 +592,7 @@ $(ID:a55ebd22-dc4b-44e2-a491-ebf216cc3db7)
 </unit>
 <unit id="4669310d-91f8-46fc-9bb9-c334305d9e05">
 <notes>
-<note appliesTo="source">line: 88</note>
+<note appliesTo="source">line: 90</note>
 </notes>
 <segment>
 <source>Above 50, the sliders scale up to twice the voice's default for `Length scale` and three times the default for `Noise scale` and `Noise w`. Because 50 always means "this voice's default", a given slider position keeps its meaning when you switch to a different voice.</source>
@@ -590,7 +600,7 @@ $(ID:a55ebd22-dc4b-44e2-a491-ebf216cc3db7)
 </unit>
 <unit id="dc75fe9d-34d6-45bb-9ba3-163f6ba34a00">
 <notes>
-<note appliesTo="source">line: 90</note>
+<note appliesTo="source">line: 92</note>
 <note appliesTo="source">prefix: ### </note>
 </notes>
 <segment>
@@ -599,7 +609,7 @@ $(ID:a55ebd22-dc4b-44e2-a491-ebf216cc3db7)
 </unit>
 <unit id="ef1a7073-7a2f-4f1e-a4af-dea93b530ff5">
 <notes>
-<note appliesTo="source">line: 92</note>
+<note appliesTo="source">line: 94</note>
 </notes>
 <segment>
 <source>In addition to Piper voices, this add-on supports Kokoro, a multilingual</source>
@@ -607,7 +617,7 @@ $(ID:a55ebd22-dc4b-44e2-a491-ebf216cc3db7)
 </unit>
 <unit id="309a1df7-b5e9-4c64-862c-bbded0b5d9a4">
 <notes>
-<note appliesTo="source">line: 93</note>
+<note appliesTo="source">line: 95</note>
 </notes>
 <segment>
 <source>neural voice with 54 built-in presets across English, French, Spanish,</source>
@@ -615,7 +625,7 @@ $(ID:a55ebd22-dc4b-44e2-a491-ebf216cc3db7)
 </unit>
 <unit id="39ab3df3-af59-44b9-87d9-99e414cbd47a">
 <notes>
-<note appliesTo="source">line: 94</note>
+<note appliesTo="source">line: 96</note>
 </notes>
 <segment>
 <source>Hindi, Italian, Japanese, Portuguese, and Mandarin. Install it from the</source>
@@ -623,7 +633,7 @@ $(ID:a55ebd22-dc4b-44e2-a491-ebf216cc3db7)
 </unit>
 <unit id="a5e1d6b0-e9c8-49c4-b7af-2af9f4d7db33">
 <notes>
-<note appliesTo="source">line: 95</note>
+<note appliesTo="source">line: 97</note>
 </notes>
 <segment>
 <source>Dengjen voice manager's "Kokoro" tab (a single ~340MB download, unlike</source>
@@ -631,7 +641,7 @@ $(ID:a55ebd22-dc4b-44e2-a491-ebf216cc3db7)
 </unit>
 <unit id="293bec69-b37c-45ad-9d2a-0929857218c8">
 <notes>
-<note appliesTo="source">line: 96</note>
+<note appliesTo="source">line: 98</note>
 </notes>
 <segment>
 <source>Piper's per-voice downloads); once installed, it appears in NVDA's Voice</source>
@@ -639,7 +649,7 @@ $(ID:a55ebd22-dc4b-44e2-a491-ebf216cc3db7)
 </unit>
 <unit id="f1e8a803-87fd-43df-b882-e88c254663e4">
 <notes>
-<note appliesTo="source">line: 97</note>
+<note appliesTo="source">line: 99</note>
 </notes>
 <segment>
 <source>list like any other voice, and its 54 presets are selectable via NVDA's</source>
@@ -647,7 +657,7 @@ $(ID:a55ebd22-dc4b-44e2-a491-ebf216cc3db7)
 </unit>
 <unit id="d25bb89b-4141-4677-b2d3-281e3c016d15">
 <notes>
-<note appliesTo="source">line: 98</note>
+<note appliesTo="source">line: 100</note>
 </notes>
 <segment>
 <source>"Speaker" setting.</source>
@@ -655,7 +665,7 @@ $(ID:a55ebd22-dc4b-44e2-a491-ebf216cc3db7)
 </unit>
 <unit id="d4218c66-db5e-4cf5-b0c6-709e7140846a">
 <notes>
-<note appliesTo="source">line: 100</note>
+<note appliesTo="source">line: 102</note>
 </notes>
 <segment>
 <source>The Japanese presets (`jf_` and `jm_`) also need a dictionary. Install it from</source>
@@ -663,7 +673,7 @@ $(ID:a55ebd22-dc4b-44e2-a491-ebf216cc3db7)
 </unit>
 <unit id="78cc3e30-dbd4-4d94-8213-a3ab850328d3">
 <notes>
-<note appliesTo="source">line: 101</note>
+<note appliesTo="source">line: 103</note>
 </notes>
 <segment>
 <source>the same tab with "Install Japanese dictionary" (a ~29MB download), then restart</source>
@@ -671,7 +681,7 @@ $(ID:a55ebd22-dc4b-44e2-a491-ebf216cc3db7)
 </unit>
 <unit id="c62347bc-cc89-4ba0-8faf-841c5a3bb73c">
 <notes>
-<note appliesTo="source">line: 102</note>
+<note appliesTo="source">line: 104</note>
 </notes>
 <segment>
 <source>NVDA. Without it, the other presets keep working and the Japanese ones do not</source>
@@ -679,7 +689,7 @@ $(ID:a55ebd22-dc4b-44e2-a491-ebf216cc3db7)
 </unit>
 <unit id="52e1a079-8a40-4e26-9689-cb3a1d069c66">
 <notes>
-<note appliesTo="source">line: 103</note>
+<note appliesTo="source">line: 105</note>
 </notes>
 <segment>
 <source>speak.</source>
@@ -687,7 +697,7 @@ $(ID:a55ebd22-dc4b-44e2-a491-ebf216cc3db7)
 </unit>
 <unit id="41a82690-96c8-4c5f-b91e-8733d906f7cb">
 <notes>
-<note appliesTo="source">line: 105</note>
+<note appliesTo="source">line: 107</note>
 <note appliesTo="source">prefix: # </note>
 </notes>
 <segment>
@@ -696,7 +706,7 @@ $(ID:a55ebd22-dc4b-44e2-a491-ebf216cc3db7)
 </unit>
 <unit id="12e17034-ca4f-492e-b999-93e14d8093c4">
 <notes>
-<note appliesTo="source">line: 107</note>
+<note appliesTo="source">line: 109</note>
 </notes>
 <segment>
 <source>By default the voice manager downloads voice catalogues and files from Hugging Face. If it is slow, blocked or unavailable where you live, you can point it at a mirror by editing NVDA's `nvda.ini` (close NVDA first). Add a `hosting` section under the add-on's section and set any of the keys below; an empty or missing key keeps the Hugging Face default.</source>
@@ -704,7 +714,7 @@ $(ID:a55ebd22-dc4b-44e2-a491-ebf216cc3db7)
 </unit>
 <unit id="764a98d5-368a-4d85-9a6c-aa4c44da2d7d">
 <notes>
-<note appliesTo="source">line: 109</note>
+<note appliesTo="source">line: 111</note>
 </notes>
 <segment>
 <source>```ini</source>
@@ -712,7 +722,7 @@ $(ID:a55ebd22-dc4b-44e2-a491-ebf216cc3db7)
 </unit>
 <unit id="23794785-7f37-4270-a0a5-7e9cd676534b">
 <notes>
-<note appliesTo="source">line: 110</note>
+<note appliesTo="source">line: 112</note>
 </notes>
 <segment>
 <source>[speech]</source>
@@ -720,7 +730,7 @@ $(ID:a55ebd22-dc4b-44e2-a491-ebf216cc3db7)
 </unit>
 <unit id="2962fa86-8ed0-47c5-a418-bc14ef839c36">
 <notes>
-<note appliesTo="source">line: 111</note>
+<note appliesTo="source">line: 113</note>
 </notes>
 <segment>
 <source>    [[dengjen_neural_voices]]</source>
@@ -728,7 +738,7 @@ $(ID:a55ebd22-dc4b-44e2-a491-ebf216cc3db7)
 </unit>
 <unit id="fc5fdfaf-a42d-414a-8cf8-ac2ae96616e3">
 <notes>
-<note appliesTo="source">line: 112</note>
+<note appliesTo="source">line: 114</note>
 </notes>
 <segment>
 <source>        [[[hosting]]]</source>
@@ -736,7 +746,7 @@ $(ID:a55ebd22-dc4b-44e2-a491-ebf216cc3db7)
 </unit>
 <unit id="be00535c-7afa-4c08-a83e-9408f75d1754">
 <notes>
-<note appliesTo="source">line: 113</note>
+<note appliesTo="source">line: 115</note>
 </notes>
 <segment>
 <source>            piper_list_url = https://mirror.example/piper/voices.json</source>
@@ -744,7 +754,7 @@ $(ID:a55ebd22-dc4b-44e2-a491-ebf216cc3db7)
 </unit>
 <unit id="2a10cb75-feaf-43e5-a196-8f9348cc525f">
 <notes>
-<note appliesTo="source">line: 114</note>
+<note appliesTo="source">line: 116</note>
 </notes>
 <segment>
 <source>            piper_download_prefix = https://mirror.example/piper</source>
@@ -752,7 +762,7 @@ $(ID:a55ebd22-dc4b-44e2-a491-ebf216cc3db7)
 </unit>
 <unit id="5a4f6004-6bfa-4f27-a661-302e8844c456">
 <notes>
-<note appliesTo="source">line: 115</note>
+<note appliesTo="source">line: 117</note>
 </notes>
 <segment>
 <source>```</source>
@@ -760,7 +770,7 @@ $(ID:a55ebd22-dc4b-44e2-a491-ebf216cc3db7)
 </unit>
 <unit id="faf16a99-7110-4edb-8684-06f7c988d7e5">
 <notes>
-<note appliesTo="source">line: 117</note>
+<note appliesTo="source">line: 119</note>
 <note appliesTo="source">prefix: |</note>
 <note appliesTo="source">suffix: |</note>
 </notes>
@@ -770,7 +780,7 @@ $(ID:a55ebd22-dc4b-44e2-a491-ebf216cc3db7)
 </unit>
 <unit id="13ba4659-9627-4440-823f-766ab9e2b6a2">
 <notes>
-<note appliesTo="source">line: 119</note>
+<note appliesTo="source">line: 121</note>
 <note appliesTo="source">prefix: |</note>
 <note appliesTo="source">suffix: |</note>
 </notes>
@@ -780,7 +790,7 @@ $(ID:a55ebd22-dc4b-44e2-a491-ebf216cc3db7)
 </unit>
 <unit id="3ef1ec5b-7f44-4098-9db8-0ea25400c003">
 <notes>
-<note appliesTo="source">line: 120</note>
+<note appliesTo="source">line: 122</note>
 <note appliesTo="source">prefix: |</note>
 <note appliesTo="source">suffix: |</note>
 </notes>
@@ -790,7 +800,7 @@ $(ID:a55ebd22-dc4b-44e2-a491-ebf216cc3db7)
 </unit>
 <unit id="d6e5752c-966f-490e-9f30-c5ddffd953cc">
 <notes>
-<note appliesTo="source">line: 121</note>
+<note appliesTo="source">line: 123</note>
 <note appliesTo="source">prefix: |</note>
 <note appliesTo="source">suffix: |</note>
 </notes>
@@ -800,7 +810,7 @@ $(ID:a55ebd22-dc4b-44e2-a491-ebf216cc3db7)
 </unit>
 <unit id="f61cd31d-90b9-4a19-93a0-7234e9f944e1">
 <notes>
-<note appliesTo="source">line: 122</note>
+<note appliesTo="source">line: 124</note>
 <note appliesTo="source">prefix: |</note>
 <note appliesTo="source">suffix: |</note>
 </notes>
@@ -810,7 +820,7 @@ $(ID:a55ebd22-dc4b-44e2-a491-ebf216cc3db7)
 </unit>
 <unit id="a89e5967-0a56-45cd-ad50-fc90534b962e">
 <notes>
-<note appliesTo="source">line: 123</note>
+<note appliesTo="source">line: 125</note>
 <note appliesTo="source">prefix: |</note>
 <note appliesTo="source">suffix: |</note>
 </notes>
@@ -820,7 +830,7 @@ $(ID:a55ebd22-dc4b-44e2-a491-ebf216cc3db7)
 </unit>
 <unit id="82b006c0-3720-45ab-b417-c1a05f4bf63f">
 <notes>
-<note appliesTo="source">line: 124</note>
+<note appliesTo="source">line: 126</note>
 <note appliesTo="source">prefix: |</note>
 <note appliesTo="source">suffix: |</note>
 </notes>
@@ -830,7 +840,7 @@ $(ID:a55ebd22-dc4b-44e2-a491-ebf216cc3db7)
 </unit>
 <unit id="a05d5459-aa5a-41b4-82bd-92c384664056">
 <notes>
-<note appliesTo="source">line: 126</note>
+<note appliesTo="source">line: 128</note>
 </notes>
 <segment>
 <source>Only `https://` URLs are accepted. Any other value is ignored, with a warning in NVDA's log. After saving `nvda.ini`, start NVDA again and click `Refresh voices list` so the catalogue is fetched from the mirror.</source>
@@ -838,7 +848,7 @@ $(ID:a55ebd22-dc4b-44e2-a491-ebf216cc3db7)
 </unit>
 <unit id="2798348a-510e-40e2-9056-b37a3932213a">
 <notes>
-<note appliesTo="source">line: 128</note>
+<note appliesTo="source">line: 130</note>
 <note appliesTo="source">prefix: # </note>
 </notes>
 <segment>
@@ -847,7 +857,7 @@ $(ID:a55ebd22-dc4b-44e2-a491-ebf216cc3db7)
 </unit>
 <unit id="3c6f2679-564b-4791-82af-3fd36de0add1">
 <notes>
-<note appliesTo="source">line: 130</note>
+<note appliesTo="source">line: 132</note>
 </notes>
 <segment>
 <source>The currently available voices are trained using freely available TTS datasets, which are generally of low quality (mostly public domain audio books or research quality recordings).</source>
@@ -855,7 +865,7 @@ $(ID:a55ebd22-dc4b-44e2-a491-ebf216cc3db7)
 </unit>
 <unit id="dbcc62e6-7fbd-4d75-becd-0b03a1d42b1b">
 <notes>
-<note appliesTo="source">line: 132</note>
+<note appliesTo="source">line: 134</note>
 </notes>
 <segment>
 <source>Additionally, these datasets are not comprehensive, hence some voices may exhibit incorrect or weird pronunciation. Both issues could be resolved by using better datasets for training.</source>
@@ -863,7 +873,7 @@ $(ID:a55ebd22-dc4b-44e2-a491-ebf216cc3db7)
 </unit>
 <unit id="b61833b6-dcfa-4d21-8c6d-6fdc10a4f7fd">
 <notes>
-<note appliesTo="source">line: 134</note>
+<note appliesTo="source">line: 136</note>
 </notes>
 <segment>
 <source>Luckily, the `Piper` developer and some developers from the blind and vision-impaired community are working on training better voices.</source>
@@ -871,24 +881,24 @@ $(ID:a55ebd22-dc4b-44e2-a491-ebf216cc3db7)
 </unit>
 <unit id="f009673f-78b6-4b80-8623-84a776e47fc0">
 <notes>
-<note appliesTo="source">line: 136</note>
+<note appliesTo="source">line: 138</note>
 <note appliesTo="source">prefix: # </note>
 </notes>
 <segment>
 <source>Troubleshooting</source>
 </segment>
 </unit>
-<unit id="38567948-6324-4b36-ae62-28bef17128bc">
+<unit id="4b00a308-ccf7-49b8-981d-eccf256cf2ee">
 <notes>
-<note appliesTo="source">line: 138</note>
+<note appliesTo="source">line: 140</note>
 </notes>
 <segment>
-<source>**Dengjen is missing from NVDA's synthesizer list, or fails to load.** The two usual causes are the missing Visual C++ redistributable described under Requirements above, and having no voices installed — the driver deliberately refuses to load when it cannot find at least one voice. Open the voice manager from NVDA's main menu, install a voice, then restart NVDA.</source>
+<source>**Dengjen is missing from NVDA's synthesiser list, or fails to load.** The two usual causes are the missing Visual C++ redistributable described under Requirements above, and having no voices installed — the driver deliberately refuses to load when it cannot find at least one voice. Open the voice manager from NVDA's main menu, install a voice, then restart NVDA.</source>
 </segment>
 </unit>
 <unit id="07c9150d-4d3d-4512-b6b6-fea3fee87977">
 <notes>
-<note appliesTo="source">line: 140</note>
+<note appliesTo="source">line: 142</note>
 </notes>
 <segment>
 <source>**A voice I just downloaded is not offered in NVDA's voice list.** Restart NVDA. A download refreshes the voice manager's own list, but NVDA may still be holding the voice set it loaded at startup.</source>
@@ -896,23 +906,23 @@ $(ID:a55ebd22-dc4b-44e2-a491-ebf216cc3db7)
 </unit>
 <unit id="af507eb5-e347-4189-9cf1-849a97053e67">
 <notes>
-<note appliesTo="source">line: 142</note>
+<note appliesTo="source">line: 144</note>
 </notes>
 <segment>
 <source>**A preview or the voice list fails with a connection error.** Both are fetched from the internet. Check your connection, then use `Refresh voices list` on the Download tab to retry.</source>
 </segment>
 </unit>
-<unit id="cd3817de-feb6-487f-85be-9038729a37bc">
+<unit id="b98d37e6-a9fe-4d48-9f07-86adae9b9f23">
 <notes>
-<note appliesTo="source">line: 144</note>
+<note appliesTo="source">line: 146</note>
 </notes>
 <segment>
-<source>**"You cannot remove the currently active voice!"** Switch NVDA to a different voice, or a different synthesizer, and then remove it.</source>
+<source>**"You cannot remove the currently active voice!"** Switch NVDA to a different voice, or a different synthesiser, and then remove it.</source>
 </segment>
 </unit>
 <unit id="a05ab9ce-03a3-429f-aa95-9dc25290df22">
 <notes>
-<note appliesTo="source">line: 146</note>
+<note appliesTo="source">line: 148</note>
 </notes>
 <segment>
 <source>**Speech is slow to start or stutters.** Prefer the `low` or `medium` quality voices, and consider the `fast` variant of your voice. Higher quality models need noticeably more processing per utterance.</source>
@@ -920,7 +930,7 @@ $(ID:a55ebd22-dc4b-44e2-a491-ebf216cc3db7)
 </unit>
 <unit id="b271f07f-216d-49d6-8552-a55034da04a7">
 <notes>
-<note appliesTo="source">line: 148</note>
+<note appliesTo="source">line: 150</note>
 <note appliesTo="source">prefix: ## </note>
 </notes>
 <segment>
@@ -929,7 +939,7 @@ $(ID:a55ebd22-dc4b-44e2-a491-ebf216cc3db7)
 </unit>
 <unit id="4e556ee4-4cd5-4c57-af43-6179b362c293">
 <notes>
-<note appliesTo="source">line: 150</note>
+<note appliesTo="source">line: 152</note>
 </notes>
 <segment>
 <source>For anything else, NVDA's log usually says what went wrong: `NVDA menu` &gt; `Tools` &gt; `View log`.</source>
@@ -937,7 +947,7 @@ $(ID:a55ebd22-dc4b-44e2-a491-ebf216cc3db7)
 </unit>
 <unit id="b5095dbf-3d8e-49b2-9506-0fe9a7884441">
 <notes>
-<note appliesTo="source">line: 152</note>
+<note appliesTo="source">line: 154</note>
 </notes>
 <segment>
 <source>Please report bugs and feature requests on the [issue tracker](https://github.com/ZirekHQ/dengjen-nvda/issues), and include the log along with your NVDA version and the voice you were using.</source>
@@ -945,7 +955,7 @@ $(ID:a55ebd22-dc4b-44e2-a491-ebf216cc3db7)
 </unit>
 <unit id="7a28518b-0217-4af0-8fb0-a8d739d2ecda">
 <notes>
-<note appliesTo="source">line: 154</note>
+<note appliesTo="source">line: 156</note>
 <note appliesTo="source">prefix: # </note>
 </notes>
 <segment>
@@ -954,7 +964,7 @@ $(ID:a55ebd22-dc4b-44e2-a491-ebf216cc3db7)
 </unit>
 <unit id="bbc63535-913b-4c54-81b6-90eda107acd4">
 <notes>
-<note appliesTo="source">line: 156</note>
+<note appliesTo="source">line: 158</note>
 </notes>
 <segment>
 <source>Copyright(c) 2024, Musharraf Omer. Copyright(c) 2026, Ali Ustek and contributors to this project. This software is licensed under The GNU GENERAL PUBLIC LICENSE Version 2 (GPL v2).</source>
@@ -962,7 +972,7 @@ $(ID:a55ebd22-dc4b-44e2-a491-ebf216cc3db7)
 </unit>
 <unit id="db803a40-7acc-4217-8139-4093c0057582">
 <notes>
-<note appliesTo="source">line: 158</note>
+<note appliesTo="source">line: 160</note>
 </notes>
 <segment>
 <source>---</source>
@@ -970,7 +980,7 @@ $(ID:a55ebd22-dc4b-44e2-a491-ebf216cc3db7)
 </unit>
 <unit id="1354cec1-3259-424b-b92f-756a5c502a41">
 <notes>
-<note appliesTo="source">line: 160</note>
+<note appliesTo="source">line: 162</note>
 <note appliesTo="source">prefix: ## </note>
 </notes>
 <segment>
@@ -979,7 +989,7 @@ $(ID:a55ebd22-dc4b-44e2-a491-ebf216cc3db7)
 </unit>
 <unit id="f745ea3b-db60-47d2-afec-4d64d99ceaa6">
 <notes>
-<note appliesTo="source">line: 162</note>
+<note appliesTo="source">line: 164</note>
 </notes>
 <segment>
 <source>If this repository saves you time and effort, please consider supporting it!</source>
@@ -987,7 +997,7 @@ $(ID:a55ebd22-dc4b-44e2-a491-ebf216cc3db7)
 </unit>
 <unit id="2c0d28b5-fa5b-49c1-bf0c-55f220db8a1e">
 <notes>
-<note appliesTo="source">line: 164</note>
+<note appliesTo="source">line: 166</note>
 </notes>
 <segment>
 <source>- ⭐ [Star on GitHub](https://github.com/ZirekHQ/dengjen-nvda)</source>
@@ -995,7 +1005,7 @@ $(ID:a55ebd22-dc4b-44e2-a491-ebf216cc3db7)
 </unit>
 <unit id="77d1680f-26e1-41f8-a22f-c985a966c7b2">
 <notes>
-<note appliesTo="source">line: 165</note>
+<note appliesTo="source">line: 167</note>
 </notes>
 <segment>
 <source>- 🐦 [Share on Twitter](https://twitter.com/intent/tweet?text=Dengjen%20Neural%20Voices%20-%20local%20neural%20TTS%20for%20NVDA&amp;url=https%3A%2F%2Fgithub.com%2FZirekHQ%2Fdengjen-nvda)</source>
@@ -1003,7 +1013,7 @@ $(ID:a55ebd22-dc4b-44e2-a491-ebf216cc3db7)
 </unit>
 <unit id="462a1d16-bfac-4526-9778-1d920bfe28e3">
 <notes>
-<note appliesTo="source">line: 166</note>
+<note appliesTo="source">line: 168</note>
 </notes>
 <segment>
 <source>- 💼 [Share on LinkedIn](https://www.linkedin.com/sharing/share-offsite/?url=https%3A%2F%2Fgithub.com%2FZirekHQ%2Fdengjen-nvda)</source>
@@ -1011,7 +1021,7 @@ $(ID:a55ebd22-dc4b-44e2-a491-ebf216cc3db7)
 </unit>
 <unit id="a55ebd22-dc4b-44e2-a491-ebf216cc3db7">
 <notes>
-<note appliesTo="source">line: 167</note>
+<note appliesTo="source">line: 169</note>
 </notes>
 <segment>
 <source>- 💖 [Support on Open Collective](https://opencollective.com/zirek)</source>
