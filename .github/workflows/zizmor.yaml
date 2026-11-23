@@ -26,7 +26,6 @@ jobs:
       - name: Run zizmor
         uses: zizmorcore/zizmor-action@45d7276c9ca790aabd705e31ca99c6185c3e76dd # v0.8.1
         with:
-          version: 1.32.0
           # Fork PRs get a read-only GITHUB_TOKEN without security-events
           # write access, so SARIF upload must be skipped there. Same-repo
           # PRs keep it enabled since they already have write access.
